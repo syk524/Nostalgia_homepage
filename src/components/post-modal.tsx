@@ -27,8 +27,16 @@ export function PostModal({
   // cancel, edit → save, browsing prev/next), and those don't all put the
   // list one step behind in history, so back() could land on a stale form
   // page or a different post instead.
+  //
+  // A hard navigation, not router.push(): pushing to a URL that matches the
+  // @children slot's existing path doesn't reconcile the @modal parallel
+  // slot in Next.js's App Router — the URL bar updates but the modal stays
+  // rendered on top, since only popping history (router.back()) reliably
+  // clears it. window.location.href forces a full reload instead, sidestepping
+  // that soft-navigation quirk entirely (same fix already used for deletion
+  // in gallery/[id]/delete-button.tsx).
   function close() {
-    router.push(getLastListView())
+    window.location.href = getLastListView()
   }
 
   useEffect(() => {
@@ -140,7 +148,7 @@ export function PostModal({
               wrapper so it sits vertically centered in the pane on load —
               later images (if any) just stack normally beneath it, not
               individually centered. */}
-          <div className="relative h-full overflow-y-auto flex flex-col items-center gap-4 p-6 sm:p-12">
+          <div className="relative h-full overflow-y-auto flex flex-col items-center gap-2 p-6 sm:p-12">
             {images.map((img, i) => (
               i === 0 ? (
                 <div key={img.id} className="min-h-full w-full flex items-center justify-center shrink-0">

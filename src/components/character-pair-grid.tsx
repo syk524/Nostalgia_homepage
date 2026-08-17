@@ -12,7 +12,7 @@ const BACKGROUND_HEIGHT = 140
 // Fixed height (not an aspect ratio) so every card's image area stays this
 // tall regardless of the card's own width — previously this was aspect-[5/2],
 // which meant the crop got shorter/taller as the grid column width changed.
-const THUMBNAIL_HEIGHT = 208
+const THUMBNAIL_HEIGHT = 238
 
 function PairCard({ pair }: { pair: PairWithCharacters }) {
   const sorted = [...pair.characters].sort((a, b) => a.slot - b.slot)

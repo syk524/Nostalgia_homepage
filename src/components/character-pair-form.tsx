@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage } from '@/lib/upload'
@@ -13,15 +13,6 @@ type CharState = {
   quote: string; quoteColor: string; quoteFont: string
   description: string
 }
-
-// Discrete stops for the blur slider, referencing the general "slider with
-// detents" pattern (interior.dev/docs/slider-detents) — not its code, just
-// the interaction: the thumb only ever rests on one of these values instead
-// of anywhere along a continuous range. Implemented as a native range input
-// over the DETENT INDICES (0-4, step 1) rather than the raw 1-100 values —
-// that gets snapping, keyboard stepping, and touch support for free from
-// the browser instead of hand-rolled drag/hit-testing math.
-const BLUR_DETENTS = [1, 25, 50, 75, 100]
 
 function emptyChar(existing?: Character): CharState {
   return {
@@ -45,6 +36,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
   const [title, setTitle] = useState(initialData?.pair.title ?? '')
   const [titleFont, setTitleFont] = useState(initialData?.pair.title_font ?? 'default')
   const [titleColor, setTitleColor] = useState(initialData?.pair.title_color ?? '#5c574d')
+  const [titleSize, setTitleSize] = useState(initialData?.pair.title_size ?? 32)
 
   const [pairImageUrl, setPairImageUrl] = useState<string | null>(initialData?.pair.pair_image_url ?? null)
   const [pairImageFile, setPairImageFile] = useState<File | null>(null)
@@ -118,6 +110,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       backgroundBlur,
       titleFont,
       titleColor,
+      titleSize,
       characters: [
         {
           name: char1.name, nameColor: char1.nameColor, nameFont: char1.nameFont,
@@ -144,39 +137,19 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
 
   return (
     <form onSubmit={handleSubmit} className="card p-6 space-y-6">
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="label" htmlFor="title-font">Title font</label>
-          <select
-            id="title-font"
-            className="input"
-            value={titleFont}
-            onChange={e => setTitleFont(e.target.value)}
-            style={{ fontFamily: pairFontFamily(titleFont) }}
-          >
-            {Object.entries(PAIR_FONTS).map(([key, { label, family }]) => (
-              <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label" htmlFor="title-color">Color</label>
-          <input
-            id="title-color"
-            type="color"
-            value={titleColor}
-            onChange={e => setTitleColor(e.target.value)}
-            className="h-[42px] w-14 rounded border border-scroll-300 cursor-pointer"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="label" htmlFor="title">Title</label>
-        <input id="title" className="input" value={title}
-          onChange={e => setTitle(e.target.value)} placeholder="Pair title" required
-          style={{ fontFamily: pairFontFamily(titleFont) }} />
-      </div>
+      <StyledTextRow
+        label="Title"
+        value={title}
+        placeholder="Pair title"
+        required
+        font={titleFont}
+        color={titleColor}
+        size={titleSize}
+        onValueChange={setTitle}
+        onFontChange={setTitleFont}
+        onColorChange={setTitleColor}
+        onSizeChange={setTitleSize}
+      />
 
       <div>
         <label className="label">Pair image (optional)</label>
@@ -216,13 +189,11 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
           <input
             id="background-blur"
             type="range"
-            min={0}
-            max={BLUR_DETENTS.length - 1}
+            min={1}
+            max={100}
             step={1}
-            value={BLUR_DETENTS.indexOf(backgroundBlur) === -1
-              ? BLUR_DETENTS.reduce((closest, d, i) => Math.abs(d - backgroundBlur) < Math.abs(BLUR_DETENTS[closest] - backgroundBlur) ? i : closest, 0)
-              : BLUR_DETENTS.indexOf(backgroundBlur)}
-            onChange={e => setBackgroundBlur(BLUR_DETENTS[Number(e.target.value)])}
+            value={backgroundBlur}
+            onChange={e => setBackgroundBlur(Number(e.target.value))}
             className="w-full block"
             style={{ accentColor: '#5c574d' }}
           />
@@ -263,19 +234,41 @@ function FontSelect({ value, onChange }: { value: string; onChange: (value: stri
   )
 }
 
+// Hex input leads (typing a hex code is the default way to set a color);
+// the native swatch is a compact secondary picker next to it.
 function ColorSwatch({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [text, setText] = useState(value)
+
+  useEffect(() => { setText(value) }, [value])
+
+  function handleTextChange(raw: string) {
+    setText(raw)
+    const hex = raw.startsWith('#') ? raw : `#${raw}`
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) onChange(hex)
+  }
+
   return (
-    <input
-      type="color"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="h-[42px] w-14 rounded border border-scroll-300 cursor-pointer shrink-0"
-    />
+    <div className="flex gap-1.5 shrink-0">
+      <input
+        type="text"
+        value={text}
+        onChange={e => handleTextChange(e.target.value)}
+        onBlur={() => setText(value)}
+        placeholder="#000000"
+        className="input h-[42px] w-24 font-mono text-xs px-2"
+      />
+      <input
+        type="color"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-[42px] w-10 rounded border border-scroll-300 cursor-pointer shrink-0"
+      />
+    </div>
   )
 }
 
 function StyledTextRow({
-  label, value, placeholder, required, font, color, onValueChange, onFontChange, onColorChange,
+  label, value, placeholder, required, font, color, size, onValueChange, onFontChange, onColorChange, onSizeChange,
 }: {
   label: string
   value: string
@@ -283,9 +276,11 @@ function StyledTextRow({
   required?: boolean
   font: string
   color: string
+  size?: number
   onValueChange: (value: string) => void
   onFontChange: (value: string) => void
   onColorChange: (value: string) => void
+  onSizeChange?: (value: number) => void
 }) {
   return (
     <div>
@@ -302,6 +297,19 @@ function StyledTextRow({
         <div className="w-36">
           <FontSelect value={font} onChange={onFontChange} />
         </div>
+        {size !== undefined && onSizeChange && (
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              min={12}
+              max={96}
+              value={size}
+              onChange={e => onSizeChange(Number(e.target.value))}
+              className="input w-16 text-center"
+            />
+            <span className="text-xs text-ink-500">px</span>
+          </div>
+        )}
         <ColorSwatch value={color} onChange={onColorChange} />
       </div>
     </div>

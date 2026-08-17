@@ -87,11 +87,12 @@ export function CharacterPairDetail({ pair, canEdit }: { pair: CharacterPair & {
               title={pair.title}
               titleFont={pair.title_font}
               titleColor={pair.title_color}
+              titleSize={pair.title_size}
               char1={char1}
               char2={char2}
             />
           ) : (
-            <h1 className="text-4xl" style={{ fontFamily: pairFontFamily(pair.title_font), color: pair.title_color }}>{pair.title}</h1>
+            <h1 style={{ fontFamily: pairFontFamily(pair.title_font), color: pair.title_color, fontSize: pair.title_size }}>{pair.title}</h1>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

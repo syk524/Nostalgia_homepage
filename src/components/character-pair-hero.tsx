@@ -7,7 +7,10 @@ function CharacterCaption({ character, align }: { character: Character; align: '
   return (
     <div className={`max-w-[260px] ${align === 'right' ? 'text-right' : 'text-left'}`}>
       {character.catchphrase && (
-        <p className="text-sm drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</p>
+        <>
+          <p className="text-sm drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</p>
+          <div className="h-px bg-white/60 my-2" />
+        </>
       )}
       <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color }}>{character.name}</h3>
       {character.quote && (
@@ -25,18 +28,19 @@ function CharacterCaption({ character, align }: { character: Character; align: '
 // (60vw) image itself, which is why the image sits in its own inner wrapper
 // while the overlay is positioned against the outer, full-width one.
 export function CharacterPairHero({
-  imageUrl, title, titleFont, titleColor, char1, char2,
+  imageUrl, title, titleFont, titleColor, titleSize, char1, char2,
 }: {
   imageUrl: string
   title: string
   titleFont: string
   titleColor: string
+  titleSize: number
   char1?: Character
   char2?: Character
 }) {
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor }}>{title}</h1>
+      <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: titleSize }}>{title}</h1>
 
       <div className="relative w-full">
         <div className="w-[60vw] mx-auto">
