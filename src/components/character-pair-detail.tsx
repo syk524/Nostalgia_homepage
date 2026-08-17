@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteCharacterPairButton } from '@/app/(main)/profile/[id]/delete-button'
 import { CharacterPairHero } from '@/components/character-pair-hero'
+import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
 import { pairFontFamily } from '@/lib/fonts'
 import type { CharacterPair, Character } from '@/types/database'
 
@@ -44,6 +45,8 @@ export function CharacterPairDetail({ pair, canEdit }: { pair: CharacterPair & {
 
   return (
     <div className="relative">
+      <NavIconColorSetter color={pair.icon_color} />
+
       {/* Full-bleed custom background — renders inside <main>, which already
           paints on top of the shared layout's decorative grid (a sibling
           earlier in the DOM), so this substitutes it with no changes needed

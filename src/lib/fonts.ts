@@ -9,6 +9,9 @@ export const PAIR_FONTS = {
   display: { label: 'Display (Bebas Neue)', family: 'var(--font-bebas-neue), sans-serif' },
   script: { label: 'Cursive (Eng)', family: 'var(--font-bastliga-one), cursive' },
   mono: { label: 'Mono (Chivo Mono)', family: 'var(--font-chivo-mono), ui-monospace, monospace' },
+  zaslia: { label: 'Zaslia (Eng)', family: 'var(--font-zaslia), cursive' },
+  homuraMincho: { label: 'Homura Mincho (JP)', family: 'var(--font-homura-mincho), serif' },
+  kmu80Sungkok: { label: '국민대80주년 (KR)', family: 'var(--font-kmu80-sungkok), serif' },
 } as const
 
 export type PairFontKey = keyof typeof PAIR_FONTS

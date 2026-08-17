@@ -37,6 +37,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
   const [titleFont, setTitleFont] = useState(initialData?.pair.title_font ?? 'default')
   const [titleColor, setTitleColor] = useState(initialData?.pair.title_color ?? '#5c574d')
   const [titleSize, setTitleSize] = useState(initialData?.pair.title_size ?? 32)
+  const [iconColor, setIconColor] = useState(initialData?.pair.icon_color ?? '#5c574d')
 
   const [pairImageUrl, setPairImageUrl] = useState<string | null>(initialData?.pair.pair_image_url ?? null)
   const [pairImageFile, setPairImageFile] = useState<File | null>(null)
@@ -111,6 +112,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       titleFont,
       titleColor,
       titleSize,
+      iconColor,
       characters: [
         {
           name: char1.name, nameColor: char1.nameColor, nameFont: char1.nameFont,
@@ -150,6 +152,11 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         onColorChange={setTitleColor}
         onSizeChange={setTitleSize}
       />
+
+      <div>
+        <label className="label">Icon color picker</label>
+        <ColorSwatch value={iconColor} onChange={setIconColor} />
+      </div>
 
       <div>
         <label className="label">Pair image (optional)</label>

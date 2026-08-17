@@ -45,6 +45,24 @@ const chosunNm = localFont({
   display: 'swap',
 })
 
+const zaslia = localFont({
+  src: './fonts/Zaslia.otf',
+  variable: '--font-zaslia',
+  display: 'swap',
+})
+
+const homuraMincho = localFont({
+  src: './fonts/HomuraMincho.otf',
+  variable: '--font-homura-mincho',
+  display: 'swap',
+})
+
+const kmu80Sungkok = localFont({
+  src: './fonts/KMU80Sungkok.ttf',
+  variable: '--font-kmu80-sungkok',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nostalgia',
   description: 'A place to keep and share what matters',
@@ -54,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${bastligaOne.variable} ${chosunNm.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${bastligaOne.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}

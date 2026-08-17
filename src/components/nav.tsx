@@ -12,8 +12,14 @@ const LINKS = [
   { href: '/gallery', label: 'Gallery' },
 ]
 
+// Same style on every render, server or client — the actual color comes
+// from the --nav-icon-color CSS variable (see globals.css), which a page
+// deep in the tree can override imperatively via nav-icon-color-setter.tsx.
+const NAV_COLOR_STYLE = { color: 'var(--nav-icon-color)' }
+
 function NavDot() {
-  return <span className="nav-dot text-ink" />
+  // Color comes from the ancestor's `color` (bg-current) — see Nav below.
+  return <span className="nav-dot" />
 }
 
 // One Nav, mounted once for the whole app — it never remounts or changes
@@ -30,7 +36,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
 
   return (
     <>
-      <nav className="font-mono fixed right-[2.6%] top-[3%] z-[60] flex items-center gap-10 text-[14px] uppercase tracking-tight text-ink">
+      <nav className="font-mono fixed right-[2.6%] top-[3%] z-[60] flex items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
         {LINKS.map(link => (
           <Link
             key={link.href}
@@ -72,7 +78,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
         </div>
       )}
 
-      <div className="font-mono fixed bottom-[3%] left-[2.6%] z-[60] text-[14px] uppercase tracking-tight text-ink">
+      <div className="font-mono fixed bottom-[3%] left-[2.6%] z-[60] text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
         {profile ? (
           <ProfileMenu profile={profile} />
         ) : (

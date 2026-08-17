@@ -12,6 +12,20 @@
     --ember:    #b23b2c;
     --sage:     #5c7364;
 
+    /* Per-page override target for the Nav's icon/text color — set/cleared
+       imperatively on document.documentElement by nav-icon-color-setter.tsx,
+       not through React state/props. That component lives in an unrelated
+       part of the tree from Nav (which is mounted once, at the layout level,
+       and never remounts), so a React-managed style prop for this value
+       would create a hydration mismatch on every page that sets an override
+       (the server can never know it) — normally survivable via
+       suppressHydrationWarning, but that suppression doesn't reliably
+       self-heal for a value that keeps changing after the mismatch, and left
+       Nav intermittently stuck showing the default color. A CSS variable the
+       browser resolves at paint time sidesteps React's reconciliation for
+       this value entirely. */
+    --nav-icon-color: var(--ink);
+
     --font-geist-pixel-square: "GeistPixelSquare", "Geist Mono", ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Monaco, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
   }
 

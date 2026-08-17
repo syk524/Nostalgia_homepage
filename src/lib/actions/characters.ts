@@ -3,10 +3,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 type CharacterInput = { name: string; nameColor: string; nameFont: string; catchphrase: string; catchphraseColor: string; catchphraseFont: string; quote: string; quoteColor: string; quoteFont: string; description: string }
-type CharacterPairInput = { title: string; pairImageUrl: string | null; backgroundUrl: string | null; backgroundBlur: number; titleFont: string; titleColor: string; titleSize: number; characters: [CharacterInput, CharacterInput] }
+type CharacterPairInput = { title: string; pairImageUrl: string | null; backgroundUrl: string | null; backgroundBlur: number; titleFont: string; titleColor: string; titleSize: number; iconColor: string; characters: [CharacterInput, CharacterInput] }
 
 export async function createCharacterPair(input: CharacterPairInput) {
-  const { title, pairImageUrl, backgroundUrl, backgroundBlur, titleFont, titleColor, titleSize, characters } = input
+  const { title, pairImageUrl, backgroundUrl, backgroundBlur, titleFont, titleColor, titleSize, iconColor, characters } = input
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
@@ -16,7 +16,7 @@ export async function createCharacterPair(input: CharacterPairInput) {
 
   const { data: pair, error } = await supabase
     .from('character_pairs')
-    .insert({ title: title.trim(), pair_image_url: pairImageUrl, background_url: backgroundUrl, background_blur: backgroundBlur, title_font: titleFont, title_color: titleColor, title_size: titleSize, created_by: user.id })
+    .insert({ title: title.trim(), pair_image_url: pairImageUrl, background_url: backgroundUrl, background_blur: backgroundBlur, title_font: titleFont, title_color: titleColor, title_size: titleSize, icon_color: iconColor, created_by: user.id })
     .select('id')
     .single()
 
@@ -35,7 +35,7 @@ export async function createCharacterPair(input: CharacterPairInput) {
 }
 
 export async function updateCharacterPair(pairId: string, input: CharacterPairInput) {
-  const { title, pairImageUrl, backgroundUrl, backgroundBlur, titleFont, titleColor, titleSize, characters } = input
+  const { title, pairImageUrl, backgroundUrl, backgroundBlur, titleFont, titleColor, titleSize, iconColor, characters } = input
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
@@ -45,7 +45,7 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
 
   const { data: updated, error } = await supabase
     .from('character_pairs')
-    .update({ title: title.trim(), pair_image_url: pairImageUrl, background_url: backgroundUrl, background_blur: backgroundBlur, title_font: titleFont, title_color: titleColor, title_size: titleSize })
+    .update({ title: title.trim(), pair_image_url: pairImageUrl, background_url: backgroundUrl, background_blur: backgroundBlur, title_font: titleFont, title_color: titleColor, title_size: titleSize, icon_color: iconColor })
     .eq('id', pairId)
     .select('id')
 

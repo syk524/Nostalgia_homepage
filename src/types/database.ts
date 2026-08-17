@@ -70,6 +70,7 @@ export type CharacterPair = {
   title_font: string
   title_color: string
   title_size: number
+  icon_color: string
   created_by: string
   created_at: string
   updated_at: string
@@ -126,7 +127,7 @@ export type Database = {
       character_pairs: {
         Row: Omit<CharacterPair, 'characters'>
         Insert: Omit<CharacterPair, 'id' | 'created_at' | 'updated_at' | 'characters'>
-        Update: Partial<Pick<CharacterPair, 'title' | 'pair_image_url' | 'background_url' | 'background_blur' | 'title_font' | 'title_color' | 'title_size'>>
+        Update: Partial<Pick<CharacterPair, 'title' | 'pair_image_url' | 'background_url' | 'background_blur' | 'title_font' | 'title_color' | 'title_size' | 'icon_color'>>
         Relationships: []
       }
       characters: {
