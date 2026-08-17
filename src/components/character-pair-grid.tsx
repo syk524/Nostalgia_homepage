@@ -5,7 +5,7 @@ import type { CharacterPair, Character } from '@/types/database'
 type PairWithCharacters = CharacterPair & { characters: Character[] }
 
 // 2-up at rest, dropping to 1 column on narrow screens.
-const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-10'
+const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-5'
 
 const BACKGROUND_HEIGHT = 140
 

@@ -13,7 +13,7 @@ import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 type GalleryPost = Post & { author: Profile; images: PostImage[]; category: Category }
 
-const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'
+const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'
 
 function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.ReactNode }) {
   const thumb = [...(post.images ?? [])].sort((a, b) => a.position - b.position)[0]
