@@ -21,7 +21,7 @@ function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.
     // Not a <Link> at the root — the drag handle is a sibling <button>,
     // and a <button> can't legally nest inside an <a> (invalid HTML,
     // same class of bug as the earlier nested-<form> issue).
-    <div className="group relative rounded overflow-hidden shadow-parchment">
+    <div className="group relative rounded overflow-hidden">
       <Link href={`/gallery/${post.id}`} className="block">
         {thumb
           ? <img
