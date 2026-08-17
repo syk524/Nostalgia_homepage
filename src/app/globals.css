@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --bg:       #f2f1ee;
+    --bg:       #f1f1f1;
     --surface:  #faf9f7;
     --border:   #dbd8d1;
-    --ink:      #222222;
+    --ink:      #5c574d;
     --ink-muted:#8a8782;
     --ember:    #b23b2c;
     --sage:     #5c7364;
@@ -97,6 +97,31 @@
     @apply h-2.5 w-2.5 shrink-0 rounded-sm bg-current;
   }
 
+  /* Interactive filter/select chip — like .badge but with hover/active
+     states for use as a button or Link (category filters, pickers). */
+  .pill {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded
+           text-xs font-mono uppercase tracking-wide
+           border border-scroll-300 text-ink-500 bg-[#D7D3CB]
+           hover:border-ink-300 hover:text-ink transition-colors duration-150;
+  }
+  .pill-active {
+    @apply bg-ink text-white border-ink hover:border-ink hover:text-white;
+  }
+  .pill-dashed {
+    @apply border-dashed text-scroll-500 hover:text-ink-500 hover:border-scroll-400;
+  }
+
+  /* Informational category tag on a post's metadata section — squared like
+     .pill, but a lighter fill and no hover/interactive states since it's
+     just display, not a filter control. */
+  .tag {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded
+           text-xs font-mono uppercase tracking-wide;
+    background-color: #cfcac1;
+    color: #5c574d;
+  }
+
   /* Dark "LCD" info readout used by the sound player's now-playing panel */
   .lcd-screen {
     @apply bg-ink-900 text-sage-200 font-mono text-xs rounded px-3 py-2 tracking-wide;
@@ -146,6 +171,15 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-up { animation: fade-up 0.3s ease both; }
+
+/* Larger-distance slide for a section that should feel like it's rising
+   into place (e.g. the New Post form), rather than the subtle page-level
+   fade-up above. */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* Slow disc spin for the sound player, while a track is playing */
 @keyframes spin-slow {

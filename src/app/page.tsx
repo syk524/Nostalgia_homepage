@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Nav } from '@/components/nav'
 
@@ -17,7 +18,9 @@ export default async function HomePage() {
         className="pointer-events-none absolute top-0 right-0 w-full h-full opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"
       />
 
-      <Nav profile={profile} />
+      <Suspense fallback={null}>
+        <Nav profile={profile} categories={[]} />
+      </Suspense>
 
       {/* wordmark */}
       <div className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] -translate-x-1/2 -translate-y-1/2">

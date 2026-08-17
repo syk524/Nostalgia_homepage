@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Nav } from '@/components/nav'
 
@@ -9,6 +10,11 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data
     : null
 
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order', { ascending: true })
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-scroll-100">
       <div
@@ -16,7 +22,9 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         className="pointer-events-none absolute top-0 right-0 w-full h-full opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"
       />
       <div className="relative">
-        <Nav profile={profile} />
+        <Suspense fallback={null}>
+          <Nav profile={profile} categories={categories ?? []} />
+        </Suspense>
         <main className="max-w-5xl mx-auto px-6 pt-24 pb-16">{children}</main>
       </div>
     </div>

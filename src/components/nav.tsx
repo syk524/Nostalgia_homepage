@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ProfileMenu } from '@/components/profile-menu'
-import type { Profile } from '@/types/database'
+import { ScrambleText } from '@/components/scramble-text'
+import type { Profile, Category } from '@/types/database'
 
 const LINKS = [
   { href: '/', label: 'Home' },
@@ -15,12 +16,21 @@ function NavDot() {
   return <span className="nav-dot text-ink" />
 }
 
-export function Nav({ profile }: { profile: Profile | null }) {
+// One Nav, mounted once for the whole app — it never remounts or changes
+// look between the homepage and any gallery view (grid, post, edit). Its
+// z-index sits above the post modal's overlay so it stays visible,
+// unchanged, even when a post is open; the category links below are just
+// conditionally shown extra content on the same persistent component,
+// not a separate nav.
+export function Nav({ profile, categories }: { profile: Profile | null; categories: Category[] }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
+  const activeCategory = searchParams.get('category')
 
   return (
     <>
-      <nav className="font-mono fixed right-[2.6%] top-[3%] z-20 flex items-center gap-10 text-[16px] uppercase tracking-tight text-ink">
+      <nav className="font-mono fixed right-[2.6%] top-[3%] z-[60] flex items-center gap-10 text-[14px] uppercase tracking-tight text-ink">
         {LINKS.map(link => (
           <Link
             key={link.href}
@@ -28,12 +38,41 @@ export function Nav({ profile }: { profile: Profile | null }) {
             className={`flex items-center gap-2 ${pathname === link.href ? 'underline underline-offset-4' : ''}`}
           >
             <NavDot />
-            {link.label}
+            <ScrambleText text={link.label} />
           </Link>
         ))}
       </nav>
 
-      <div className="font-mono fixed bottom-[3%] left-[2.6%] z-20 text-[16px] uppercase tracking-tight text-ink">
+      {onGallery && (
+        <div className="hidden sm:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">
+          {/* Selected = full-strength text + a trailing filled circle;
+              unselected = muted text, no marker at all — no square dot,
+              no underline. Text scrambles into place on hover (see
+              scramble-text.tsx — an original small reimplementation of the
+              "decode" effect, not the use-scramble package itself).
+              Plain <a> tags — a soft navigation from a link that lives
+              inside the post modal's parallel route slot to an unrelated
+              route can update the URL without re-rendering (a Next.js edge
+              case); a full navigation always renders correctly. Harmless
+              here too since this isn't a frequent-transition control. */}
+          <a href="/gallery" className={`flex items-center gap-2 ${!activeCategory ? 'text-ink font-medium' : 'text-ink-400'}`}>
+            <ScrambleText text="All" />
+            {!activeCategory && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
+          </a>
+          {categories.map(cat => (
+            <a
+              key={cat.id}
+              href={`/gallery?category=${encodeURIComponent(cat.name)}`}
+              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'text-ink font-medium' : 'text-ink-400'}`}
+            >
+              <ScrambleText text={cat.name} />
+              {activeCategory === cat.name && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div className="font-mono fixed bottom-[3%] left-[2.6%] z-[60] text-[14px] uppercase tracking-tight text-ink">
         {profile ? (
           <ProfileMenu profile={profile} />
         ) : (

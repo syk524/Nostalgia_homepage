@@ -4,10 +4,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Neutral ink scale — near-black text on the Figma landing page (#333)
-        ink:    { DEFAULT: '#222222', 50: '#f7f7f6', 100: '#ececea', 200: '#d6d4d0', 300: '#b3b0aa', 400: '#8a8782', 500: '#6b6864', 600: '#524f4c', 700: '#3a3836', 800: '#282625', 900: '#1a1918' },
-        // Neutral surface scale — matches the Figma background (#f2f1ee)
-        scroll: { DEFAULT: '#e9e7e2', 50: '#faf9f7', 100: '#f2f1ee', 200: '#e9e7e2', 300: '#dbd8d1', 400: '#c2beb5', 500: '#a39e93', 600: '#847e72', 700: '#665f54', 800: '#494339', 900: '#2c2822' },
+        // Neutral ink scale — DEFAULT is a warm gray (not near-black) to
+        // match the softer "weight of paper" reference tone; numbered
+        // shades are untouched.
+        ink:    { DEFAULT: '#5c574d', 50: '#f7f7f6', 100: '#ececea', 200: '#d6d4d0', 300: '#b3b0aa', 400: '#8a8782', 500: '#6b6864', 600: '#524f4c', 700: '#3a3836', 800: '#282625', 900: '#1a1918' },
+        // Neutral surface scale — 100 is the site's painted page background (#f1f1f1)
+        scroll: { DEFAULT: '#e9e7e2', 50: '#faf9f7', 100: '#f1f1f1', 200: '#e9e7e2', 300: '#dbd8d1', 400: '#c2beb5', 500: '#a39e93', 600: '#847e72', 700: '#665f54', 800: '#494339', 900: '#2c2822' },
         // Error/danger accent
         ember:  { DEFAULT: '#b23b2c', 50: '#fbf0ee', 100: '#f4d6d0', 200: '#e8ac9f', 300: '#d8816c', 400: '#c65f45', 500: '#b23b2c', 600: '#8f2f23', 700: '#6c241b', 800: '#4a1813', 900: '#280d0a' },
         // Success accent

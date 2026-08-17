@@ -1,125 +1,44 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { uploadImage } from '@/lib/upload'
-import type { Profile } from '@/types/database'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { CharacterPairGrid } from '@/components/character-pair-grid'
+import type { Profile, CharacterPair, Character } from '@/types/database'
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [form, setForm]       = useState({ display_name: '', bio: '', username: '' })
-  const [iconUrl, setIconUrl]  = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [saving, setSaving]    = useState(false)
-  const [msg, setMsg]          = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+export default async function CharacterArchivePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => {
-          if (data) {
-            setProfile(data)
-            setForm({ display_name: data.display_name ?? '', bio: data.bio ?? '', username: data.username })
-            setIconUrl(data.user_icon_url ?? '')
-          }
-        })
-    })
-  }, [])
+  const profile = user
+    ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data as Profile | null
+    : null
+  const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
-  async function handleIconUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
-    setUploading(true)
-    const { url, error } = await uploadImage(file, profile.id, 'user-icons')
-    if (error) { setMsg({ type: 'err', text: error }); setUploading(false); return }
-    if (url) setIconUrl(url)
-    setUploading(false)
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!profile) return
-    setSaving(true)
-    setMsg(null)
-    const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({
-      display_name: form.display_name || null,
-      bio: form.bio || null,
-      user_icon_url: iconUrl || null,
-    }).eq('id', profile.id)
-
-    setMsg(error
-      ? { type: 'err', text: error.message }
-      : { type: 'ok', text: 'Profile saved.' })
-    setSaving(false)
-  }
-
-  if (!profile) return <div className="animate-fade-up"><p className="text-ink-500">Loading…</p></div>
+  const { data: pairs } = await supabase
+    .from('character_pairs')
+    .select('*, characters(*)')
+    .order('created_at', { ascending: false })
 
   return (
-    <div className="animate-fade-up max-w-lg space-y-6">
-      <div>
-        <h2 className="text-3xl text-ink">Profile</h2>
-        <p className="text-ink-500 mt-1">
-          Nickname, avatar, and bio. Role: <span className="badge">{profile.role}</span>
-        </p>
-      </div>
+    // Breaks out of the shared <main>'s centered max-w-5xl — without this,
+    // the grid was capped at 1024px and stopped growing on wider screens,
+    // which read as "not responsive." sm:pl clears the same side-nav gutter
+    // gallery/page.tsx reserves (see that file for why vw, not %), so cards
+    // never sit under Nav's floating category rail. animate-fade-up has to
+    // stay off this outer div and live on the inner one instead — its
+    // keyframe sets `transform: translateY(...)`, which as a plain CSS
+    // animation would replace the whole `transform` property and cancel out
+    // this div's own -translate-x-1/2 (see character-pair-detail.tsx for
+    // the same fix).
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 sm:pl-[calc(2.6vw+159px)]">
+      <div className="max-w-[1400px] animate-fade-up space-y-6">
+        <div className="flex items-start justify-end gap-4">
+          {canEdit && <Link href="/profile/new" className="btn-primary shrink-0">New Pair</Link>}
+        </div>
 
-      <div className="card p-6">
-        <form onSubmit={handleSave} className="space-y-5">
-          <div>
-            <label className="label">Avatar</label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
-                {iconUrl
-                  ? <img src={iconUrl} alt="avatar preview" className="w-full h-full object-cover" />
-                  : <span className="text-2xl text-scroll-400">◯</span>
-                }
-              </div>
-              <label className="btn-ghost text-xs cursor-pointer">
-                {uploading ? 'Uploading…' : 'Choose image'}
-                <input type="file" accept="image/*" onChange={handleIconUpload}
-                  className="sr-only" disabled={uploading} />
-              </label>
-            </div>
-          </div>
+        {!pairs?.length && (
+          <p className="text-ink-500">No pairs registered yet{canEdit ? ' — register the first one.' : '.'}</p>
+        )}
 
-          <div>
-            <label className="label" htmlFor="username">Username</label>
-            <input id="username" className="input bg-scroll-100 cursor-not-allowed"
-              value={form.username} readOnly title="Username cannot be changed" />
-            <p className="text-xs text-ink-500 mt-1">Username can&apos;t be changed after signup.</p>
-          </div>
-
-          <div>
-            <label className="label" htmlFor="display_name">Nickname</label>
-            <input id="display_name" className="input" value={form.display_name}
-              onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-              placeholder="What others will see you as" />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="bio">Bio</label>
-            <textarea id="bio" rows={3} className="textarea" value={form.bio}
-              onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-              placeholder="A short introduction" />
-          </div>
-
-          {msg && (
-            <p className={`text-sm px-4 py-2.5 rounded border ${
-              msg.type === 'ok'
-                ? 'text-sage-700 bg-sage-50 border-sage-200'
-                : 'text-ember bg-ember/10 border-ember/20'
-            }`}>
-              {msg.text}
-            </p>
-          )}
-
-          <button type="submit" disabled={saving || uploading} className="btn-primary">
-            {saving ? 'Saving…' : 'Save Profile'}
-          </button>
-        </form>
+        <CharacterPairGrid pairs={(pairs ?? []) as unknown as (CharacterPair & { characters: Character[] })[]} />
       </div>
     </div>
   )

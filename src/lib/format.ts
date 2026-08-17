@@ -21,11 +21,11 @@ export function formatRelativeTime(iso: string): string {
     }
     value /= amount
   }
-  return new Date(iso).toLocaleDateString()
+  return new Date(iso).toLocaleDateString('en-US')
 }
 
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   })
 }

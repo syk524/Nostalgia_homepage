@@ -21,5 +21,10 @@ export default async function NewPostPage() {
     )
   }
 
-  return <NewPostForm />
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order', { ascending: true })
+
+  return <NewPostForm categories={categories ?? []} />
 }

@@ -22,5 +22,10 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
     )
   }
 
-  return <EditPostForm postId={id} />
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order', { ascending: true })
+
+  return <EditPostForm postId={id} categories={categories ?? []} />
 }
