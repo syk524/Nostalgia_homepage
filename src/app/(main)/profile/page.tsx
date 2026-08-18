@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { CharacterPairGrid } from '@/components/character-pair-grid'
-import type { Profile, CharacterPair, Character } from '@/types/database'
+import type { Profile, CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
 export default async function CharacterArchivePage() {
   const supabase = await createClient()
@@ -12,10 +12,13 @@ export default async function CharacterArchivePage() {
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
-  const { data: pairs } = await supabase
+  const { data: rawPairs } = await supabase
     .from('character_pairs')
-    .select('*, characters(*)')
+    .select('*, pair_profiles!inner(title, title_font, pair_image_url, background_url, profile_characters(name, name_color, name_font, slot))')
+    .eq('pair_profiles.is_primary', true)
     .order('created_at', { ascending: false })
+  type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'background_url'> & { profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[] }
+  const pairs = rawPairs as unknown as (CharacterPair & { pair_profiles: PrimaryProfileSummary[] })[] | null
 
   return (
     // Breaks out of the shared <main>'s centered max-w-5xl — without this,
@@ -38,7 +41,7 @@ export default async function CharacterArchivePage() {
           <p className="text-ink-500">No pairs registered yet{canEdit ? ' — register the first one.' : '.'}</p>
         )}
 
-        <CharacterPairGrid pairs={(pairs ?? []) as unknown as (CharacterPair & { characters: Character[] })[]} />
+        <CharacterPairGrid pairs={pairs ?? []} />
       </div>
     </div>
   )

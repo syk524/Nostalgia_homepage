@@ -1,229 +1,324 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { GripVertical, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadImage } from '@/lib/upload'
+import { uploadImage, uploadHtmlPage } from '@/lib/upload'
 import { createCharacterPair, updateCharacterPair } from '@/lib/actions/characters'
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
-import type { CharacterPair, Character } from '@/types/database'
+import type { CharacterPairWithProfiles, PairProfileWithContent } from '@/lib/character-pair-queries'
+import type { ProfileCharacter } from '@/types/database'
 
-type CharState = {
-  name: string; nameColor: string; nameFont: string
-  catchphrase: string; catchphraseColor: string; catchphraseFont: string
-  quote: string; quoteColor: string; quoteFont: string
-  description: string
+// `id` here is a client-only key (existing sections keep their real db id;
+// new ones get a fresh crypto.randomUUID()) — it never gets sent to the
+// server. Sections are saved wholesale (delete + reinsert) on every save,
+// so the server never needs to match this id back up to a row; it's only
+// here so React has a stable key across add/remove/reorder.
+type SectionState = { id: string; title: string; titleColor: string; titleFont: string; description: string; textColor: string }
+
+function emptySection(): SectionState {
+  return { id: crypto.randomUUID(), title: '', titleColor: '#5c574d', titleFont: 'default', description: '', textColor: '#5c574d' }
 }
 
-function emptyChar(existing?: Character): CharState {
+// Same client-only `id` convention as SectionState — a stable React key
+// across add/remove/reorder, never sent to the server (timeline entries
+// are saved wholesale, delete + reinsert, same as sections).
+type TimelineEntryState = { id: string; subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string }
+
+function emptyTimelineEntry(): TimelineEntryState {
+  return { id: crypto.randomUUID(), subtitle: '', subtitleColor: '#5c574d', title: '', titleColor: '#5c574d', description: '', char1Thought: '', char2Thought: '' }
+}
+
+// A character's full presentation within one profile — nothing about a
+// character (not even their name or avatar) is shared across a pair's
+// profiles, so identity and caption content both live here together.
+type ProfileCharState = {
+  name: string; nameColor: string; nameFont: string
+  profileImageUrl: string | null; profileImageFile: File | null; profileImagePreview: string; uploadingProfileImage: boolean
+  catchphrase: string; catchphraseColor: string; catchphraseFont: string
+  quote: string; quoteColor: string; quoteFont: string
+  keyword1: string; keyword2: string; keyword3: string; keywordFont: string; keywordColor: string
+  descriptionColor: string
+  captionShadowColor: string; captionShadowStrength: number
+  captionOffsetY: number
+  sections: SectionState[]
+}
+
+function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
   return {
     name: existing?.name ?? '',
     nameColor: existing?.name_color ?? '#5c574d',
     nameFont: existing?.name_font ?? 'default',
+    profileImageUrl: existing?.profile_image_url ?? null,
+    profileImageFile: null,
+    profileImagePreview: existing?.profile_image_url ?? '',
+    uploadingProfileImage: false,
     catchphrase: existing?.catchphrase ?? '',
     catchphraseColor: existing?.catchphrase_color ?? '#5c574d',
     catchphraseFont: existing?.catchphrase_font ?? 'default',
     quote: existing?.quote ?? '',
     quoteColor: existing?.quote_color ?? '#5c574d',
     quoteFont: existing?.quote_font ?? 'default',
-    description: existing?.description ?? '',
+    keyword1: existing?.keyword_1 ?? '',
+    keyword2: existing?.keyword_2 ?? '',
+    keyword3: existing?.keyword_3 ?? '',
+    keywordFont: existing?.keyword_font ?? 'default',
+    keywordColor: existing?.keyword_color ?? '#5c574d',
+    descriptionColor: existing?.description_color ?? '#5c574d',
+    captionShadowColor: existing?.caption_shadow_color ?? '#000000',
+    captionShadowStrength: existing?.caption_shadow_strength ?? 2,
+    captionOffsetY: existing?.caption_offset_y ?? 0,
+    sections: existing
+      ? existing.description_sections?.map(s => ({
+          id: s.id, title: s.title ?? '', titleColor: s.title_color, titleFont: s.title_font, description: s.description, textColor: s.text_color,
+        })) ?? []
+      : [emptySection()],
   }
 }
 
-export function CharacterPairForm({ initialData }: { initialData?: { pair: CharacterPair; characters: [Character, Character] } }) {
+// One variant of the pair — a fully self-contained tab in the editor, a
+// fully self-contained URL on the public side. Nothing here is shared
+// with any other profile of the same pair.
+type ProfileState = {
+  id: string
+  title: string; profileTitle: string; titleFont: string; titleColor: string; titleSize: number; iconColor: string
+  linkText: string; linkUrl: string; linkFont: string; linkColor: string; hasMusic: boolean
+  isPrimary: boolean
+  pageType: 'template' | 'custom_html'
+  customHtmlUrl: string | null; customHtmlFile: File | null; customHtmlFileName: string; uploadingCustomHtml: boolean
+  pairImageUrl: string | null; pairImageFile: File | null; pairImagePreview: string; uploadingPairImage: boolean
+  backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
+  backgroundBlur: number
+  timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
+  timelineEntries: TimelineEntryState[]
+  characters: [ProfileCharState, ProfileCharState]
+}
+
+function emptyProfile(existing?: PairProfileWithContent): ProfileState {
+  const sorted = existing ? [...existing.profile_characters].sort((a, b) => a.slot - b.slot) : undefined
+
+  return {
+    id: existing?.id ?? crypto.randomUUID(),
+    title: existing?.title ?? '',
+    profileTitle: existing?.profile_title ?? '',
+    titleFont: existing?.title_font ?? 'default',
+    titleColor: existing?.title_color ?? '#5c574d',
+    titleSize: existing?.title_size ?? 32,
+    iconColor: existing?.icon_color ?? '#5c574d',
+    linkText: existing?.link_text ?? '',
+    linkUrl: existing?.link_url ?? '',
+    linkFont: existing?.link_font ?? 'default',
+    linkColor: existing?.link_color ?? '#5c574d',
+    hasMusic: existing?.has_music ?? false,
+    isPrimary: existing?.is_primary ?? false,
+    pageType: existing?.page_type ?? 'template',
+    customHtmlUrl: existing?.custom_html_url ?? null,
+    customHtmlFile: null,
+    customHtmlFileName: existing?.custom_html_url?.split('/').pop() ?? '',
+    uploadingCustomHtml: false,
+    pairImageUrl: existing?.pair_image_url ?? null,
+    pairImageFile: null,
+    pairImagePreview: existing?.pair_image_url ?? '',
+    uploadingPairImage: false,
+    backgroundUrl: existing?.background_url ?? null,
+    backgroundFile: null,
+    backgroundPreview: existing?.background_url ?? '',
+    uploadingBackground: false,
+    backgroundBlur: existing?.background_blur ?? 1,
+    timelineSubtitleFont: existing?.timeline_subtitle_font ?? 'default',
+    timelineTitleFont: existing?.timeline_title_font ?? 'default',
+    timelineTextColor: existing?.timeline_text_color ?? '#5c574d',
+    timelineDotColor: existing?.timeline_dot_color ?? '#5c574d',
+    timelineLineColor: existing?.timeline_line_color ?? '#5c574d',
+    timelineShadow: existing?.timeline_shadow ?? false,
+    timelineEntries: existing
+      ? existing.timeline_entries?.map(e => ({
+          id: e.id, subtitle: e.subtitle ?? '', subtitleColor: e.subtitle_color, title: e.title ?? '', titleColor: e.title_color,
+          description: e.description ?? '', char1Thought: e.char1_thought ?? '', char2Thought: e.char2_thought ?? '',
+        })) ?? []
+      : [emptyTimelineEntry()],
+    characters: [emptyProfileChar(sorted?.[0]), emptyProfileChar(sorted?.[1])],
+  }
+}
+
+export function CharacterPairForm({ initialData }: { initialData?: { pair: CharacterPairWithProfiles } }) {
   const router = useRouter()
   const isEdit = !!initialData
 
-  const [title, setTitle] = useState(initialData?.pair.title ?? '')
-  const [titleFont, setTitleFont] = useState(initialData?.pair.title_font ?? 'default')
-  const [titleColor, setTitleColor] = useState(initialData?.pair.title_color ?? '#5c574d')
-  const [titleSize, setTitleSize] = useState(initialData?.pair.title_size ?? 32)
-  const [iconColor, setIconColor] = useState(initialData?.pair.icon_color ?? '#5c574d')
-
-  const [pairImageUrl, setPairImageUrl] = useState<string | null>(initialData?.pair.pair_image_url ?? null)
-  const [pairImageFile, setPairImageFile] = useState<File | null>(null)
-  const [pairImagePreview, setPairImagePreview] = useState(initialData?.pair.pair_image_url ?? '')
-  const [uploadingPairImage, setUploadingPairImage] = useState(false)
-
-  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(initialData?.pair.background_url ?? null)
-  const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
-  const [backgroundPreview, setBackgroundPreview] = useState(initialData?.pair.background_url ?? '')
-  const [uploadingBg, setUploadingBg] = useState(false)
-  const [backgroundBlur, setBackgroundBlur] = useState(initialData?.pair.background_blur ?? 1)
-
-  const [char1, setChar1] = useState<CharState>(() => emptyChar(initialData?.characters[0]))
-  const [char2, setChar2] = useState<CharState>(() => emptyChar(initialData?.characters[1]))
+  const [profiles, setProfiles] = useState<ProfileState[]>(() =>
+    initialData?.pair.pair_profiles.length
+      ? [...initialData.pair.pair_profiles].sort((a, b) => a.position - b.position).map(p => emptyProfile(p))
+      // A new pair starts with one empty, starred profile rather than
+      // none — every pair created through this form needs at least one.
+      : [{ ...emptyProfile(undefined), isPrimary: true }]
+  )
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  function handlePairImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPairImageFile(file)
-    setPairImagePreview(URL.createObjectURL(file))
+  function updateProfile(index: number, patch: Partial<ProfileState>) {
+    setProfiles(prev => prev.map((p, i) => i === index ? { ...p, ...patch } : p))
   }
-
-  function handleBackgroundChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setBackgroundFile(file)
-    setBackgroundPreview(URL.createObjectURL(file))
+  function updateProfileChar(index: number, slot: 0 | 1, patch: Partial<ProfileCharState>) {
+    setProfiles(prev => prev.map((p, i) => {
+      if (i !== index) return p
+      const characters = [...p.characters] as [ProfileCharState, ProfileCharState]
+      characters[slot] = { ...characters[slot], ...patch }
+      return { ...p, characters }
+    }))
   }
-
-  function updateChar(setChar: React.Dispatch<React.SetStateAction<CharState>>, patch: Partial<CharState>) {
-    setChar(prev => ({ ...prev, ...patch }))
+  // Custom HTML is only allowed for non-primary profiles, so promoting a
+  // tab to primary also forces it back to the standard template — avoids
+  // a dead end where starring it silently fails server-side validation
+  // with no clear reason why.
+  function setPrimary(index: number) {
+    setProfiles(prev => prev.map((p, i) => i === index ? { ...p, isPrimary: true, pageType: 'template' } : { ...p, isPrimary: false }))
+  }
+  function addProfile() {
+    setProfiles(prev => [...prev, emptyProfile(undefined)])
+    setActiveIndex(profiles.length)
+  }
+  function removeProfile(index: number) {
+    const next = profiles.filter((_, i) => i !== index)
+    setProfiles(next)
+    setActiveIndex(prev => Math.min(prev, next.length - 1))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
-    if (!title.trim()) { setError('Title is required.'); return }
-    if (!char1.name.trim() || !char2.name.trim()) { setError('Both characters need a name.'); return }
+    if (!profiles.length) { setError('At least one profile is required.'); return }
+    if (profiles.some(p => p.pageType === 'template' && !p.title.trim())) { setError('Every template profile needs a title.'); return }
+    if (profiles.some(p => !p.profileTitle.trim())) { setError('Every profile needs a profile title.'); return }
+    if (profiles.some(p => p.pageType === 'template' && (!p.characters[0].name.trim() || !p.characters[1].name.trim()))) { setError('Both characters need a name in every template profile.'); return }
+    if (profiles.filter(p => p.isPrimary).length !== 1) { setError('Exactly one profile must be starred as primary.'); return }
 
     setSubmitting(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
 
-    let finalPairImageUrl = pairImageUrl
-    if (pairImageFile) {
-      setUploadingPairImage(true)
-      const { url, error: pairImgErr } = await uploadImage(pairImageFile, user.id, 'gallery-images')
-      setUploadingPairImage(false)
-      if (pairImgErr) { setError(pairImgErr); setSubmitting(false); return }
-      finalPairImageUrl = url
+    const resolvedProfiles: Parameters<typeof createCharacterPair>[0]['profiles'] = []
+    for (const p of profiles) {
+      let finalPairImageUrl = p.pairImageUrl
+      if (p.pairImageFile) {
+        const { url, error: err } = await uploadImage(p.pairImageFile, user.id, 'gallery-images')
+        if (err) { setError(err); setSubmitting(false); return }
+        finalPairImageUrl = url
+      }
+
+      let finalBackgroundUrl = p.backgroundUrl
+      if (p.backgroundFile) {
+        const { url, error: err } = await uploadImage(p.backgroundFile, user.id, 'gallery-images')
+        if (err) { setError(err); setSubmitting(false); return }
+        finalBackgroundUrl = url
+      }
+
+      let finalCustomHtmlUrl = p.customHtmlUrl
+      if (p.customHtmlFile) {
+        const { url, error: err } = await uploadHtmlPage(p.customHtmlFile, user.id, 'profile-pages')
+        if (err) { setError(err); setSubmitting(false); return }
+        finalCustomHtmlUrl = url
+      }
+      if (p.pageType === 'custom_html' && !finalCustomHtmlUrl) {
+        setError(`Upload an HTML file for "${p.title || 'a profile'}".`); setSubmitting(false); return
+      }
+
+      const resolvedCharacters: ReturnType<typeof toProfileCharInput>[] = []
+      for (const c of p.characters) {
+        let finalProfileImageUrl = c.profileImageUrl
+        if (c.profileImageFile) {
+          const { url, error: err } = await uploadImage(c.profileImageFile, user.id, 'gallery-images')
+          if (err) { setError(err); setSubmitting(false); return }
+          finalProfileImageUrl = url
+        }
+        resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl))
+      }
+
+      resolvedProfiles.push({
+        title: p.title, profileTitle: p.profileTitle, titleFont: p.titleFont, titleColor: p.titleColor, titleSize: p.titleSize, iconColor: p.iconColor,
+        linkText: p.linkText, linkUrl: p.linkUrl, linkFont: p.linkFont, linkColor: p.linkColor, hasMusic: p.hasMusic,
+        isPrimary: p.isPrimary, pageType: p.pageType, customHtmlUrl: p.pageType === 'custom_html' ? finalCustomHtmlUrl : null,
+        pairImageUrl: finalPairImageUrl, backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
+        timelineSubtitleFont: p.timelineSubtitleFont, timelineTitleFont: p.timelineTitleFont, timelineTextColor: p.timelineTextColor,
+        timelineDotColor: p.timelineDotColor, timelineLineColor: p.timelineLineColor, timelineShadow: p.timelineShadow,
+        timelineEntries: p.timelineEntries.map(e => ({
+          subtitle: e.subtitle, subtitleColor: e.subtitleColor, title: e.title, titleColor: e.titleColor,
+          description: e.description, char1Thought: e.char1Thought, char2Thought: e.char2Thought,
+        })),
+        characters: resolvedCharacters as [ReturnType<typeof toProfileCharInput>, ReturnType<typeof toProfileCharInput>],
+      })
     }
 
-    let finalBackgroundUrl = backgroundUrl
-    if (backgroundFile) {
-      setUploadingBg(true)
-      const { url, error: bgErr } = await uploadImage(backgroundFile, user.id, 'gallery-images')
-      setUploadingBg(false)
-      if (bgErr) { setError(bgErr); setSubmitting(false); return }
-      finalBackgroundUrl = url
-    }
-
-    const input: Parameters<typeof createCharacterPair>[0] = {
-      title,
-      pairImageUrl: finalPairImageUrl,
-      backgroundUrl: finalBackgroundUrl,
-      backgroundBlur,
-      titleFont,
-      titleColor,
-      titleSize,
-      iconColor,
-      characters: [
-        {
-          name: char1.name, nameColor: char1.nameColor, nameFont: char1.nameFont,
-          catchphrase: char1.catchphrase, catchphraseColor: char1.catchphraseColor, catchphraseFont: char1.catchphraseFont,
-          quote: char1.quote, quoteColor: char1.quoteColor, quoteFont: char1.quoteFont,
-          description: char1.description,
-        },
-        {
-          name: char2.name, nameColor: char2.nameColor, nameFont: char2.nameFont,
-          catchphrase: char2.catchphrase, catchphraseColor: char2.catchphraseColor, catchphraseFont: char2.catchphraseFont,
-          quote: char2.quote, quoteColor: char2.quoteColor, quoteFont: char2.quoteFont,
-          description: char2.description,
-        },
-      ],
-    }
+    const input: Parameters<typeof createCharacterPair>[0] = { profiles: resolvedProfiles }
 
     const result = isEdit
       ? await updateCharacterPair(initialData!.pair.id, input)
       : await createCharacterPair(input)
 
-    if (result?.error || !result?.pairId) { setError(result?.error ?? 'Could not save the pair.'); setSubmitting(false); return }
-    router.push(`/profile/${result.pairId}`)
+    if (result?.error || !result?.pairSlug) { setError(result?.error ?? 'Could not save the pair.'); setSubmitting(false); return }
+    router.push(`/profile/${result.pairSlug}`)
   }
 
+  const activeProfile = profiles[activeIndex]
+
   return (
-    <form onSubmit={handleSubmit} className="card p-6 space-y-6">
-      <StyledTextRow
-        label="Title"
-        value={title}
-        placeholder="Pair title"
-        required
-        font={titleFont}
-        color={titleColor}
-        size={titleSize}
-        onValueChange={setTitle}
-        onFontChange={setTitleFont}
-        onColorChange={setTitleColor}
-        onSizeChange={setTitleSize}
-      />
-
-      <div>
-        <label className="label">Icon color picker</label>
-        <ColorSwatch value={iconColor} onChange={setIconColor} />
-      </div>
-
-      <div>
-        <label className="label">Pair image (optional)</label>
-        <div className="flex items-center gap-4">
-          <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
-            {pairImagePreview
-              ? <img src={pairImagePreview} alt="" className="w-full h-full object-cover" />
-              : <span className="text-2xl text-scroll-400">◯</span>
-            }
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center gap-2 flex-wrap">
+        {profiles.map((p, i) => (
+          <div key={p.id} className={`pill !gap-1.5 ${i === activeIndex ? 'pill-active' : ''}`}>
+            <button type="button" onClick={() => setActiveIndex(i)}>
+              {p.profileTitle || `Profile ${i + 1}`}
+            </button>
+            <button type="button" onClick={() => setPrimary(i)} aria-label={p.isPrimary ? 'Primary profile' : 'Make primary'} className="shrink-0">
+              <Star size={12} className={p.isPrimary ? 'fill-current' : 'opacity-40'} />
+            </button>
+            {profiles.length > 1 && !p.isPrimary && (
+              <button type="button" onClick={() => removeProfile(i)} aria-label="Remove profile" className="shrink-0 opacity-60 hover:opacity-100">
+                <X size={12} />
+              </button>
+            )}
           </div>
-          <label className="btn-ghost text-xs cursor-pointer">
-            {uploadingPairImage ? 'Uploading…' : 'Choose image'}
-            <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={uploadingPairImage} />
-          </label>
-        </div>
+        ))}
+        <button type="button" onClick={addProfile} className="pill pill-dashed">+ Add profile</button>
       </div>
 
-      <div>
-        <label className="label">Background (optional)</label>
-        <div className="flex items-center gap-4">
-          <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
-            {backgroundPreview
-              ? <img src={backgroundPreview} alt="" className="w-full h-full object-cover" />
-              : <span className="text-2xl text-scroll-400">◯</span>
-            }
-          </div>
-          <label className="btn-ghost text-xs cursor-pointer">
-            {uploadingBg ? 'Uploading…' : 'Choose image'}
-            <input type="file" accept="image/*" onChange={handleBackgroundChange} className="sr-only" disabled={uploadingBg} />
-          </label>
+      <div className="card p-6 space-y-6">
+        <ProfileFieldset
+          profile={activeProfile}
+          onPatch={patch => updateProfile(activeIndex, patch)}
+          onPatchChar={(slot, patch) => updateProfileChar(activeIndex, slot, patch)}
+        />
+
+        {error && (
+          <p className="field-error bg-ember/10 border border-ember/20 rounded px-4 py-2.5 text-sm">{error}</p>
+        )}
+
+        <div className="flex gap-2">
+          <button type="submit" disabled={submitting} className="btn-primary">
+            {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Register Pair'}
+          </button>
+          <button type="button" onClick={() => router.push(isEdit ? `/profile/${initialData!.pair.slug}` : '/profile')} className="btn-ghost">
+            Cancel
+          </button>
         </div>
-        <div className="mt-3">
-          <label className="label flex items-center justify-between" htmlFor="background-blur">
-            <span>Blur strength</span>
-            <span className="text-ink-500 normal-case tracking-normal">{backgroundBlur}%</span>
-          </label>
-          <input
-            id="background-blur"
-            type="range"
-            min={1}
-            max={100}
-            step={1}
-            value={backgroundBlur}
-            onChange={e => setBackgroundBlur(Number(e.target.value))}
-            className="w-full block"
-            style={{ accentColor: '#5c574d' }}
-          />
-        </div>
-      </div>
-
-      <CharacterFieldset label="Character 1" state={char1} onPatch={patch => updateChar(setChar1, patch)} />
-      <CharacterFieldset label="Character 2" state={char2} onPatch={patch => updateChar(setChar2, patch)} />
-
-      {error && (
-        <p className="field-error bg-ember/10 border border-ember/20 rounded px-4 py-2.5 text-sm">{error}</p>
-      )}
-
-      <div className="flex gap-2">
-        <button type="submit" disabled={submitting} className="btn-primary">
-          {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Register Pair'}
-        </button>
-        <button type="button" onClick={() => router.push(isEdit ? `/profile/${initialData!.pair.id}` : '/profile')} className="btn-ghost">
-          Cancel
-        </button>
       </div>
     </form>
   )
+}
+
+function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null) {
+  return {
+    name: c.name, nameColor: c.nameColor, nameFont: c.nameFont, profileImageUrl,
+    catchphrase: c.catchphrase, catchphraseColor: c.catchphraseColor, catchphraseFont: c.catchphraseFont,
+    quote: c.quote, quoteColor: c.quoteColor, quoteFont: c.quoteFont,
+    keyword1: c.keyword1, keyword2: c.keyword2, keyword3: c.keyword3, keywordFont: c.keywordFont, keywordColor: c.keywordColor,
+    descriptionColor: c.descriptionColor,
+    captionShadowColor: c.captionShadowColor, captionShadowStrength: c.captionShadowStrength, captionOffsetY: c.captionOffsetY,
+    sections: c.sections.map(s => ({ title: s.title, titleColor: s.titleColor, titleFont: s.titleFont, description: s.description, textColor: s.textColor })),
+  }
 }
 
 function FontSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -241,36 +336,14 @@ function FontSelect({ value, onChange }: { value: string; onChange: (value: stri
   )
 }
 
-// Hex input leads (typing a hex code is the default way to set a color);
-// the native swatch is a compact secondary picker next to it.
 function ColorSwatch({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [text, setText] = useState(value)
-
-  useEffect(() => { setText(value) }, [value])
-
-  function handleTextChange(raw: string) {
-    setText(raw)
-    const hex = raw.startsWith('#') ? raw : `#${raw}`
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) onChange(hex)
-  }
-
   return (
-    <div className="flex gap-1.5 shrink-0">
-      <input
-        type="text"
-        value={text}
-        onChange={e => handleTextChange(e.target.value)}
-        onBlur={() => setText(value)}
-        placeholder="#000000"
-        className="input h-[42px] w-24 font-mono text-xs px-2"
-      />
-      <input
-        type="color"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="h-[42px] w-10 rounded border border-scroll-300 cursor-pointer shrink-0"
-      />
-    </div>
+    <input
+      type="color"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="h-[42px] w-10 rounded border border-scroll-300 cursor-pointer shrink-0"
+    />
   )
 }
 
@@ -323,27 +396,262 @@ function StyledTextRow({
   )
 }
 
+// Everything about one profile: its title/link/icon color, which page
+// type it is, its image/background, both characters (full identity +
+// caption), and its own timeline. A full page's worth of input — nothing
+// here is inherited from anywhere else.
+function ProfileFieldset({
+  profile, onPatch, onPatchChar,
+}: {
+  profile: ProfileState
+  onPatch: (patch: Partial<ProfileState>) => void
+  onPatchChar: (slot: 0 | 1, patch: Partial<ProfileCharState>) => void
+}) {
+  function handlePairImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ pairImageFile: file, pairImagePreview: URL.createObjectURL(file) })
+  }
+  function handleBackgroundChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ backgroundFile: file, backgroundPreview: URL.createObjectURL(file) })
+  }
+  function handleCustomHtmlChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ customHtmlFile: file, customHtmlFileName: file.name })
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-base font-semibold text-ink uppercase tracking-wide font-mono">Profile Info</p>
+
+      <div>
+        <label className="label">Page type</label>
+        <select className="input" value={profile.pageType} onChange={e => onPatch({ pageType: e.target.value as ProfileState['pageType'] })}>
+          <option value="template">Standard template</option>
+          <option value="custom_html" disabled={profile.isPrimary}>Custom HTML page</option>
+        </select>
+        {profile.isPrimary && (
+          <p className="text-xs text-ink-400 mt-1">The starred profile always uses the standard template — star a different profile to free this one up for a custom page.</p>
+        )}
+      </div>
+
+      <div>
+        <label className="label">Profile Title</label>
+        <input
+          className="input"
+          value={profile.profileTitle}
+          onChange={e => onPatch({ profileTitle: e.target.value })}
+          placeholder="e.g. Debut Era"
+          required
+        />
+      </div>
+
+      <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono border-t border-scroll-300">Pair Info</p>
+
+      {profile.pageType !== 'custom_html' && (
+        <>
+          <StyledTextRow
+            label="Title"
+            value={profile.title}
+            placeholder="Pair title"
+            required
+            font={profile.titleFont}
+            color={profile.titleColor}
+            size={profile.titleSize}
+            onValueChange={v => onPatch({ title: v })}
+            onFontChange={v => onPatch({ titleFont: v })}
+            onColorChange={v => onPatch({ titleColor: v })}
+            onSizeChange={v => onPatch({ titleSize: v })}
+          />
+
+          <div>
+            <label className="label">Link (optional)</label>
+            <div className="flex flex-wrap gap-3">
+              <input
+                className="input flex-1 min-w-[140px]"
+                value={profile.linkText}
+                onChange={e => onPatch({ linkText: e.target.value })}
+                placeholder="Link text"
+                style={{ fontFamily: pairFontFamily(profile.linkFont) }}
+              />
+              <div className="w-36">
+                <FontSelect value={profile.linkFont} onChange={v => onPatch({ linkFont: v })} />
+              </div>
+              <ColorSwatch value={profile.linkColor} onChange={v => onPatch({ linkColor: v })} />
+            </div>
+            <input
+              type="url"
+              className="input w-full mt-2"
+              value={profile.linkUrl}
+              onChange={e => onPatch({ linkUrl: e.target.value })}
+              placeholder="https://…"
+            />
+            <label className="flex items-center gap-2 mt-2 text-xs text-ink-500 normal-case tracking-normal">
+              <input type="checkbox" checked={profile.hasMusic} onChange={e => onPatch({ hasMusic: e.target.checked })} className="cursor-pointer" />
+              Show a music note icon before the link text
+            </label>
+          </div>
+        </>
+      )}
+
+      <div>
+        <label className="label">Icon color picker</label>
+        <ColorSwatch value={profile.iconColor} onChange={v => onPatch({ iconColor: v })} />
+      </div>
+
+      {profile.pageType === 'custom_html' ? (
+        <div>
+          <label className="label">HTML file</label>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-ink-500">{profile.customHtmlFileName || 'No file chosen'}</span>
+            <label className="btn-ghost text-xs cursor-pointer">
+              {profile.uploadingCustomHtml ? 'Uploading…' : 'Choose file'}
+              <input type="file" accept=".html,text/html" onChange={handleCustomHtmlChange} className="sr-only" disabled={profile.uploadingCustomHtml} />
+            </label>
+          </div>
+          <p className="text-xs text-ink-400 mt-1">A single self-contained .html file, rendered in a sandboxed frame.</p>
+        </div>
+      ) : (
+        <>
+          <div>
+            <label className="label">Pair image</label>
+            <div className="flex items-center gap-4">
+              <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                {profile.pairImagePreview
+                  ? <img src={profile.pairImagePreview} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-2xl text-scroll-400">◯</span>
+                }
+              </div>
+              <label className="btn-ghost text-xs cursor-pointer">
+                {profile.uploadingPairImage ? 'Uploading…' : 'Choose image'}
+                <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Background</label>
+            <div className="flex items-center gap-4">
+              <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                {profile.backgroundPreview
+                  ? <img src={profile.backgroundPreview} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-2xl text-scroll-400">◯</span>
+                }
+              </div>
+              <label className="btn-ghost text-xs cursor-pointer">
+                {profile.uploadingBackground ? 'Uploading…' : 'Choose image'}
+                <input type="file" accept="image/*" onChange={handleBackgroundChange} className="sr-only" disabled={profile.uploadingBackground} />
+              </label>
+            </div>
+            <div className="mt-3">
+              <label className="label flex items-center justify-between" htmlFor={`background-blur-${profile.id}`}>
+                <span>Background image blur strength</span>
+                <span className="text-ink-500 normal-case tracking-normal">{profile.backgroundBlur}%</span>
+              </label>
+              <input
+                id={`background-blur-${profile.id}`}
+                type="range"
+                min={1}
+                max={100}
+                step={1}
+                value={profile.backgroundBlur}
+                onChange={e => onPatch({ backgroundBlur: Number(e.target.value) })}
+                className="w-full block"
+                style={{ accentColor: '#5c574d' }}
+              />
+            </div>
+          </div>
+
+          <CharacterFieldset label="Character 1" state={profile.characters[0]} onPatch={patch => onPatchChar(0, patch)} />
+          <CharacterFieldset label="Character 2" state={profile.characters[1]} onPatch={patch => onPatchChar(1, patch)} />
+
+          <div className="space-y-4 pt-4 border-t border-scroll-300">
+            <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono">Timeline</p>
+
+            <div>
+              <label className="label">Subtitle &amp; title font</label>
+              <div className="flex flex-wrap gap-3">
+                <div className="w-36">
+                  <FontSelect value={profile.timelineSubtitleFont} onChange={v => onPatch({ timelineSubtitleFont: v })} />
+                </div>
+                <div className="w-36">
+                  <FontSelect value={profile.timelineTitleFont} onChange={v => onPatch({ timelineTitleFont: v })} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Description text color</label>
+              <ColorSwatch value={profile.timelineTextColor} onChange={v => onPatch({ timelineTextColor: v })} />
+            </div>
+
+            <div>
+              <label className="label">Dot &amp; line</label>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">Circle</span>
+                  <ColorSwatch value={profile.timelineDotColor} onChange={v => onPatch({ timelineDotColor: v })} />
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">Line</span>
+                  <ColorSwatch value={profile.timelineLineColor} onChange={v => onPatch({ timelineLineColor: v })} />
+                </div>
+                <label className="flex items-center gap-2 text-xs text-ink-500 normal-case tracking-normal cursor-pointer">
+                  <input type="checkbox" checked={profile.timelineShadow} onChange={e => onPatch({ timelineShadow: e.target.checked })} className="cursor-pointer" />
+                  Add a shadow behind them
+                </label>
+              </div>
+            </div>
+
+            <TimelineEditor
+              entries={profile.timelineEntries}
+              onChange={entries => onPatch({ timelineEntries: entries })}
+              char1Name={profile.characters[0].name}
+              char2Name={profile.characters[1].name}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function CharacterFieldset({
   label, state, onPatch,
 }: {
   label: string
-  state: CharState
-  onPatch: (patch: Partial<CharState>) => void
+  state: ProfileCharState
+  onPatch: (patch: Partial<ProfileCharState>) => void
 }) {
+  function handleProfileImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ profileImageFile: file, profileImagePreview: URL.createObjectURL(file) })
+  }
+
   return (
     <div className="space-y-4 pt-4 border-t border-scroll-300">
-      <p className="label">{label}</p>
+      <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono">{label}</p>
 
-      <StyledTextRow
-        label="Catchphrase"
-        value={state.catchphrase}
-        placeholder="A short tagline"
-        font={state.catchphraseFont}
-        color={state.catchphraseColor}
-        onValueChange={v => onPatch({ catchphrase: v })}
-        onFontChange={v => onPatch({ catchphraseFont: v })}
-        onColorChange={v => onPatch({ catchphraseColor: v })}
-      />
+      <div>
+        <label className="label">Profile picture</label>
+        <p className="text-xs text-ink-400 mb-2">Shown as this character's icon on the timeline's thought hovers.</p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+            {state.profileImagePreview
+              ? <img src={state.profileImagePreview} alt="" className="w-full h-full object-cover" />
+              : <span className="text-xl text-scroll-400">◯</span>
+            }
+          </div>
+          <label className="btn-ghost text-xs cursor-pointer">
+            {state.uploadingProfileImage ? 'Uploading…' : 'Choose image'}
+            <input type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" disabled={state.uploadingProfileImage} />
+          </label>
+        </div>
+      </div>
 
       <StyledTextRow
         label="Name"
@@ -355,6 +663,19 @@ function CharacterFieldset({
         onValueChange={v => onPatch({ name: v })}
         onFontChange={v => onPatch({ nameFont: v })}
         onColorChange={v => onPatch({ nameColor: v })}
+      />
+
+      <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Character Caption</p>
+
+      <StyledTextRow
+        label="Catchphrase"
+        value={state.catchphrase}
+        placeholder="A short tagline"
+        font={state.catchphraseFont}
+        color={state.catchphraseColor}
+        onValueChange={v => onPatch({ catchphrase: v })}
+        onFontChange={v => onPatch({ catchphraseFont: v })}
+        onColorChange={v => onPatch({ catchphraseColor: v })}
       />
 
       <StyledTextRow
@@ -369,9 +690,287 @@ function CharacterFieldset({
       />
 
       <div>
-        <label className="label">Description</label>
-        <textarea className="textarea" rows={4} value={state.description} onChange={e => onPatch({ description: e.target.value })} placeholder="Notes for now — details later" />
+        <label className="label">Keywords</label>
+        <div className="flex flex-wrap gap-3">
+          {(['keyword1', 'keyword2', 'keyword3'] as const).map((key, i) => (
+            <input
+              key={key}
+              className="input flex-1 min-w-[100px]"
+              value={state[key]}
+              onChange={e => onPatch({ [key]: e.target.value })}
+              placeholder={`Keyword ${i + 1}`}
+              style={{ fontFamily: pairFontFamily(state.keywordFont) }}
+            />
+          ))}
+          <div className="w-36">
+            <FontSelect value={state.keywordFont} onChange={v => onPatch({ keywordFont: v })} />
+          </div>
+          <ColorSwatch value={state.keywordColor} onChange={v => onPatch({ keywordColor: v })} />
+        </div>
       </div>
+
+      <div>
+        <label className="label flex items-center justify-between gap-3">
+          <span>Caption text shadow</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 w-40 shrink-0">
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal shrink-0">Strength</span>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.5}
+                value={state.captionShadowStrength}
+                onChange={e => onPatch({ captionShadowStrength: Number(e.target.value) })}
+                className="input flex-1 min-w-0 text-center"
+              />
+            </div>
+            <ColorSwatch value={state.captionShadowColor} onChange={v => onPatch({ captionShadowColor: v })} />
+          </div>
+        </label>
+      </div>
+
+      <div>
+        <label className="label flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5">
+            Caption vertical offset
+            <span className="text-[10px] text-ink-400 normal-case tracking-normal">(200px to -200px)</span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={-200}
+              max={200}
+              step={1}
+              value={state.captionOffsetY}
+              onChange={e => onPatch({ captionOffsetY: Math.min(200, Math.max(-200, Number(e.target.value))) })}
+              className="input w-20 text-center"
+            />
+            <span className="text-[10px] text-ink-400 normal-case tracking-normal">px</span>
+          </div>
+        </label>
+      </div>
+
+      <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Description</p>
+
+      <div>
+        <label className="label">Description background gradient</label>
+        <ColorSwatch value={state.descriptionColor} onChange={v => onPatch({ descriptionColor: v })} />
+      </div>
+
+      <SectionsEditor sections={state.sections} onChange={sections => onPatch({ sections })} />
+    </div>
+  )
+}
+
+// Add/delete/reorder are all client-side state edits — nothing is
+// persisted until the whole pair is saved (see saveProfiles in
+// characters.ts, which replaces a profile's section set wholesale).
+// Drag-and-drop reorder mirrors image-manager.tsx's native HTML5
+// draggable/onDragStart/onDrop pattern rather than pulling in a DnD
+// library for one more reorderable list.
+function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onChange: (sections: SectionState[]) => void }) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  function patch(index: number, p: Partial<SectionState>) {
+    onChange(sections.map((s, i) => i === index ? { ...s, ...p } : s))
+  }
+  function add() {
+    onChange([...sections, emptySection()])
+  }
+  function remove(index: number) {
+    onChange(sections.filter((_, i) => i !== index))
+  }
+  function reorder(from: number, to: number) {
+    const next = [...sections]
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    onChange(next)
+  }
+  // Copies this section's title font plus both colors to every other
+  // section for this character — per the scope decided for this feature,
+  // it only reaches this character's own sections, not the other
+  // character's.
+  function applyToAll(index: number) {
+    const { titleColor, titleFont, textColor } = sections[index]
+    onChange(sections.map(s => ({ ...s, titleColor, titleFont, textColor })))
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <label className="label mb-0">Description sections</label>
+        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ Add section</button>
+      </div>
+
+      {!sections.length && <p className="text-xs text-ink-400">No sections yet — add one to give this character a description.</p>}
+
+      {sections.map((section, i) => (
+        <div
+          key={section.id}
+          draggable
+          onDragStart={() => setDragIndex(i)}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); if (dragIndex !== null && dragIndex !== i) reorder(dragIndex, i); setDragIndex(null) }}
+          onDragEnd={() => setDragIndex(null)}
+          className="rounded border border-scroll-300 bg-scroll-50 p-3 space-y-2"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <GripVertical size={14} className="text-ink-300 shrink-0 cursor-move" />
+            <input
+              className="input flex-1 min-w-[120px]"
+              value={section.title}
+              onChange={e => patch(i, { title: e.target.value })}
+              placeholder="Section title (optional)"
+              style={{ fontFamily: pairFontFamily(section.titleFont) }}
+            />
+            <div className="w-32 shrink-0">
+              <FontSelect value={section.titleFont} onChange={v => patch(i, { titleFont: v })} />
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Title</span>
+              <ColorSwatch value={section.titleColor} onChange={v => patch(i, { titleColor: v })} />
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Text</span>
+              <ColorSwatch value={section.textColor} onChange={v => patch(i, { textColor: v })} />
+            </div>
+            <button type="button" onClick={() => remove(i)} aria-label="Remove section" className="text-ink-400 hover:text-ember shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+          {sections.length > 1 && (
+            <button type="button" onClick={() => applyToAll(i)} className="text-xs text-ink-400 hover:text-ink underline underline-offset-2">
+              Apply these styles to all sections
+            </button>
+          )}
+          <textarea
+            className="textarea"
+            rows={3}
+            value={section.description}
+            onChange={e => patch(i, { description: e.target.value })}
+            placeholder="Section text"
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// One consolidated list per profile (not per character) — mirrors
+// SectionsEditor's add/remove/reorder mechanics, minus the per-item
+// font/color controls (those live once, above this editor, as the shared
+// timeline style) and plus the two per-character thought fields.
+function TimelineEditor({
+  entries, onChange, char1Name, char2Name,
+}: {
+  entries: TimelineEntryState[]
+  onChange: (entries: TimelineEntryState[]) => void
+  char1Name: string
+  char2Name: string
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  function patch(index: number, p: Partial<TimelineEntryState>) {
+    onChange(entries.map((e, i) => i === index ? { ...e, ...p } : e))
+  }
+  function add() {
+    onChange([...entries, emptyTimelineEntry()])
+  }
+  function remove(index: number) {
+    onChange(entries.filter((_, i) => i !== index))
+  }
+  function reorder(from: number, to: number) {
+    const next = [...entries]
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    onChange(next)
+  }
+  // Copies this entry's subtitle + title colors to every other entry —
+  // same shape as SectionsEditor's applyToAll, minus font (the timeline's
+  // subtitle/title fonts are already shared pair-wide, not per-entry).
+  function applyToAll(index: number) {
+    const { subtitleColor, titleColor } = entries[index]
+    onChange(entries.map(e => ({ ...e, subtitleColor, titleColor })))
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <label className="label mb-0">Timeline entries</label>
+        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ Add entry</button>
+      </div>
+
+      {!entries.length && <p className="text-xs text-ink-400">No entries yet — add one to give this profile a timeline.</p>}
+
+      {entries.map((entry, i) => (
+        <div
+          key={entry.id}
+          draggable
+          onDragStart={() => setDragIndex(i)}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); if (dragIndex !== null && dragIndex !== i) reorder(dragIndex, i); setDragIndex(null) }}
+          onDragEnd={() => setDragIndex(null)}
+          className="rounded border border-scroll-300 bg-scroll-50 p-3 space-y-2"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <GripVertical size={14} className="text-ink-300 shrink-0 cursor-move" />
+            <input
+              className="input flex-1 min-w-[120px]"
+              value={entry.subtitle}
+              onChange={e => patch(i, { subtitle: e.target.value })}
+              placeholder="Subtitle (e.g. Before debut)"
+            />
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Subtitle</span>
+              <ColorSwatch value={entry.subtitleColor} onChange={v => patch(i, { subtitleColor: v })} />
+            </div>
+            <button type="button" onClick={() => remove(i)} aria-label="Remove entry" className="text-ink-400 hover:text-ember shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              className="input flex-1 min-w-[120px]"
+              value={entry.title}
+              onChange={e => patch(i, { title: e.target.value })}
+              placeholder="Title"
+            />
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Title</span>
+              <ColorSwatch value={entry.titleColor} onChange={v => patch(i, { titleColor: v })} />
+            </div>
+          </div>
+          {entries.length > 1 && (
+            <button type="button" onClick={() => applyToAll(i)} className="text-xs text-ink-400 hover:text-ink underline underline-offset-2">
+              Apply these colors to all entries
+            </button>
+          )}
+          <textarea
+            className="textarea"
+            rows={3}
+            value={entry.description}
+            onChange={e => patch(i, { description: e.target.value })}
+            placeholder="Entry text"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <textarea
+              className="textarea"
+              rows={2}
+              value={entry.char1Thought}
+              onChange={e => patch(i, { char1Thought: e.target.value })}
+              placeholder={`${char1Name || 'Character 1'}’s thought (optional)`}
+            />
+            <textarea
+              className="textarea"
+              rows={2}
+              value={entry.char2Thought}
+              onChange={e => patch(i, { char2Thought: e.target.value })}
+              placeholder={`${char2Name || 'Character 2'}’s thought (optional)`}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { fetchPairWithProfiles } from '@/lib/character-pair-queries'
 import { CharacterPairForm } from '@/components/character-pair-form'
-import type { CharacterPair, Character } from '@/types/database'
 
-export default async function EditCharacterPairPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function EditCharacterPairPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const profile = user
@@ -18,27 +18,19 @@ export default async function EditCharacterPairPage({ params }: { params: Promis
       <div className="animate-fade-up space-y-2">
         <h2 className="text-3xl text-ink">Edit Pair</h2>
         <p className="text-ink-500">
-          You don&apos;t have edit authority yet. <Link href={`/profile/${id}`} className="text-ember hover:underline">Back to pair</Link>
+          You don&apos;t have edit authority yet. <Link href={`/profile/${slug}`} className="text-ember hover:underline">Back to pair</Link>
         </p>
       </div>
     )
   }
 
-  const { data: pair } = await supabase
-    .from('character_pairs')
-    .select('*, characters(*)')
-    .eq('id', id)
-    .single()
-
+  const pair = await fetchPairWithProfiles(supabase, slug)
   if (!pair) notFound()
-
-  const typedPair = pair as unknown as CharacterPair & { characters: Character[] }
-  const sorted = [...typedPair.characters].sort((a, b) => a.slot - b.slot) as [Character, Character]
 
   return (
     <div className="animate-fade-up max-w-2xl space-y-6 mx-auto">
       <h2 className="text-3xl text-ink">Edit Pair</h2>
-      <CharacterPairForm initialData={{ pair: typedPair, characters: sorted }} />
+      <CharacterPairForm initialData={{ pair }} />
     </div>
   )
 }

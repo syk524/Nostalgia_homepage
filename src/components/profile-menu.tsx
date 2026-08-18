@@ -4,8 +4,12 @@ import { logout } from '@/lib/actions/auth'
 import { ProfileEditModal } from '@/components/profile-edit-modal'
 import type { Profile } from '@/types/database'
 
+// No text-ink here — color comes from the ancestor's `color` (bg-current
+// in .nav-dot), same as Nav's own NavDot (see nav.tsx), so a per-page
+// --nav-icon-color override (e.g. character-pair-detail.tsx) reaches this
+// dot too instead of it staying fixed at the default ink color.
 function NavDot() {
-  return <span className="nav-dot text-ink" />
+  return <span className="nav-dot" />
 }
 
 export function ProfileMenu({ profile }: { profile: Profile }) {

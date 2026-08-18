@@ -82,6 +82,33 @@ export async function uploadImages(files: File[], ownerId: string, bucket: Bucke
   return { urls, errors }
 }
 
+type HtmlBucket = 'profile-pages'
+
+const MAX_HTML_SIZE = 2 * 1024 * 1024
+
+// Extension check rather than file.type — unlike images/audio, browsers
+// don't reliably set a MIME type for a local .html file across OSes.
+// contentType is set explicitly on upload so the bucket serves the right
+// header regardless of what (if anything) the browser guessed.
+export async function uploadHtmlPage(file: File, ownerId: string, bucket: HtmlBucket) {
+  const supabase = createClient()
+
+  if (!file.name.toLowerCase().endsWith('.html'))
+    return { url: null, error: 'Must be an HTML file.' }
+  if (file.size > MAX_HTML_SIZE)
+    return { url: null, error: 'File must be under 2 MB.' }
+
+  const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.html`
+
+  const { error: uploadErr } = await supabase.storage
+    .from(bucket).upload(path, file, { upsert: true, contentType: 'text/html' })
+
+  if (uploadErr) return { url: null, error: uploadErr.message }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
 type AudioBucket = 'playlist-audio'
 
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3']

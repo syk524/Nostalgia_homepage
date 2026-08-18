@@ -207,3 +207,78 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #c2ae97; }
+
+/* Places a character-pair description section into an explicit row/column
+   of its parent grid (see character-pair-detail.tsx), so character 1's
+   section N and character 2's section N always land in the same row and
+   top-align. --section-row/--section-col are set per-item via inline
+   style since the values are dynamic (per section index) — Tailwind's
+   arbitrary-value classes can't be built from a runtime-interpolated
+   string. Scoped to the sm+ breakpoint only: below it the grid collapses
+   to a single column, and forcing an explicit column there would place
+   items into a nonexistent second track instead of just stacking them. */
+@media (min-width: 640px) {
+  .description-section-cell {
+    grid-row: var(--section-row);
+    grid-column: var(--section-col);
+  }
+}
+
+/* Pure-CSS hover tooltip for the timeline's character-thought icons —
+   adapted from the Transitions.dev snippet the user supplied, renamed to
+   this app's own class prefix and re-themed onto its scroll/ink tokens
+   instead of plain white/#2f2f2f. The wrap (not the trigger) is the hover
+   target so the pointer can drift onto the tooltip without flicker; the
+   80ms open delay lives ONLY in the hover/focus rule, so leaving snaps it
+   back to 0 and the close plays immediately. */
+:root {
+  --tt-in-dur: 150ms;
+  --tt-out-dur: 50ms;
+  --tt-scale: 0.98;
+  --tt-delay: 80ms;
+  --tt-in-ease: ease-out;
+  --tt-out-ease: ease-out;
+}
+
+.thought-tt-wrap {
+  position: relative;
+  display: inline-block;
+}
+.thought-tt {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, 0) scale(var(--tt-scale));
+  transform-origin: 50% 100%;
+  z-index: 20;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #faf9f7;
+  color: #5c574d;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 6px 0 rgba(0, 0, 0, 0.05),
+    0 4px 42px 0 rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    transform var(--tt-out-dur) var(--tt-out-ease);
+}
+.thought-tt-wrap:hover .thought-tt,
+.thought-tt-trigger:focus-visible + .thought-tt {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  transition-duration: var(--tt-in-dur);
+  transition-timing-function: var(--tt-in-ease);
+  transition-delay: var(--tt-delay);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thought-tt { transition: none !important; }
+}

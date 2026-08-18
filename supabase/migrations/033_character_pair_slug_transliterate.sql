@@ -1,0 +1,11 @@
+-- 032's SQL-side backfill kept non-Latin titles' raw characters as their
+-- slug (e.g. "むかし"), which broke navigation to that pair's page — a
+-- multi-byte path segment gets percent-encoded by the browser, and this
+-- app's own auth-redirect middleware was found to double-encode that
+-- percent-encoding when it isn't logged in, mangling the return path.
+-- src/lib/slug.ts now romanizes Korean/Japanese titles on every future
+-- save; this catches up the one already-backfilled row that predates it.
+-- (A from-scratch DB only ever has titles that go through the app's own
+-- create/update path, so this is a one-time catch-up, not a repeatable
+-- backfill query.)
+update public.character_pairs set slug = 'mukashi' where title = 'むかし';

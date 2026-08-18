@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { HomeFolder } from '@/components/home-folder'
 import { Nav } from '@/components/nav'
 
 export default async function HomePage() {
@@ -26,6 +27,8 @@ export default async function HomePage() {
       <div className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] -translate-x-1/2 -translate-y-1/2">
         <img src="/images/nostalgio-wordmark.png" alt="Nostalgia" className="w-full" />
       </div>
+
+      <HomeFolder />
     </div>
   )
 }

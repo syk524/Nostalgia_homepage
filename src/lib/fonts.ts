@@ -5,13 +5,15 @@
 // to persist a short string.
 export const PAIR_FONTS = {
   default: { label: 'Default', family: 'var(--font-roboto), var(--font-noto-sans-kr), system-ui, sans-serif' },
-  serif: { label: '조선명조체', family: 'var(--font-chosun-nm), Georgia, serif' },
-  display: { label: 'Display (Bebas Neue)', family: 'var(--font-bebas-neue), sans-serif' },
-  script: { label: 'Cursive (Eng)', family: 'var(--font-bastliga-one), cursive' },
-  mono: { label: 'Mono (Chivo Mono)', family: 'var(--font-chivo-mono), ui-monospace, monospace' },
+  serif: { label: '조선명조체 (KR)', family: 'var(--font-chosun-nm), Georgia, serif' },
+  display: { label: 'Bebas Neue (Eng)', family: 'var(--font-bebas-neue), sans-serif' },
+  mono: { label: 'Chivo Mono (Eng)', family: 'var(--font-chivo-mono), ui-monospace, monospace' },
   zaslia: { label: 'Zaslia (Eng)', family: 'var(--font-zaslia), cursive' },
   homuraMincho: { label: 'Homura Mincho (JP)', family: 'var(--font-homura-mincho), serif' },
   kmu80Sungkok: { label: '국민대80주년 (KR)', family: 'var(--font-kmu80-sungkok), serif' },
+  ogRenaissance: { label: 'OG 르네상스 비밀 (KR)', family: 'var(--font-og-renaissance), serif' },
+  antroVectraBold: { label: 'Antro Vectra Bold (Eng)', family: 'var(--font-antro-vectra-bold), sans-serif' },
+  kunstlerScript: { label: 'Kunstler Script (Eng)', family: 'var(--font-kunstler-script), cursive' },
 } as const
 
 export type PairFontKey = keyof typeof PAIR_FONTS

@@ -55,12 +55,12 @@ export function PostModal({
     // gallery/page.tsx for why vw, not %. Nav is mounted once at the
     // root layout, sits above this modal's z-50 via its own z-[60], and
     // never remounts between posts, so it's the same nav everywhere rather
-    // than something owned by this modal. No bg here — that gutter stays
-    // transparent so the app's own background (decorative grid +
-    // bg-scroll-100, from the root layout) shows through behind the nav
-    // instead of being painted over; each content panel below carries its
-    // own opaque background instead.
-    <div className="fixed inset-0 z-50 sm:pl-[calc(2.6vw+159px)] flex flex-col sm:flex-row animate-fade-up">
+    // than something owned by this modal. bg-scroll-100 matches the root
+    // layout's own page background, so this gutter fully covers the
+    // gallery grid behind the modal (previously left transparent, which
+    // let grid thumbnails show through and clip against the modal edge)
+    // while the category links still render on top via Nav's z-[60].
+    <div className="fixed inset-0 z-50 bg-scroll-100 sm:pl-[calc(2.6vw+159px)] flex flex-col sm:flex-row animate-fade-up">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. */}

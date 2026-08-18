@@ -31,12 +31,6 @@ const bebasNeue = Bebas_Neue({
   variable: '--font-bebas-neue',
 })
 
-const bastligaOne = localFont({
-  src: './fonts/BastligaOne.ttf',
-  variable: '--font-bastliga-one',
-  display: 'swap',
-})
-
 // The "serif" pair-font choice (see lib/fonts.ts) — used for both Korean
 // and Latin text, no mixed-font fallback chain.
 const chosunNm = localFont({
@@ -63,6 +57,24 @@ const kmu80Sungkok = localFont({
   display: 'swap',
 })
 
+const ogRenaissance = localFont({
+  src: './fonts/OGRenaissance.ttf',
+  variable: '--font-og-renaissance',
+  display: 'swap',
+})
+
+const antroVectraBold = localFont({
+  src: './fonts/AntroVectraBold.otf',
+  variable: '--font-antro-vectra-bold',
+  display: 'swap',
+})
+
+const kunstlerScript = localFont({
+  src: './fonts/KunstlerScript.ttf',
+  variable: '--font-kunstler-script',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nostalgia',
   description: 'A place to keep and share what matters',
@@ -72,7 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${bastligaOne.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}

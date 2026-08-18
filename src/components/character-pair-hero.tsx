@@ -1,22 +1,71 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { PairLink } from '@/components/pair-link'
 import { pairFontFamily } from '@/lib/fonts'
-import type { Character } from '@/types/database'
+import type { ProfileCharacter } from '@/types/database'
 
 // Catchphrase as plain text (no pill), then name, then the quote — each with
 // its own independently selectable font and color.
-function CharacterCaption({ character, align }: { character: Character; align: 'left' | 'right' }) {
+function CharacterCaption({ character, align }: { character: ProfileCharacter; align: 'left' | 'right' }) {
+  // A zero-offset, blurred text-shadow reads as a soft halo/border around
+  // the letterforms rather than a directional drop shadow — user-set
+  // color and strength (blur radius, in px), one shared value for all
+  // three caption lines rather than a separate control per field. This is
+  // layered on top of the existing drop-shadow filter (kept for legibility
+  // against busy photo backgrounds) — text-shadow and filter:drop-shadow
+  // are independent properties, so both apply without conflict.
+  const textShadow = `0 0 ${character.caption_shadow_strength}px ${character.caption_shadow_color}`
   return (
-    <div className={`max-w-[260px] ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    // caption_offset_y nudges just this character up/down from the shared
+    // row's own centered position (set on the row in CharacterPairHero) —
+    // a transform, not a margin: margin participates in the flex row's
+    // own align-items:center calculation (each item centers within a line
+    // whose cross-axis size includes margins), so unequal margins between
+    // the two captions shifted the row's centering itself and produced
+    // less separation than the margin values implied. A transform is a
+    // pure paint-time offset, invisible to that layout math, so it's an
+    // exact 1:1 pixel shift.
+    <div className={`max-w-[650px] ${align === 'right' ? 'text-right' : 'text-left'}`} style={{ transform: `translateY(${character.caption_offset_y}px)` }}>
       {character.catchphrase && (
         <>
-          <p className="text-sm drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</p>
-          <div className="h-px bg-white/60 my-2" />
+          {/* letter-spacing doesn't accept percentages in CSS — 140% is
+              expressed as 1.4em, i.e. 140% of the font size, the standard
+              reading of a percentage tracking value. */}
+          <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
+          <div className={`h-px max-w-[200px] bg-white/60 my-2 ${align === 'right' ? 'ml-auto' : ''}`} />
         </>
       )}
-      <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color }}>{character.name}</h3>
+      <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
       {character.quote && (
-        <p className="text-sm drop-shadow mt-1" style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color }}>“{character.quote}”</p>
+        // Narrower than the 650px caption block above it, so it wraps
+        // sooner — ml-auto (mirroring the divider line) keeps its right
+        // edge flush with the wider name/catchphrase when right-aligned,
+        // instead of the shrunk box just sitting left-anchored inside the
+        // wider container.
+        <p className={`text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
+      )}
+      {(character.keyword_1 || character.keyword_2 || character.keyword_3) && (
+        // One shared font/color for all three keywords (not per-keyword),
+        // same text-shadow as the rest of the caption. Each non-empty
+        // keyword gets a # prefix; empty slots are just skipped, not
+        // rendered as a stray "#". Rendered as separate flex items with a
+        // gap instead of one string joined by plain spaces — a fixed gap
+        // is a more reliable, adjustable way to widen the spacing between
+        // keywords than relying on however wide a literal space character
+        // renders at this font. justify-end mirrors the ml-auto/text-right
+        // treatment the rest of this block uses when right-aligned.
+        // text-sm matches the description body's own text size exactly
+        // (character-pair-detail.tsx's section paragraphs use the same
+        // class) rather than a separately-set px value that only
+        // coincidentally lined up.
+        <div
+          className={`drop-shadow mt-1 flex flex-wrap gap-3 text-sm ${align === 'right' ? 'justify-end' : ''}`}
+          style={{ fontFamily: pairFontFamily(character.keyword_font), color: character.keyword_color, textShadow }}
+        >
+          {[character.keyword_1, character.keyword_2, character.keyword_3].filter(Boolean).map((k, i) => (
+            <span key={i}>#{k}</span>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -24,21 +73,26 @@ function CharacterCaption({ character, align }: { character: Character; align: '
 
 // The pair title sits as a plain heading above the image (normal flow, not
 // overlaid — no background pill needed since it's not sitting on top of
-// arbitrary photo content). Character names stay confined to the left/right
-// edges of an 80%-wide centered band — measured against the full page
-// content width, not the narrower (60vw) image itself, which is why the
-// image sits in its own inner wrapper while the overlay is positioned
-// against the outer, full-width one.
+// arbitrary photo content). Character captions sit flush against the
+// left/right edges of the full content container — measured against the
+// full page content width, not the narrower (60vw) image itself, which is
+// why the image sits in its own inner wrapper while the overlay is
+// positioned against the outer, full-width one.
 export function CharacterPairHero({
-  imageUrl, title, titleFont, titleColor, titleSize, char1, char2,
+  imageUrl, title, titleFont, titleColor, titleSize, linkText, linkUrl, linkFont, linkColor, hasMusic, char1, char2,
 }: {
   imageUrl: string
   title: string
   titleFont: string
   titleColor: string
   titleSize: number
-  char1?: Character
-  char2?: Character
+  linkText: string | null
+  linkUrl: string | null
+  linkFont: string
+  linkColor: string
+  hasMusic: boolean
+  char1?: ProfileCharacter
+  char2?: ProfileCharacter
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [captionTop, setCaptionTop] = useState<number | null>(null)
@@ -92,15 +146,32 @@ export function CharacterPairHero({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: titleSize }}>{title}</h1>
+      {/* Grouped in their own div, not left as two direct children of the
+          space-y-4 above — space-y's `> * ~ *` selector outranks a plain
+          mt-2 on specificity, so PairLink's own 8px gap would just lose to
+          space-y-4's 16px if it sat at that level. Nesting one level down
+          keeps space-y-4 governing only the gap to the image container
+          below, letting PairLink's own margin set the title-to-link gap
+          precisely. */}
+      <div>
+        <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: titleSize }}>{title}</h1>
+        <PairLink text={linkText} url={linkUrl} font={linkFont} color={linkColor} hasMusic={hasMusic} centered />
+      </div>
 
       <div ref={containerRef} className="relative w-full">
         <div className="w-[60vw] mx-auto">
           <img src={imageUrl} alt="" className="w-full h-auto block rounded" />
         </div>
 
+        {/* right side matches Nav's own right-[2.6%] inset — the
+            container this is positioned against already carries a fixed
+            24px (1.5rem) right padding from the shared px-6 on the outer
+            content wrapper (only its left padding changes at sm+, per
+            character-pair-detail.tsx), so the offset here is the delta
+            from that 24px up to the vw-scaled 2.6% nav uses, same
+            calc() pattern as the back button fix in character-pair-detail.tsx. */}
         <div
-          className="absolute left-[10%] right-[10%] flex items-center justify-between gap-6 pointer-events-none"
+          className="absolute left-0 right-[calc(2.6vw-1.5rem)] flex items-center justify-between gap-6 pointer-events-none"
           style={{ top: captionTop !== null ? `${captionTop}px` : '50%', transform: 'translateY(-50%)' }}
         >
           {char1 && <CharacterCaption character={char1} align="left" />}
