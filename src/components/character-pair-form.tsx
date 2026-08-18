@@ -168,12 +168,11 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       return { ...p, characters }
     }))
   }
-  // Custom HTML is only allowed for non-primary profiles, so promoting a
-  // tab to primary also forces it back to the standard template — avoids
-  // a dead end where starring it silently fails server-side validation
-  // with no clear reason why.
+  // Custom HTML is only allowed for non-primary profiles — the star
+  // button itself is disabled for those (see the tab bar below) rather
+  // than allowing the click and silently switching page type back.
   function setPrimary(index: number) {
-    setProfiles(prev => prev.map((p, i) => i === index ? { ...p, isPrimary: true, pageType: 'template' } : { ...p, isPrimary: false }))
+    setProfiles(prev => prev.map((p, i) => i === index ? { ...p, isPrimary: true } : { ...p, isPrimary: false }))
   }
   function addProfile() {
     setProfiles(prev => [...prev, emptyProfile(undefined)])
@@ -272,7 +271,13 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
             <button type="button" onClick={() => setActiveIndex(i)}>
               {p.profileTitle || `Profile ${i + 1}`}
             </button>
-            <button type="button" onClick={() => setPrimary(i)} aria-label={p.isPrimary ? 'Primary profile' : 'Make primary'} className="shrink-0">
+            <button
+              type="button"
+              onClick={() => setPrimary(i)}
+              disabled={p.pageType === 'custom_html'}
+              aria-label={p.isPrimary ? 'Primary profile' : p.pageType === 'custom_html' ? 'Custom HTML pages can’t be primary' : 'Make primary'}
+              className="shrink-0 disabled:opacity-20 disabled:cursor-not-allowed"
+            >
               <Star size={12} className={p.isPrimary ? 'fill-current' : 'opacity-40'} />
             </button>
             {profiles.length > 1 && !p.isPrimary && (
