@@ -155,6 +155,46 @@ export type CharacterPair = {
   pair_profiles?: PairProfile[]
 }
 
+// One image in the shared, editor/admin-managed sticker library. Any
+// editor/admin can drag a copy of it onto their own home page background.
+export type StickerGalleryImage = {
+  id: string
+  image_url: string
+  storage_path: string
+  created_by: string
+  created_at: string
+}
+
+// Where one editor/admin has placed one gallery sticker on their own
+// background — per-account, not shared, so two editors' arrangements
+// never collide.
+export type UserBackgroundSticker = {
+  id: string
+  user_id: string
+  gallery_id: string
+  pos_x: number
+  pos_y: number
+  scale: number
+  rotation: number
+  z: number
+  created_at: string
+  updated_at: string
+  gallery?: StickerGalleryImage
+}
+
+export type EventVisibility = 'public' | 'members' | 'private'
+
+export type CalendarEvent = {
+  id: string
+  event_date: string
+  title: string
+  dot_color: string
+  visibility: EventVisibility
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export type TrackSource = 'youtube' | 'upload'
 
 export type PlaylistTrack = {
@@ -230,6 +270,24 @@ export type Database = {
         Row: TimelineEntry
         Insert: Omit<TimelineEntry, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Pick<TimelineEntry, 'position' | 'subtitle' | 'subtitle_color' | 'title' | 'title_color' | 'description' | 'char1_thought' | 'char2_thought'>>
+        Relationships: []
+      }
+      sticker_gallery: {
+        Row: StickerGalleryImage
+        Insert: Omit<StickerGalleryImage, 'id' | 'created_at'>
+        Update: never
+        Relationships: []
+      }
+      user_background_stickers: {
+        Row: Omit<UserBackgroundSticker, 'gallery'>
+        Insert: Omit<UserBackgroundSticker, 'id' | 'created_at' | 'updated_at' | 'gallery'>
+        Update: Partial<Pick<UserBackgroundSticker, 'pos_x' | 'pos_y' | 'scale' | 'rotation' | 'z'>>
+        Relationships: []
+      }
+      calendar_events: {
+        Row: CalendarEvent
+        Insert: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>
+        Update: never
         Relationships: []
       }
     }
