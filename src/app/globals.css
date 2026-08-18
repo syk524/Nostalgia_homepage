@@ -82,6 +82,16 @@
            transition-colors duration-150;
   }
 
+  /* Dark-surface sibling of .input, for the music player's popouts
+     which sit on the pill's own bg-ink-900/90 backdrop instead of the
+     site's paper-white background. */
+  .dark-input {
+    @apply w-full px-3.5 py-2 rounded-lg border border-scroll-100/15 bg-scroll-100/5
+           text-sm text-scroll-100 placeholder:text-scroll-500
+           focus:outline-none focus:ring-2 focus:ring-scroll-100/15 focus:border-scroll-100/30
+           transition-colors duration-150;
+  }
+
   /* Textarea */
   .textarea {
     @apply w-full px-4 py-3 rounded border border-ink/10 bg-white
@@ -136,47 +146,6 @@
     color: #5c574d;
   }
 
-  /* Dark "LCD" info readout used by the sound player's now-playing panel */
-  .lcd-screen {
-    @apply bg-ink-900 text-sage-200 font-mono text-xs rounded px-3 py-2 tracking-wide;
-    text-shadow: 0 0 6px rgba(147, 170, 154, 0.6);
-    background-image: repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.04) 0px,
-      rgba(255, 255, 255, 0.04) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-  }
-
-  /* Retro hardware chrome for the sound player: a plain black bezel
-     wrapping a black panel, like the CD-player/FM-radio references. */
-  .retro-frame {
-    @apply rounded-[28px] shadow-lifted p-[10px];
-    background-color: #17161a;
-  }
-  .retro-inner {
-    @apply rounded-[20px] border border-white/10;
-    background-color: #0b0b0d;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-  }
-
-  /* Uppercase, tracked mono label used for the retro control row (Add music / Loop / See list) */
-  .retro-label {
-    @apply flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest transition-colors;
-  }
-
-  /* Chunky "physical" round button used by the sound player's transport controls */
-  .knob-btn {
-    @apply rounded-full flex items-center justify-center transition-all;
-    box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.15),
-      inset 0 -2px 3px rgba(0, 0, 0, 0.35),
-      0 1px 2px rgba(0, 0, 0, 0.4);
-  }
-  .knob-btn:active {
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-  }
 }
 
 /* Fade-in animation for page transitions */

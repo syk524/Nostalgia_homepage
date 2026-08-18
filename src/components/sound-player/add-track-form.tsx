@@ -66,20 +66,20 @@ export function AddTrackForm({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="label mb-0">Add music</span>
-        <button onClick={onClose} className="text-ink/40 hover:text-ink text-xs">Close</button>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-scroll-400">Add music</span>
+        <button onClick={onClose} className="text-scroll-400 hover:text-scroll-100 text-xs transition-colors">Close</button>
       </div>
 
       <div className="flex gap-1 text-xs">
         <button
           onClick={() => setTab('youtube')}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded ${tab === 'youtube' ? 'bg-ink text-white' : 'bg-ink/5 text-ink/60'}`}
+          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full transition-colors ${tab === 'youtube' ? 'bg-scroll-100 text-ink-900' : 'bg-scroll-100/10 text-scroll-400 hover:text-scroll-100'}`}
         >
           <LinkIcon size={12} /> YouTube
         </button>
         <button
           onClick={() => setTab('upload')}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded ${tab === 'upload' ? 'bg-ink text-white' : 'bg-ink/5 text-ink/60'}`}
+          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full transition-colors ${tab === 'upload' ? 'bg-scroll-100 text-ink-900' : 'bg-scroll-100/10 text-scroll-400 hover:text-scroll-100'}`}
         >
           <Upload size={12} /> Upload MP3
         </button>
@@ -88,49 +88,57 @@ export function AddTrackForm({
       {tab === 'youtube' ? (
         <div className="space-y-2">
           <input
-            className="input text-sm py-1.5"
+            className="dark-input"
             placeholder="YouTube link"
             value={url}
             onChange={e => handleYoutubeFetch(e.target.value)}
           />
           <input
-            className="input text-sm py-1.5"
+            className="dark-input"
             placeholder="Title"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <input
-            className="input text-sm py-1.5"
+            className="dark-input"
             placeholder="Artist"
             value={artist}
             onChange={e => setArtist(e.target.value)}
           />
-          <button onClick={handleYoutubeSubmit} disabled={busy || !url.trim()} className="btn-primary w-full justify-center text-sm">
+          <button
+            onClick={handleYoutubeSubmit}
+            disabled={busy || !url.trim()}
+            className="w-full justify-center flex items-center gap-2 py-2 rounded-full bg-scroll-100 text-ink-900 text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             {busy ? 'Adding…' : 'Add track'}
           </button>
         </div>
       ) : (
         <div className="space-y-2">
           <input
-            className="input text-sm py-1.5"
+            className="dark-input"
             placeholder="Title (optional)"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <input
-            className="input text-sm py-1.5"
+            className="dark-input"
             placeholder="Artist (optional)"
             value={artist}
             onChange={e => setArtist(e.target.value)}
           />
           <input ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="sr-only" onChange={handleFileChange} disabled={busy} />
-          <button onClick={() => fileRef.current?.click()} disabled={busy} className="btn-ghost w-full justify-center text-sm">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            className="w-full justify-center flex items-center gap-2 py-2 rounded-full text-scroll-100 text-sm font-medium border border-scroll-100/20 hover:border-scroll-100/40 hover:bg-scroll-100/5 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             {busy ? 'Uploading…' : 'Choose MP3 file'}
           </button>
         </div>
       )}
 
-      {error && <p className="field-error">{error}</p>}
+      {error && <p className="text-xs text-ember mt-1.5">{error}</p>}
     </div>
   )
 }

@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchQueue, type QueueTrack } from '@/lib/playlist'
 import { removeTrack } from '@/lib/actions/playlist'
 import type { PlaylistTrack } from '@/types/database'
-import { CollapsedDisc } from './collapsed-disc'
-import { NowPlayingPanel } from './now-playing-panel'
+import { DockMusicWidget } from './dock-music-widget'
 import { YoutubeFrame, YT_TARGET_ID } from './youtube-frame'
 
 export type LoopMode = 'off' | 'all' | 'one'
@@ -25,10 +24,9 @@ export function SoundPlayer() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [loopMode, setLoopMode] = useState<LoopMode>('all')
-  const [panelOpen, setPanelOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [ytReady, setYtReady] = useState(false)
 
-  const containerRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const ytPlayerRef = useRef<any>(null)
   const ytPlayerCreatedRef = useRef(false)
@@ -200,18 +198,6 @@ export function SoundPlayer() {
     }
   }, [])
 
-  // click outside to close the panel
-  useEffect(() => {
-    if (!panelOpen) return
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setPanelOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [panelOpen])
-
   function handleAudioEnded() {
     advanceQueue()
   }
@@ -253,10 +239,6 @@ export function SoundPlayer() {
     setCurrentIndex(0)
   }
 
-  function handleCycleLoopMode() {
-    setLoopMode(m => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'))
-  }
-
   async function handleRemove(track: QueueTrack) {
     if (!canEdit) return
     await removeTrack(track.id)
@@ -276,36 +258,28 @@ export function SoundPlayer() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="fixed bottom-0 right-[6%] z-30 transition-transform duration-300 ease-out translate-y-[50px] hover:translate-y-0 focus-within:translate-y-0"
-    >
+    <>
       <YoutubeFrame />
       <audio ref={audioRef} onEnded={handleAudioEnded} className="hidden" />
 
-      {panelOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3">
-          <NowPlayingPanel
-            queue={queue}
-            currentIndex={currentIndex}
-            isPlaying={isPlaying}
-            elapsedSeconds={elapsedSeconds}
-            loopMode={loopMode}
-            userId={userId}
-            canEdit={canEdit}
-            onPlayPause={handlePlayPause}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onSelect={handleSelect}
-            onShuffle={handleShuffle}
-            onCycleLoopMode={handleCycleLoopMode}
-            onRemove={handleRemove}
-            onTrackAdded={handleTrackAdded}
-          />
-        </div>
-      )}
-
-      <CollapsedDisc isPlaying={isPlaying} onClick={() => setPanelOpen(v => !v)} />
-    </div>
+      <DockMusicWidget
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(v => !v)}
+        queue={queue}
+        currentIndex={currentIndex}
+        isPlaying={isPlaying}
+        elapsedSeconds={elapsedSeconds}
+        loopMode={loopMode}
+        userId={userId}
+        canEdit={canEdit}
+        onPlayPause={handlePlayPause}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onSelect={handleSelect}
+        onShuffle={handleShuffle}
+        onRemove={handleRemove}
+        onTrackAdded={handleTrackAdded}
+      />
+    </>
   )
 }
