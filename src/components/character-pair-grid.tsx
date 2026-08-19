@@ -86,9 +86,17 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
 // height, but no caption row below it — the plus icon alone is the
 // label, and a real card's caption row would leave a misleading blank
 // title/author-name space here since this tile has none of that yet.
+// self-end: on an odd-count grid, this tile shares its row with a
+// single real card whose image is followed by a caption line, making
+// the row taller than this tile's own natural (image-only) height.
+// Without self-end, CSS Grid's default align-items:stretch expands
+// this anchor to that full row height, and the box's explicit height
+// keeps it pinned to the top of that taller box — self-end keeps the
+// anchor at its own natural height and pins it to the row's bottom
+// edge instead, flush with its row-mate's caption line below.
 function AddPairCard() {
   return (
-    <Link href="/profile/new" className="group block">
+    <Link href="/profile/new" className="group block self-end">
       <div
         className="w-full rounded border-2 border-dashed border-scroll-300 flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
         style={{ height: THUMBNAIL_HEIGHT }}
