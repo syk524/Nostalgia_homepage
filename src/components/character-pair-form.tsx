@@ -353,7 +353,7 @@ function ColorSwatch({ value, onChange }: { value: string; onChange: (value: str
       type="color"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="h-[42px] w-10 rounded-full border border-scroll-300 cursor-pointer shrink-0"
+      className="h-10 w-10 rounded-full border border-scroll-300 cursor-pointer shrink-0"
     />
   )
 }

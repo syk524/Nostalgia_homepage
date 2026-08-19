@@ -219,7 +219,7 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
                     value={textColor}
                     onChange={e => setTextColor(e.target.value)}
                     aria-label="Text color"
-                    className="h-9 w-10 rounded-full border border-scroll-300 cursor-pointer"
+                    className="h-10 w-10 rounded-full border border-scroll-300 cursor-pointer"
                   />
                 </div>
 
