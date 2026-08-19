@@ -79,13 +79,16 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   )
 }
 
-// Same dashed-border, centered-plus-icon tile used for "add a sticker"
-// (sticker-gallery-modal.tsx) — kept here as a grid tile instead of a
-// btn-primary above the grid so it reads as "one more card you can add"
-// rather than a page-level action. Matches PairCard's own image-box
-// height, but no caption row below it — the plus icon alone is the
-// label, and a real card's caption row would leave a misleading blank
-// title/author-name space here since this tile has none of that yet.
+// Same centered-plus-icon tile used for "add a sticker" (see
+// sticker-gallery-modal.tsx for the pattern this is based on, though
+// that one keeps a dashed border at rest) — kept here as a grid tile
+// instead of a btn-primary above the grid so it reads as "one more
+// card you can add" rather than a page-level action. Matches PairCard's
+// own image-box height, but no caption row below it — the plus icon
+// alone is the label, and a real card's caption row would leave a
+// misleading blank title/author-name space here since this tile has
+// none of that yet. Quiet at rest (no border, no fill) and only reveals
+// itself as a tile via a background tint on hover.
 // self-end: on an odd-count grid, this tile shares its row with a
 // single real card whose image is followed by a caption line, making
 // the row taller than this tile's own natural (image-only) height.
@@ -98,7 +101,7 @@ function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block self-end">
       <div
-        className="w-full rounded border-2 border-dashed border-transparent flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
+        className="w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20"
         style={{ height: THUMBNAIL_HEIGHT }}
       >
         <Plus size={28} />
