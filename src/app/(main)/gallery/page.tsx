@@ -5,6 +5,17 @@ import { GalleryGrid } from '@/components/gallery-grid'
 import { TrackListView } from '@/components/track-list-view'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
+// Reading `searchParams` already makes this dynamic on the server —
+// every request re-runs this component — but the category links (both
+// here and in nav.tsx) are plain client-side Links, and Next's client
+// Router Cache was serving a stale cached RSC payload for /gallery on
+// a searchParams-only navigation: the URL and the nav's own active-
+// category highlight updated correctly (those are client state), but
+// the grid kept showing whatever was cached from an earlier visit to
+// this route. force-dynamic opts this route out of that cache so every
+// category switch is guaranteed a fresh fetch.
+export const dynamic = 'force-dynamic'
+
 export default async function GalleryPage({
   searchParams,
 }: {
@@ -105,7 +116,22 @@ export default async function GalleryPage({
             <p className="text-ink-500">No posts yet{canEdit ? ' — write the first one.' : '.'}</p>
           )}
 
+          {/* Keyed on the active category: GalleryGrid mirrors its `posts`
+              prop into local state (needed for the optimistic drag-reorder
+              update), which only ever syncs on mount — a soft navigation
+              to a new category re-renders this with a fresh, correctly-
+              filtered `posts` prop, but without a key change GalleryGrid
+              keeps whatever it already had in state from the previous
+              category instead of picking up the new list. This used to be
+              masked by category links doing a full page reload (nav.tsx),
+              which remounted everything unconditionally; now that those
+              are a normal soft-navigating Link, the key is what forces a
+              fresh instance (and fresh state) per category. Reordering is
+              disabled on every filtered view anyway, so there's never a
+              legitimate case where in-progress reorder state should
+              survive a category switch. */}
           <GalleryGrid
+            key={activeCategory?.id ?? 'all'}
             posts={(posts ?? []) as unknown as (Post & { author: Profile; images: PostImage[]; category: Category })[]}
             canReorder={canReorder}
           />
