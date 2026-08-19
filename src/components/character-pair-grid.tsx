@@ -98,7 +98,7 @@ function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block self-end">
       <div
-        className="w-full rounded border-2 border-dashed border-scroll-300 flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
+        className="w-full rounded border-2 border-dashed border-transparent flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
         style={{ height: THUMBNAIL_HEIGHT }}
       >
         <Plus size={28} />
