@@ -55,14 +55,16 @@ function readStoredOpen(): boolean {
 
 // The calendar lives on the desk like the sticker folder — draggable,
 // pans with the canvas — but instead of opening a separate window it
-// morphs in place: the sizing box snaps directly between the small
-// icon size and the full panel size (no animated grow/shrink, per
-// .desk-widget-box in globals.css) — position is handled separately
-// via the drag offset, so the two never fight each other. Both the
-// icon face and the panel face stay mounted at all times inside that
-// box and cross-fade by opacity alone via CSS
-// (.desk-widget-icon-face/-panel-face), rather than one hard-swapping
-// for the other at some fixed size threshold. Both position and
+// morphs in place: the sizing box (top-left anchored, growing down and
+// right rather than from center) tweens its own width/height between
+// the small icon and the full panel, per .desk-widget-box in
+// globals.css — position is handled separately via the drag offset, so
+// the two never fight each other. Both the icon face and the panel
+// face stay mounted at all times inside that box and cross-fade via
+// CSS (.desk-widget-icon-face/-panel-face), rather than one hard-
+// swapping for the other at some fixed size threshold; the panel's own
+// content stays hidden until the resize itself has finished, so it
+// never looks like it's stretching into place. Both position and
 // open/closed state persist per browser (localStorage) — if you leave
 // it open, it reopens open next time; if you close it, it reopens as
 // just the icon.

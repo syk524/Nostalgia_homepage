@@ -1,4 +1,5 @@
 'use client'
+import { pairFontFamily } from '@/lib/fonts'
 
 // June 22, 2026 — the fixed reference date the "D+NN" count runs from,
 // kept here (not in the day_counter table) since the user asked for a
@@ -21,21 +22,40 @@ export function dayCount(): number {
 // instead of a generic glyph — a small card showing the current D+
 // count. Computed once from the viewer's own clock; if the tab is left
 // open across midnight the face goes stale until the next reload, same
-// tradeoff as calendar-dock-icon.tsx.
-export function DayCounterDockIcon({ size }: { size: number }) {
+// tradeoff as calendar-dock-icon.tsx. Background photo/font/text color
+// mirror the same fields on the day_counter row (see
+// day-counter-desk-widget.tsx, which passes them through) — the icon
+// isn't independently customizable, it just reflects whatever the
+// widget itself is currently set to.
+export function DayCounterDockIcon({ size, photoUrl, font, textColor }: {
+  size: number
+  photoUrl?: string | null
+  font?: string | null
+  textColor?: string | null
+}) {
   const n = dayCount()
+  const color = textColor ?? '#FFFFFF'
 
   return (
     <div
-      className="rounded-lg bg-scroll-50 flex flex-col items-center justify-center overflow-hidden select-none"
-      style={{ width: size, height: size }}
+      className="relative rounded-lg overflow-hidden select-none"
+      style={{ width: size, height: size, background: '#282625' }}
     >
-      {/* Same optical-centering nudge as calendar-dock-icon.tsx. */}
-      <div className="flex flex-col items-center -translate-y-px">
-        <span className="font-mono text-[7px] font-semibold uppercase text-ember leading-none">D+</span>
-        <span className="font-mono font-bold leading-none text-ink-900 mt-0.5" style={{ fontSize: size * 0.32 }}>
-          {n}
-        </span>
+      {photoUrl && <img src={photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+      {/* Same dark scrim the widget's own display face uses over its
+          photo, so white text stays legible regardless of the image. */}
+      <div className="absolute inset-0 bg-black/30" />
+      <div
+        className="relative w-full h-full flex flex-col items-center justify-center"
+        style={{ fontFamily: pairFontFamily(font) }}
+      >
+        {/* Same optical-centering nudge as calendar-dock-icon.tsx. */}
+        <div className="flex flex-col items-center -translate-y-px">
+          <span className="text-[7px] font-semibold uppercase leading-none" style={{ color }}>D+</span>
+          <span className="font-bold leading-none mt-0.5" style={{ fontSize: size * 0.32, color }}>
+            {n}
+          </span>
+        </div>
       </div>
     </div>
   )

@@ -159,7 +159,12 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
           onPointerCancel={drag.handlers.onPointerCancel}
           className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
         >
-          <DayCounterDockIcon size={ICON_SIZE} />
+          <DayCounterDockIcon
+            size={ICON_SIZE}
+            photoUrl={dayCounter.photo_url}
+            font={dayCounter.font}
+            textColor={dayCounter.text_color}
+          />
         </div>
 
         {/* Stops pointerdown from bubbling to the desk canvas's own pan

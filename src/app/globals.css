@@ -276,49 +276,64 @@
   .t-popout { transition: none !important; }
 }
 
-/* Calendar and day-counter desk widgets' icon↔panel morph
-   (calendar-desk-widget.tsx, day-counter-desk-widget.tsx). The box
-   itself (.desk-widget-box, width/height) snaps directly between the
-   small icon size and the full panel size — no animated grow/shrink —
-   so the panel never visibly stretches into place. What actually
-   animates is the two faces stacked inside it
-   (.desk-widget-icon-face / .desk-widget-panel-face, both always
-   mounted) cross-fading by opacity alone: the icon dims out, the
-   panel dims in, at whatever size the box has already snapped to.
-   Opening uses a bouncier ease than closing, kept from the original
-   reference's own asymmetry — .desk-widget-icon-face/-panel-face's
-   base rule is the close transition, .is-open overrides it, so
-   removing .is-open falls back to the close values automatically. */
+/* Adapted from Transitions.dev's "Plus to menu morph" recipe, for the
+   calendar and day-counter desk widgets' icon↔panel morph
+   (calendar-desk-widget.tsx, day-counter-desk-widget.tsx). Two parts:
+   the box (.desk-widget-box, width/height — the actual "size" half of
+   the morph) and the two faces (.desk-widget-icon-face /
+   .desk-widget-panel-face) stacked inside it, both always mounted.
+   Unlike the reference, the faces cross-fade by opacity ALONE — no
+   scale/slide/blur — since the box's own resize is already doing all
+   the "size" motion; layering a second scale/blur on the content read
+   as redundant. Opening uses a bouncier ease than closing (the
+   reference's own asymmetry) — .desk-widget-box's base rule is the
+   close transition, .is-open overrides it, so removing .is-open falls
+   back to the close values automatically, no separate is-closing state
+   needed the way the popout's fade-then-unmount does (a width/height
+   transition has nothing left to clean up after it finishes — no
+   flash of unstyled content the way abruptly unmounting faded content
+   would risk). The panel content is mounted and animating right along
+   with the box (not waiting to even start), but held at opacity 0
+   until the resize itself has fully finished — transition-delay =
+   --widget-morph-open-dur on just the is-open panel-face rule below —
+   so it only ever dims in once the container has already settled at
+   full size, never while it's still stretching. Closing keeps the
+   base rule's zero delay, so content starts fading out immediately as
+   the box begins shrinking. */
 :root {
-  --widget-morph-open-dur: 350ms;
-  --widget-morph-close-dur: 250ms;
+  --widget-morph-open-dur: 280ms;
+  --widget-morph-close-dur: 200ms;
   --widget-morph-open-ease: cubic-bezier(0.34, 1.25, 0.64, 1);
   --widget-morph-close-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --widget-morph-fade-dur: 180ms;
 }
 .desk-widget-box {
-  transition: none;
+  transition: width var(--widget-morph-close-dur) var(--widget-morph-close-ease), height var(--widget-morph-close-dur) var(--widget-morph-close-ease);
+}
+.desk-widget-box.is-open {
+  transition: width var(--widget-morph-open-dur) var(--widget-morph-open-ease), height var(--widget-morph-open-dur) var(--widget-morph-open-ease);
 }
 .desk-widget-icon-face {
   opacity: 1;
-  transition: opacity var(--widget-morph-close-dur) var(--widget-morph-close-ease);
+  transition: opacity var(--widget-morph-fade-dur) var(--widget-morph-close-ease);
 }
 .desk-widget-box.is-open .desk-widget-icon-face {
   opacity: 0;
-  transition: opacity var(--widget-morph-open-dur) var(--widget-morph-open-ease);
+  transition: opacity var(--widget-morph-fade-dur) var(--widget-morph-open-ease);
   pointer-events: none;
 }
 .desk-widget-panel-face {
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--widget-morph-close-dur) var(--widget-morph-close-ease);
+  transition: opacity var(--widget-morph-fade-dur) var(--widget-morph-close-ease);
 }
 .desk-widget-box.is-open .desk-widget-panel-face {
   opacity: 1;
   pointer-events: auto;
-  transition: opacity var(--widget-morph-open-dur) var(--widget-morph-open-ease);
+  transition: opacity var(--widget-morph-fade-dur) var(--widget-morph-open-ease) var(--widget-morph-open-dur);
 }
 @media (prefers-reduced-motion: reduce) {
-  .desk-widget-icon-face, .desk-widget-panel-face { transition: none !important; }
+  .desk-widget-box, .desk-widget-icon-face, .desk-widget-panel-face { transition: none !important; }
 }
 
 /* A dropped sticker's own settle-in bounce (placed-sticker.tsx). The

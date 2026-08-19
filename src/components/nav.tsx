@@ -35,8 +35,17 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   const activeCategory = searchParams.get('category')
   // Archive is an admin-only debugging section — hidden from editors
   // and logged-out visitors, not just unlinked (the page itself also
-  // 404s for anyone else, see archive/page.tsx).
-  const links = profile?.role === 'admin' ? LINKS : LINKS.filter(link => link.href !== '/archive')
+  // 404s for anyone else, see archive/page.tsx). Profile is unlinked
+  // for guests too — the /profile grid route itself stays public
+  // (middleware still allows it, and an individual pair page still
+  // redirects a guest to login), this only hides the nav entry so a
+  // logged-out visitor isn't invited toward a section that immediately
+  // walls off anything they click into.
+  const links = LINKS.filter(link => {
+    if (link.href === '/archive') return profile?.role === 'admin'
+    if (link.href === '/profile') return !!profile
+    return true
+  })
 
   return (
     <>
