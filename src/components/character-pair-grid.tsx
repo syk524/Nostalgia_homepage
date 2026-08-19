@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { pairFontFamily } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
@@ -78,10 +79,36 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   )
 }
 
-export function CharacterPairGrid({ pairs }: { pairs: PairWithPrimaryProfile[] }) {
+// Same dashed-border, centered-plus-icon tile used for "add a sticker"
+// (sticker-gallery-modal.tsx) — kept here as a grid tile instead of a
+// btn-primary above the grid so it reads as "one more card you can add"
+// rather than a page-level action. Matches PairCard's own image-box
+// height and caption row (with blank name slots either side, so the
+// "New Pair" label lines up with every other card's centered title)
+// instead of a shorter/differently-proportioned tile.
+function AddPairCard() {
+  return (
+    <Link href="/profile/new" className="group block">
+      <div
+        className="w-full rounded border border-dashed border-scroll-300 flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
+        style={{ height: THUMBNAIL_HEIGHT }}
+      >
+        <Plus size={28} />
+      </div>
+      <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
+        <span />
+        <span className="font-medium text-center" style={{ fontSize: '1.5em' }}>New Pair</span>
+        <span />
+      </div>
+    </Link>
+  )
+}
+
+export function CharacterPairGrid({ pairs, canEdit }: { pairs: PairWithPrimaryProfile[]; canEdit: boolean }) {
   return (
     <div className={GRID_CLASSES}>
       {pairs.map(pair => <PairCard key={pair.id} pair={pair} />)}
+      {canEdit && <AddPairCard />}
     </div>
   )
 }

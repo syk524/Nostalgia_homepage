@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { CharacterPairGrid } from '@/components/character-pair-grid'
 import type { Profile, CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
@@ -39,15 +38,11 @@ export default async function CharacterArchivePage() {
     // blow up past a sane size.
     <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 sm:pl-[calc(2.6vw+159px)]">
       <div className="animate-fade-up space-y-6">
-        <div className="flex items-start justify-end gap-4">
-          {canEdit && <Link href="/profile/new" className="btn-primary shrink-0">New Pair</Link>}
-        </div>
-
-        {!pairs?.length && (
-          <p className="text-ink-500">No pairs registered yet{canEdit ? ' — register the first one.' : '.'}</p>
+        {!pairs?.length && !canEdit && (
+          <p className="text-ink-500">No pairs registered yet.</p>
         )}
 
-        <CharacterPairGrid pairs={pairs ?? []} />
+        <CharacterPairGrid pairs={pairs ?? []} canEdit={canEdit} />
       </div>
     </div>
   )
