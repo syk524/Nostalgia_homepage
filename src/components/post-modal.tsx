@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import { DeletePostButton } from '@/app/(main)/gallery/[id]/delete-button'
@@ -19,6 +19,7 @@ export function PostModal({
   nextId?: string | null
 }) {
   const router = useRouter()
+  const [closing, setClosing] = useState(false)
   const images = [...(post.images ?? [])].sort((a, b) => a.position - b.position)
   const backdrop = images[0]?.image_url
 
@@ -28,15 +29,24 @@ export function PostModal({
   // list one step behind in history, so back() could land on a stale form
   // page or a different post instead.
   //
-  // A hard navigation, not router.push(): pushing to a URL that matches the
-  // @children slot's existing path doesn't reconcile the @modal parallel
-  // slot in Next.js's App Router — the URL bar updates but the modal stays
-  // rendered on top, since only popping history (router.back()) reliably
-  // clears it. window.location.href forces a full reload instead, sidestepping
-  // that soft-navigation quirk entirely (same fix already used for deletion
-  // in gallery/[id]/delete-button.tsx).
+  // Closing used to be window.location.href (a full reload) — pushing to a
+  // URL that matches the @children slot's existing path doesn't reconcile
+  // the @modal parallel slot in this Next.js version (confirmed directly:
+  // the URL bar updates but the modal stays rendered on top). A hard
+  // reload sidestepped that by tearing down the whole page, but
+  // SoundPlayer lives in the root layout too, so every close silently
+  // stopped and restarted whatever was playing. Since we're not relying on
+  // Next to clear the slot anyway, we don't need it to: `closing` hides
+  // this component immediately via ordinary component state (`return
+  // null` below), which is instant and touches nothing outside this
+  // component — the audio element two levels up in the tree is never
+  // touched — router.push still runs alongside it purely so the URL bar,
+  // browser history, and anything reading it (Nav's category
+  // highlighting) end up correct, but nothing here depends on that push
+  // actually doing the unmounting.
   function close() {
-    window.location.href = getLastListView()
+    setClosing(true)
+    router.push(getLastListView())
   }
 
   useEffect(() => {
@@ -48,6 +58,12 @@ export function PostModal({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [router, prevId, nextId])
+
+  // After every hook above — an early return before them would call a
+  // different number of hooks between the open and closing renders,
+  // which is exactly the "Rendered fewer hooks than expected" crash
+  // this used to trip.
+  if (closing) return null
 
   return (
     // calc(2.6vw+159px) clears Nav's floating category links (left-2.6%,

@@ -16,6 +16,40 @@ declare global {
   }
 }
 
+// A handful of navigations (closing a post, deleting one, adding one,
+// switching gallery category while a post is open) all have to force a
+// full page reload rather than a soft Next.js navigation — the
+// @modal parallel-route slot (post-modal.tsx) doesn't reliably clear
+// on a client-side router.push in this Next.js version (confirmed:
+// the URL updates but the modal stays visibly rendered on top), so
+// window.location.href is the only thing that actually works. Since
+// SoundPlayer lives in the root layout, a hard reload remounts it from
+// scratch and would normally wipe playback entirely. Rather than
+// chasing every hard-nav call site, SoundPlayer persists just enough
+// (which track, paused or not, how far in, loop mode) to this
+// browser tab's own sessionStorage and rehydrates it once on mount —
+// makes the reload itself invisible instead of trying to prevent it.
+const PLAYBACK_STORAGE_KEY = 'sound-player-playback'
+type StoredPlayback = { trackId: string; isPlaying: boolean; elapsedSeconds: number; loopMode: LoopMode }
+
+function readStoredPlayback(): StoredPlayback | null {
+  try {
+    const raw = sessionStorage.getItem(PLAYBACK_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeStoredPlayback(state: StoredPlayback) {
+  try {
+    sessionStorage.setItem(PLAYBACK_STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // Storage unavailable (private mode, quota) — playback still works
+    // for this page view, it just won't survive the next hard reload.
+  }
+}
+
 export function SoundPlayer() {
   const [userId, setUserId] = useState<string | null>(null)
   const [canEdit, setCanEdit] = useState(false)
@@ -40,10 +74,17 @@ export function SoundPlayer() {
   const queueRef = useRef<QueueTrack[]>([])
   const currentIndexRef = useRef(0)
   const loopModeRef = useRef<LoopMode>('all')
+  const isPlayingRef = useRef(false)
+  // Set once, from sessionStorage, the moment the restored track first
+  // becomes `current` — the "switch source" effect below consumes and
+  // clears it, seeking the freshly-loaded source to this position
+  // instead of starting over at 0.
+  const pendingSeekRef = useRef<number | null>(null)
 
   queueRef.current = queue
   currentIndexRef.current = currentIndex
   loopModeRef.current = loopMode
+  isPlayingRef.current = isPlaying
 
   const current = queue[currentIndex]
 
@@ -70,11 +111,21 @@ export function SoundPlayer() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // load the shared queue once on mount
+  // load the shared queue once on mount, resuming a persisted position
+  // if this tab has one and the track it points to still exists
   useEffect(() => {
     fetchQueue().then(q => {
       setQueue(q)
-      setCurrentIndex(i => (i < q.length ? i : 0))
+      const stored = readStoredPlayback()
+      const restoredIndex = stored ? q.findIndex(t => t.id === stored.trackId) : -1
+      if (stored && restoredIndex !== -1) {
+        setCurrentIndex(restoredIndex)
+        setLoopMode(stored.loopMode)
+        setIsPlaying(stored.isPlaying)
+        pendingSeekRef.current = stored.elapsedSeconds
+      } else {
+        setCurrentIndex(i => (i < q.length ? i : 0))
+      }
     })
   }, [])
 
@@ -145,17 +196,23 @@ export function SoundPlayer() {
     // is meant to stay mounted for the app's lifetime.
   }, [advanceQueue])
 
-  // switch source when the current track changes
+  // switch source when the current track changes. seekTo (from a
+  // restored session, see pendingSeekRef above) is only actually
+  // consumed once it's been acted on — for a YouTube track that isn't
+  // ready yet, this effect re-runs once ytReady flips true, and the
+  // still-pending seek needs to survive until that real run.
   useEffect(() => {
     if (!current) return
     const audio = audioRef.current
     const yt = ytPlayerRef.current
+    const seekTo = pendingSeekRef.current
 
     if (current.source === 'youtube') {
       audio?.pause()
       if (ytReady && yt?.loadVideoById) {
-        if (isPlaying) yt.loadVideoById(current.source_ref)
-        else yt.cueVideoById(current.source_ref)
+        if (isPlaying) yt.loadVideoById(current.source_ref, seekTo ?? undefined)
+        else yt.cueVideoById(current.source_ref, seekTo ?? undefined)
+        pendingSeekRef.current = null
       }
     } else {
       if (ytReady && yt?.stopVideo) yt.stopVideo()
@@ -164,10 +221,18 @@ export function SoundPlayer() {
         const { data } = supabase.storage.from('playlist-audio').getPublicUrl(current.source_ref)
         audio.src = data.publicUrl
         audio.load()
+        if (seekTo) {
+          const applySeek = () => {
+            audio.currentTime = seekTo
+            audio.removeEventListener('loadedmetadata', applySeek)
+          }
+          audio.addEventListener('loadedmetadata', applySeek)
+        }
         if (isPlaying) audio.play().catch(() => {})
+        pendingSeekRef.current = null
       }
     }
-    setElapsedSeconds(0)
+    setElapsedSeconds(seekTo ?? 0)
     setDurationSeconds(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, ytReady])
@@ -188,19 +253,25 @@ export function SoundPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying])
 
-  // elapsed time polling, unified across both source types
+  // elapsed time polling, unified across both source types — also the
+  // spot that keeps sessionStorage current, so whichever position was
+  // last polled (at most 500ms stale) is what a forced hard reload
+  // elsewhere in the app (closing/deleting/adding a post) resumes from.
   useEffect(() => {
     elapsedIntervalRef.current = setInterval(() => {
       const track = queueRef.current[currentIndexRef.current]
       if (!track) return
+      let elapsed = 0
       if (track.source === 'youtube') {
         const yt = ytPlayerRef.current
-        if (typeof yt?.getCurrentTime === 'function') setElapsedSeconds(yt.getCurrentTime())
+        if (typeof yt?.getCurrentTime === 'function') elapsed = yt.getCurrentTime()
         if (typeof yt?.getDuration === 'function') setDurationSeconds(yt.getDuration() || 0)
       } else if (audioRef.current) {
-        setElapsedSeconds(audioRef.current.currentTime)
+        elapsed = audioRef.current.currentTime
         setDurationSeconds(Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : 0)
       }
+      setElapsedSeconds(elapsed)
+      writeStoredPlayback({ trackId: track.id, isPlaying: isPlayingRef.current, elapsedSeconds: elapsed, loopMode: loopModeRef.current })
     }, 500)
     return () => {
       if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current)
@@ -339,7 +410,19 @@ export function SoundPlayer() {
   return (
     <>
       <YoutubeFrame />
-      <audio ref={audioRef} onEnded={handleAudioEnded} className="hidden" />
+      {/* onPlay/onPause keep isPlaying honest against the actual audio
+          element — same reasoning as the YouTube player's own
+          onStateChange handler above: a resumed session's autoplay can
+          be silently blocked by the browser (no user gesture on this
+          fresh page load), and without this the dock would keep
+          showing "Pause" while nothing is actually audible. */}
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnded}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        className="hidden"
+      />
 
       <DockMusicWidget
         collapsed={collapsed}

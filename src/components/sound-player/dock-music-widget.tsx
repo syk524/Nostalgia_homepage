@@ -142,7 +142,11 @@ export function DockMusicWidget({
   }
 
   return (
-    <div className="fixed bottom-0 right-6 z-40">
+    // z-[60] matches Nav's own reasoning for sitting above the post
+    // modal's z-50 overlay — same fixed-chrome precedent, so the player
+    // stays visible and usable even while a post is open, not covered
+    // by the modal's full-screen bg-scroll-100 background.
+    <div className="fixed bottom-0 right-6 z-[60]">
       {/* Only this inner wrapper carries the pill's own slide+fade —
           see .animate-pill-collapse/-expand in globals.css. Expanded
           rests at translateY(-42px): the tag's own height (32px) plus
