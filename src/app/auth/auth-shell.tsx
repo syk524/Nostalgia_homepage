@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export function AuthShell({ tagline, children }: { tagline: string; children: React.ReactNode }) {
+export function AuthShell({ tagline, children }: { tagline?: string; children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-scroll-100 flex items-center justify-center px-4">
       <div
@@ -25,7 +25,7 @@ export function AuthShell({ tagline, children }: { tagline: string; children: Re
           <Link href="/" className="font-mono text-2xl uppercase tracking-tight text-ink">
             Nostalgia
           </Link>
-          <p className="text-ink-500 text-sm mt-2">{tagline}</p>
+          {tagline && <p className="text-ink-500 text-sm mt-2">{tagline}</p>}
         </div>
 
         <div className="card p-8">{children}</div>

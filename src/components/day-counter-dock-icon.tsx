@@ -30,10 +30,13 @@ export function DayCounterDockIcon({ size }: { size: number }) {
       className="rounded-lg bg-scroll-50 flex flex-col items-center justify-center overflow-hidden select-none"
       style={{ width: size, height: size }}
     >
-      <span className="font-mono text-[7px] font-semibold uppercase text-ember leading-none">D+</span>
-      <span className="font-mono font-bold leading-none text-ink-900 mt-0.5" style={{ fontSize: size * 0.32 }}>
-        {n}
-      </span>
+      {/* Same optical-centering nudge as calendar-dock-icon.tsx. */}
+      <div className="flex flex-col items-center -translate-y-px">
+        <span className="font-mono text-[7px] font-semibold uppercase text-ember leading-none">D+</span>
+        <span className="font-mono font-bold leading-none text-ink-900 mt-0.5" style={{ fontSize: size * 0.32 }}>
+          {n}
+        </span>
+      </div>
     </div>
   )
 }

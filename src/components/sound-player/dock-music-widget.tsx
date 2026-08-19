@@ -163,7 +163,13 @@ export function DockMusicWidget({
           here — changing animation-name alone is enough for the
           browser to restart it; forcing a remount on top of that only
           adds an extra unmount/mount cycle for no benefit. */}
-      <div className={collapsed ? 'animate-pill-collapse' : 'animate-pill-expand'}>
+      {/* relative z-25 sits between the tag's two possible z-indexes
+          below — during collapse the tag never actually overlaps the
+          pill spatially (see tag-collapse's own comment), so this is
+          inert there; it only matters for tag-expand's new reveal,
+          where the tag deliberately passes through the pill's own
+          footprint to read as emerging from behind it. */}
+      <div className={`relative z-[25] ${collapsed ? 'animate-pill-collapse' : 'animate-pill-expand'}`}>
       {popoutPhase !== 'closed' && (
         <div className={`absolute bottom-full right-0 mb-3 t-popout ${popoutPhase === 'open' ? 'is-open' : ''} ${popoutPhase === 'closing' ? 'is-closing' : ''}`}>
           {popoutContent === 'add' ? (
@@ -198,7 +204,7 @@ export function DockMusicWidget({
         </div>
       )}
 
-      <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-ink-900/90 backdrop-blur-md">
+      <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-[#2F2F2E]">
         <div className="min-w-0 w-36 font-mono">
           <p className="text-sm text-scroll-100 truncate font-medium">{current?.title ?? 'Nothing playing'}</p>
           <p className="text-xs text-scroll-400 truncate">{current?.artist ?? '—'}</p>
@@ -291,11 +297,11 @@ export function DockMusicWidget({
           them the instant they'd be visible would pop; swapping them
           off-screen instead doesn't. No React `key` here either — same
           reasoning as the pill. */}
-      <div className="absolute left-1/2 bottom-0 z-30" style={{ transform: 'translateX(calc(-50% + 80px))' }}>
+      <div className={`absolute left-1/2 bottom-0 ${collapsed ? 'z-30' : 'z-20'}`} style={{ transform: 'translateX(calc(-50% + 80px))' }}>
         <button
           onClick={handleToggleCollapse}
           aria-label={collapsed ? 'Show music player' : 'Hide music player'}
-          className={`flex items-center justify-center h-8 w-12 bg-ink-900/90 backdrop-blur-md text-scroll-400 hover:text-scroll-100 transition-colors ${collapsed ? 'animate-tag-collapse' : 'animate-tag-expand'} ${tagDocked ? 'rounded-t-lg' : 'rounded-b-lg'}`}
+          className={`flex items-center justify-center h-8 w-12 bg-[#2F2F2E] text-scroll-400 hover:text-scroll-100 transition-colors ${collapsed ? 'animate-tag-collapse' : 'animate-tag-expand'} ${tagDocked ? 'rounded-t-lg' : 'rounded-b-lg'}`}
         >
           {tagDocked ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>

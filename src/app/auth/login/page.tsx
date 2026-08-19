@@ -8,7 +8,7 @@ export default function LoginPage() {
   const [state, action, pending] = useActionState(login, undefined)
 
   return (
-    <AuthShell tagline="Welcome back">
+    <AuthShell>
       <h2 className="text-xl text-ink mb-6">Log In</h2>
 
       <form action={action} className="space-y-4">

@@ -227,6 +227,13 @@
 @keyframes tag-expand {
   0%     { transform: translateY(0px); opacity: 1; }
   37.5%  { transform: translateY(100px); opacity: 0; }
+  /* From here the tag no longer rises up alongside the pill — it
+     jumps (invisibly, still opacity 0) to sit right at the pill's own
+     resting height, then slides the 32px down into its own resting
+     spot as it fades in, reading as if it's sliding out from behind
+     the pill rather than climbing up to meet it. Collapsing is
+     untouched — this only changes tag-expand. */
+  50%    { transform: translateY(-42px); opacity: 0; }
   100%   { transform: translateY(-10px); opacity: 1; }
 }
 .animate-tag-collapse { animation: tag-collapse 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -283,8 +290,8 @@
    base rule is the close transition, .is-open overrides it, so
    removing .is-open falls back to the close values automatically. */
 :root {
-  --widget-morph-open-dur: 200ms;
-  --widget-morph-close-dur: 150ms;
+  --widget-morph-open-dur: 350ms;
+  --widget-morph-close-dur: 250ms;
   --widget-morph-open-ease: cubic-bezier(0.34, 1.25, 0.64, 1);
   --widget-morph-close-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
