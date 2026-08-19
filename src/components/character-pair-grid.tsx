@@ -83,22 +83,17 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
 // (sticker-gallery-modal.tsx) — kept here as a grid tile instead of a
 // btn-primary above the grid so it reads as "one more card you can add"
 // rather than a page-level action. Matches PairCard's own image-box
-// height and caption row (with blank name slots either side, so the
-// "New Pair" label lines up with every other card's centered title)
-// instead of a shorter/differently-proportioned tile.
+// height, but no caption row below it — the plus icon alone is the
+// label, and a real card's caption row would leave a misleading blank
+// title/author-name space here since this tile has none of that yet.
 function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block">
       <div
-        className="w-full rounded border border-dashed border-scroll-300 flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
+        className="w-full rounded border-2 border-dashed border-scroll-300 flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:border-ink-400"
         style={{ height: THUMBNAIL_HEIGHT }}
       >
         <Plus size={28} />
-      </div>
-      <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
-        <span />
-        <span className="font-medium text-center" style={{ fontSize: '1.5em' }}>New Pair</span>
-        <span />
       </div>
     </Link>
   )
