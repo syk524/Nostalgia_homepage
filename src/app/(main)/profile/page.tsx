@@ -12,11 +12,13 @@ export default async function CharacterArchivePage() {
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
-  const { data: rawPairs } = await supabase
-    .from('character_pairs')
-    .select('*, pair_profiles!inner(title, title_font, pair_image_url, illustration_source, background_url, profile_characters(name, name_color, name_font, slot))')
-    .eq('pair_profiles.is_primary', true)
-    .order('created_at', { ascending: false })
+  // pair_profiles/profile_characters are locked to signed-in reads only
+  // (see migration 052) — a guest can't query them directly, so the
+  // grid goes through this security-definer RPC instead, which returns
+  // only the summary fields below regardless of who's asking. Shape
+  // matches PrimaryProfileSummary exactly, so nothing downstream
+  // (CharacterPairGrid) needs to change.
+  const { data: rawPairs } = await supabase.rpc('get_public_pair_grid')
   type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'background_url'> & { profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[] }
   const pairs = rawPairs as unknown as (CharacterPair & { pair_profiles: PrimaryProfileSummary[] })[] | null
 

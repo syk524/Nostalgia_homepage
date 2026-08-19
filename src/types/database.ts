@@ -310,6 +310,16 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      // Security-definer RPC (migration 052) — returns the /profile
+      // grid's summary shape regardless of auth state, since the
+      // underlying pair_profiles/profile_characters tables are locked
+      // to signed-in reads. Callers cast the result themselves (see
+      // profile/page.tsx), so this stays loosely typed on purpose.
+      get_public_pair_grid: {
+        Args: Record<string, never>
+        Returns: Record<string, unknown>[]
+      }
+    }
   }
 }
