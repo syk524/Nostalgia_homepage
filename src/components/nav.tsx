@@ -22,6 +22,28 @@ function NavDot() {
   return <span className="nav-dot" />
 }
 
+// The post modal's @modal parallel-route slot (gallery/@modal/(.)[id]/)
+// only ever gets populated while the URL is a post-detail path — that's
+// the one case Next.js fails to reconcile on a soft navigation to a
+// sibling route (the modal overlay sticks around instead of clearing),
+// which is why category links used to hard-navigate unconditionally.
+// Category switching is common enough, and the site-wide music player
+// (mounted once in the root layout, outside every route segment) loses
+// all its in-memory playback state on a hard reload, so the workaround
+// is scoped to just the path shape that can actually trigger the bug —
+// everywhere else gets a normal soft-navigating Link, which never
+// touches the player. Excludes /gallery/new and /gallery/[id]/edit,
+// neither of which the modal slot ever intercepts.
+function CategoryLink({ href, hardNav, className, children }: {
+  href: string
+  hardNav: boolean
+  className: string
+  children: React.ReactNode
+}) {
+  if (hardNav) return <a href={href} className={className}>{children}</a>
+  return <Link href={href} className={className}>{children}</Link>
+}
+
 // One Nav, mounted once for the whole app — it never remounts or changes
 // look between the homepage and any gallery view (grid, post, edit). Its
 // z-index sits above the post modal's overlay so it stays visible,
@@ -32,6 +54,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
+  const onPostDetail = /^\/gallery\/(?!new$)[^/]+$/.test(pathname)
   const activeCategory = searchParams.get('category')
   // Archive is an admin-only debugging section — hidden from editors
   // and logged-out visitors, not just unlinked (the page itself also
@@ -69,24 +92,22 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
               no underline. Text scrambles into place on hover (see
               scramble-text.tsx — an original small reimplementation of the
               "decode" effect, not the use-scramble package itself).
-              Plain <a> tags — a soft navigation from a link that lives
-              inside the post modal's parallel route slot to an unrelated
-              route can update the URL without re-rendering (a Next.js edge
-              case); a full navigation always renders correctly. Harmless
-              here too since this isn't a frequent-transition control. */}
-          <a href="/gallery" className={`flex items-center gap-2 ${!activeCategory ? 'text-ink font-medium' : 'text-ink-400'}`}>
+              hardNav only kicks in on a post-detail path — see
+              CategoryLink's own comment for why. */}
+          <CategoryLink href="/gallery" hardNav={onPostDetail} className={`flex items-center gap-2 ${!activeCategory ? 'text-ink font-medium' : 'text-ink-400'}`}>
             <ScrambleText text="All" />
             {!activeCategory && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
-          </a>
+          </CategoryLink>
           {categories.map(cat => (
-            <a
+            <CategoryLink
               key={cat.id}
               href={`/gallery?category=${encodeURIComponent(cat.name)}`}
+              hardNav={onPostDetail}
               className={`flex items-center gap-2 ${activeCategory === cat.name ? 'text-ink font-medium' : 'text-ink-400'}`}
             >
               <ScrambleText text={cat.name} />
               {activeCategory === cat.name && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
-            </a>
+            </CategoryLink>
           ))}
         </div>
       )}
