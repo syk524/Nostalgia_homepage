@@ -80,6 +80,14 @@ export function SoundPlayer() {
   // clears it, seeking the freshly-loaded source to this position
   // instead of starting over at 0.
   const pendingSeekRef = useRef<number | null>(null)
+  // Set right before cueVideoById() when the switch should end up playing.
+  // Calling playVideo() immediately after cueVideoById() is a race — both
+  // are async postMessage calls into the iframe, and playVideo() can land
+  // before the cue actually finishes loading the new video, so it's a
+  // no-op and playback stays stuck at CUED. Deferring the playVideo() call
+  // to onStateChange, once the CUED state confirms the new video is
+  // actually loaded, removes the race entirely.
+  const autoplayOnCueRef = useRef(false)
 
   queueRef.current = queue
   currentIndexRef.current = currentIndex
@@ -167,6 +175,10 @@ export function SoundPlayer() {
         events: {
           onReady: () => setYtReady(true),
           onStateChange: (event: any) => {
+            if (event.data === window.YT.PlayerState.CUED && autoplayOnCueRef.current) {
+              autoplayOnCueRef.current = false
+              ytPlayerRef.current?.playVideo?.()
+            }
             if (event.data === window.YT.PlayerState.ENDED) advanceQueue()
             if (event.data === window.YT.PlayerState.PLAYING) setIsPlaying(true)
             if (event.data === window.YT.PlayerState.PAUSED) setIsPlaying(false)
@@ -209,9 +221,21 @@ export function SoundPlayer() {
 
     if (current.source === 'youtube') {
       audio?.pause()
-      if (ytReady && yt?.loadVideoById) {
-        if (isPlaying) yt.loadVideoById(current.source_ref, seekTo ?? undefined)
-        else yt.cueVideoById(current.source_ref, seekTo ?? undefined)
+      // loadVideoById is documented to autoplay on its own, but calling it
+      // again shortly after a previous loadVideoById/cueVideoById — e.g.
+      // two YouTube tracks back to back via Next/Prev — can leave the
+      // player stuck at CUED instead of actually playing (confirmed via
+      // the onStateChange trace: the implicit autoplay silently drops if
+      // the previous video's load hadn't fully settled yet). cueVideoById
+      // always, with autoplayOnCueRef flagging whether onStateChange
+      // should fire playVideo() once the CUED state confirms the new
+      // video is actually loaded — calling playVideo() synchronously
+      // right after cueVideoById() was tried first and is itself racy
+      // (both are async postMessage calls into the iframe; playVideo()
+      // can arrive before the cue finishes and become a no-op).
+      if (ytReady && yt?.cueVideoById) {
+        autoplayOnCueRef.current = isPlaying
+        yt.cueVideoById(current.source_ref, seekTo ?? undefined)
         pendingSeekRef.current = null
       }
     } else {
@@ -410,17 +434,21 @@ export function SoundPlayer() {
   return (
     <>
       <YoutubeFrame />
-      {/* onPlay/onPause keep isPlaying honest against the actual audio
-          element — same reasoning as the YouTube player's own
-          onStateChange handler above: a resumed session's autoplay can
-          be silently blocked by the browser (no user gesture on this
-          fresh page load), and without this the dock would keep
-          showing "Pause" while nothing is actually audible. */}
+      {/* onPlay is purely additive confirmation that actual playback
+          started — safe to trust unconditionally, since nothing in
+          this component ever wants isPlaying flipped true unless
+          audio genuinely started. Deliberately no onPause here: a
+          track change reassigns audio.src and calls .load(), which
+          makes the browser fire its own native `pause` event as part
+          of resetting the element — completely unrelated to the user
+          pausing anything, but indistinguishable from a real pause to
+          a plain onPause handler. That clobbered the isPlaying:true a
+          track change had just set, so next/prev silently landed on
+          the new track paused instead of continuing to play. */}
       <audio
         ref={audioRef}
         onEnded={handleAudioEnded}
         onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
         className="hidden"
       />
 
