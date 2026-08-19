@@ -6,18 +6,24 @@ import { uploadImage } from '@/lib/upload'
 import { addGalleryImage, deleteGalleryImage } from '@/lib/actions/stickers'
 import type { StickerGalleryImage } from '@/types/database'
 
-// The shared sticker library (editor/admin only — see draggable-home-scene.tsx,
-// which only ever mounts this for canEdit users). No dimmed backdrop and
-// no backdrop-click close — it floats over the page exactly like a dock
+// The sticker picker itself is open to everyone (see
+// draggable-home-scene.tsx, which mounts this for any visitor once
+// galleryOpen is true) — the shared library of images is public, RLS
+// allows anonymous SELECT. Managing that library (uploading a new image,
+// deleting one) stays editor/admin only, gated here by `canManage`
+// rather than the modal's own presence, so a guest can still drag
+// existing stickers onto their board. No dimmed backdrop and no
+// backdrop-click close — it floats over the page exactly like a dock
 // app window (see dock-app-window.tsx, whose header/no-shadow treatment
 // this mirrors), draggable by its header and remembered per browser via
 // usePersistentDraggable. The X is still the only way to close it. With
 // no backdrop covering the canvas, drag-and-drop of a tile onto the
 // background is handled directly by draggable-home-scene's own listeners
 // again — nothing here needs to forward it anymore.
-export function StickerGalleryModal({ images, ownerId, onClose, onImagesChange }: {
+export function StickerGalleryModal({ images, ownerId, canManage, onClose, onImagesChange }: {
   images: StickerGalleryImage[]
-  ownerId: string
+  ownerId: string | null
+  canManage: boolean
   onClose: () => void
   onImagesChange: (images: StickerGalleryImage[]) => void
 }) {
@@ -30,7 +36,7 @@ export function StickerGalleryModal({ images, ownerId, onClose, onImagesChange }
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
+    if (!file || !ownerId) return
 
     setError('')
     setUploading(true)
@@ -84,15 +90,19 @@ export function StickerGalleryModal({ images, ownerId, onClose, onImagesChange }
         {error && <p className="field-error text-xs mb-3">{error}</p>}
 
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="aspect-square rounded-lg border border-dashed border-scroll-300 flex items-center justify-center text-ink-400 hover:text-ink-600 hover:border-ink-400 transition-colors disabled:opacity-50"
-          >
-            {uploading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          {canManage && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="aspect-square rounded-lg border border-dashed border-scroll-300 flex items-center justify-center text-ink-400 hover:text-ink-600 hover:border-ink-400 transition-colors disabled:opacity-50"
+              >
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            </>
+          )}
 
           {images.map(img => (
             <div key={img.id} className="group relative aspect-square rounded-lg border border-scroll-300 bg-scroll-100 overflow-hidden">
@@ -103,21 +113,25 @@ export function StickerGalleryModal({ images, ownerId, onClose, onImagesChange }
                 onDragStart={e => e.dataTransfer.setData('text/sticker-gallery-id', img.id)}
                 className="w-full h-full object-contain p-2 cursor-grab active:cursor-grabbing select-none"
               />
-              <button
-                type="button"
-                onClick={() => handleDelete(img)}
-                disabled={deletingId === img.id}
-                aria-label="Delete from gallery"
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-ink-900/60 text-scroll-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-100"
-              >
-                {deletingId === img.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(img)}
+                  disabled={deletingId === img.id}
+                  aria-label="Delete from gallery"
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-ink-900/60 text-scroll-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-100"
+                >
+                  {deletingId === img.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                </button>
+              )}
             </div>
           ))}
         </div>
 
         {images.length === 0 && (
-          <p className="mt-4 text-[11px] font-mono text-ink-400">No stickers yet — add one above.</p>
+          <p className="mt-4 text-[11px] font-mono text-ink-400">
+            {canManage ? 'No stickers yet — add one above.' : 'No stickers yet.'}
+          </p>
         )}
       </div>
     </div>

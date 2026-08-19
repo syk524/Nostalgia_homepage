@@ -83,6 +83,27 @@ export async function addUploadedTrack(storagePath: string, title: string, artis
   return { track, error: null }
 }
 
+// Mirrors reorderPosts (lib/actions/gallery.ts) — bulk-persist a new
+// position for every track, in the order the client already committed
+// to locally (see QueueList's dnd-kit drag end). requireEditor gates
+// this the same as add/remove; the currently-playing track's own
+// position isn't special-cased here — sound-player.tsx's handleReorder
+// keeps currentIndex pointed at the right track by id regardless of
+// where the reorder lands it, which is the actual thing that mattered.
+export async function reorderTracks(orderedIds: string[]) {
+  const { supabase, user, error: authError } = await requireEditor()
+  if (!user) return { error: authError }
+
+  const results = await Promise.all(
+    orderedIds.map((id, position) => supabase.from('playlist_tracks').update({ position }).eq('id', id))
+  )
+  const failed = results.find(r => r.error)
+  if (failed?.error) return { error: failed.error.message }
+
+  revalidatePath('/')
+  return { error: null }
+}
+
 export async function removeTrack(trackId: string) {
   const { supabase, user, error: authError } = await requireEditor()
   if (!user) return { error: authError }

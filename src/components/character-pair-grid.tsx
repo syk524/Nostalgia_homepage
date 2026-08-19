@@ -5,7 +5,7 @@ import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/datab
 // Everything the grid needs comes from the primary profile — title,
 // thumbnail image/background, and both characters' names — since nothing
 // is shared at the pair level any more.
-type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'background_url'> & {
+type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'background_url'> & {
   profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[]
 }
 type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSummary[] }
@@ -48,6 +48,22 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             alt=""
             className="absolute left-1/2 top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
           />
+          {primaryProfile.illustration_source && (
+            // Always this exact font/color/size regardless of what's
+            // picked for the detail page — the thumbnail is a fixed,
+            // consistent design element, not a per-profile customization
+            // surface. Noto Sans KR's light (300) weight, loaded in
+            // layout.tsx specifically for this. Anchored off the box's
+            // own bottom (not top) so it sits a fixed 6px above the
+            // background band's own top edge regardless of the box's
+            // total height — BACKGROUND_HEIGHT (the band's height) + 6.
+            <span
+              className="absolute right-0 z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              style={{ bottom: BACKGROUND_HEIGHT + 6, fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
+            >
+              ©{primaryProfile.illustration_source}
+            </span>
+          )}
         </div>
       ) : (
         <div className="w-full aspect-video rounded flex items-center justify-center text-scroll-400 text-3xl">◯</div>

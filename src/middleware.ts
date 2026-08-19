@@ -6,8 +6,12 @@ const AUTH_PAGES = ['/auth/login', '/auth/register']
 
 // Routes viewable by everyone, guests included. Gallery browsing/reading is
 // public; creating and editing posts requires a session (checked below).
+// The profile grid is public too, but only the grid — a pair's own detail
+// page (and everything else under /profile/) still requires login, so
+// browsing who's listed is open while actually reading a profile isn't.
 function isPublicRoute(path: string): boolean {
   if (path === '/' || path === '/archive') return true
+  if (path === '/profile') return true
   if (path === '/gallery') return true
   if (path.startsWith('/gallery/')) {
     return path !== '/gallery/new' && !path.endsWith('/edit')

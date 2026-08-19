@@ -87,6 +87,7 @@ type ProfileState = {
   pageType: 'template' | 'custom_html'
   customHtmlUrl: string | null; customHtmlFile: File | null; customHtmlFileName: string; uploadingCustomHtml: boolean
   pairImageUrl: string | null; pairImageFile: File | null; pairImagePreview: string; uploadingPairImage: boolean
+  illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
@@ -120,6 +121,9 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     pairImageFile: null,
     pairImagePreview: existing?.pair_image_url ?? '',
     uploadingPairImage: false,
+    illustrationSource: existing?.illustration_source ?? '',
+    illustrationSourceFont: existing?.illustration_source_font ?? 'default',
+    illustrationSourceColor: existing?.illustration_source_color ?? '#5c574d',
     backgroundUrl: existing?.background_url ?? null,
     backgroundFile: null,
     backgroundPreview: existing?.background_url ?? '',
@@ -240,7 +244,9 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         title: p.title, profileTitle: p.profileTitle, titleFont: p.titleFont, titleColor: p.titleColor, titleSize: p.titleSize, iconColor: p.iconColor,
         linkText: p.linkText, linkUrl: p.linkUrl, linkFont: p.linkFont, linkColor: p.linkColor, hasMusic: p.hasMusic,
         isPrimary: p.isPrimary, pageType: p.pageType, customHtmlUrl: p.pageType === 'custom_html' ? finalCustomHtmlUrl : null,
-        pairImageUrl: finalPairImageUrl, backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
+        pairImageUrl: finalPairImageUrl,
+        illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
+        backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         timelineSubtitleFont: p.timelineSubtitleFont, timelineTitleFont: p.timelineTitleFont, timelineTextColor: p.timelineTextColor,
         timelineDotColor: p.timelineDotColor, timelineLineColor: p.timelineLineColor, timelineShadow: p.timelineShadow,
         timelineEntries: p.timelineEntries.map(e => ({
@@ -347,7 +353,7 @@ function ColorSwatch({ value, onChange }: { value: string; onChange: (value: str
       type="color"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="h-[42px] w-10 rounded border border-scroll-300 cursor-pointer shrink-0"
+      className="h-[42px] w-10 rounded-full border border-scroll-300 cursor-pointer shrink-0"
     />
   )
 }
@@ -534,6 +540,31 @@ function ProfileFieldset({
                 {profile.uploadingPairImage ? 'Uploading…' : 'Choose image'}
                 <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
               </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Illustration source (optional)</label>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-[140px]">
+                <span
+                  className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-ink/50"
+                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont) }}
+                >
+                  ©
+                </span>
+                <input
+                  className="input pl-8"
+                  value={profile.illustrationSource}
+                  onChange={e => onPatch({ illustrationSource: e.target.value })}
+                  placeholder="e.g. 부때"
+                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont) }}
+                />
+              </div>
+              <div className="w-36">
+                <FontSelect value={profile.illustrationSourceFont} onChange={v => onPatch({ illustrationSourceFont: v })} />
+              </div>
+              <ColorSwatch value={profile.illustrationSourceColor} onChange={v => onPatch({ illustrationSourceColor: v })} />
             </div>
           </div>
 

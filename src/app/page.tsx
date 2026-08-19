@@ -4,6 +4,7 @@ import { DraggableHomeScene } from '@/components/draggable-home-scene'
 import { Nav } from '@/components/nav'
 import { fetchStickerGallery, fetchUserPlacements } from '@/lib/sticker-queries'
 import { fetchCalendarEvents } from '@/lib/calendar-queries'
+import { fetchDayCounter } from '@/lib/day-counter-queries'
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -14,9 +15,16 @@ export default async function HomePage() {
     : null
 
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
-  const [galleryImages, placements] = canEdit && user
-    ? await Promise.all([fetchStickerGallery(supabase), fetchUserPlacements(supabase, user.id)])
-    : [[], []]
+  const isAdmin = profile?.role === 'admin'
+
+  // The gallery itself (which stickers exist to place) is shared/global,
+  // not per-owner — RLS allows anonymous SELECT, so every visitor sees
+  // the same picker. Placements are the opposite: per-account, editor/
+  // admin only. A guest (or a logged-in viewer) still gets a sticker
+  // board, just not this Supabase-backed one — draggable-home-scene.tsx
+  // seeds their placements from localStorage client-side instead.
+  const galleryImages = await fetchStickerGallery(supabase)
+  const placements = canEdit && user ? await fetchUserPlacements(supabase, user.id) : []
 
   // Unlike the sticker gallery, the calendar is open to every visitor —
   // RLS on calendar_events already filters rows down to what this
@@ -24,14 +32,20 @@ export default async function HomePage() {
   // fetch runs unconditionally rather than being gated by canEdit.
   const calendarEvents = await fetchCalendarEvents(supabase)
 
+  // Same reasoning as the calendar — a single global row, public to
+  // every visitor, RLS-gated on write rather than read.
+  const dayCounter = await fetchDayCounter(supabase)
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-scroll-100">
       <DraggableHomeScene
         canEdit={canEdit}
+        isAdmin={isAdmin}
         userId={user?.id ?? null}
         initialGalleryImages={galleryImages}
         initialPlacements={placements}
         initialEvents={calendarEvents}
+        initialDayCounter={dayCounter}
       />
 
       <Suspense fallback={null}>

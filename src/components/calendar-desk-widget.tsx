@@ -41,28 +41,31 @@ const PANEL_WIDTH = 560
 const PANEL_HEIGHT = 400
 const OPEN_STORAGE_KEY = 'calendar-desk-widget-open'
 
+// Defaults to open — a first-time visitor (nothing stored yet) sees the
+// panel already expanded; only an explicit close ('0') keeps it shut on
+// the next visit.
 function readStoredOpen(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return localStorage.getItem(OPEN_STORAGE_KEY) === '1'
+    return localStorage.getItem(OPEN_STORAGE_KEY) !== '0'
   } catch {
-    return false
+    return true
   }
 }
 
 // The calendar lives on the desk like the sticker folder — draggable,
 // pans with the canvas — but instead of opening a separate window it
-// morphs in place: the same box tweens its own width/height between the
-// small icon and the full panel (only width/height transition, per the
-// user's reference — position is handled separately via the drag
-// offset, so the two never fight each other). The sizing box is
-// centered on the drag anchor via top/left 50% + translate(-50%,-50%),
-// which CSS recomputes every frame against the box's current (animating)
-// size — so it grows and shrinks symmetrically around a fixed center
-// point, the spot you dragged it to, rather than from a corner. Both
-// position and open/closed state persist per browser (localStorage) —
-// if you leave it open, it reopens open next time; if you close it, it
-// reopens as just the icon.
+// morphs in place: the sizing box snaps directly between the small
+// icon size and the full panel size (no animated grow/shrink, per
+// .desk-widget-box in globals.css) — position is handled separately
+// via the drag offset, so the two never fight each other. Both the
+// icon face and the panel face stay mounted at all times inside that
+// box and cross-fade by opacity alone via CSS
+// (.desk-widget-icon-face/-panel-face), rather than one hard-swapping
+// for the other at some fixed size threshold. Both position and
+// open/closed state persist per browser (localStorage) — if you leave
+// it open, it reopens open next time; if you close it, it reopens as
+// just the icon.
 export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange }: {
   panX: number
   panY: number
@@ -179,179 +182,180 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
       style={{ transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
     >
       <div
-        className="absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden"
+        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${open ? 'is-open' : ''}`}
         style={{
           width: open ? PANEL_WIDTH : ICON_SIZE,
           height: open ? PANEL_HEIGHT : ICON_SIZE,
-          transition: 'width 300ms cubic-bezier(0.22, 1, 0.36, 1), height 300ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
-        {open ? (
-          // Stops pointerdown from bubbling to the desk canvas's own
-          // onPointerDown (which starts a pan gesture and captures the
-          // pointer, per the same bug the sticker gallery modal hit
-          // earlier). The header/icon already dodge this because their
-          // own drag handlers call stopPropagation, but plain buttons in
-          // the body — day cells, Add event, nav arrows — had nothing
-          // stopping their clicks from being hijacked.
+        {/* Both faces stay mounted at all times and cross-fade via CSS
+            (.desk-widget-icon-face/-panel-face in globals.css) instead
+            of one hard-swapping for the other — see that rule's own
+            comment for why. */}
+        <div
+          onPointerDown={handleIconPointerDown}
+          onPointerMove={drag.handlers.onPointerMove}
+          onPointerUp={handleIconPointerUp}
+          onPointerCancel={drag.handlers.onPointerCancel}
+          className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
+        >
+          <CalendarDockIcon size={ICON_SIZE} />
+        </div>
+
+        {/* Stops pointerdown from bubbling to the desk canvas's own
+            onPointerDown (which starts a pan gesture and captures the
+            pointer, per the same bug the sticker gallery modal hit
+            earlier). The header/icon already dodge this because their
+            own drag handlers call stopPropagation, but plain buttons in
+            the body — day cells, Add event, nav arrows — had nothing
+            stopping their clicks from being hijacked. */}
+        <div
+          className="desk-widget-panel-face absolute inset-0 flex flex-col"
+          style={{ width: PANEL_WIDTH, height: PANEL_HEIGHT }}
+          onPointerDown={e => e.stopPropagation()}
+        >
           <div
-            className="absolute inset-0 flex flex-col"
-            style={{ width: PANEL_WIDTH, height: PANEL_HEIGHT }}
-            onPointerDown={e => e.stopPropagation()}
+            {...drag.handlers}
+            className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${drag.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           >
-            <div
-              {...drag.handlers}
-              className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${drag.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            <div className="flex items-center gap-1.5">
+              <CalendarDays size={13} className="text-[#5B574E]" />
+              <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Calendar</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              onPointerDown={e => e.stopPropagation()}
+              aria-label="Close"
+              className="text-ink-400 hover:text-ink-600"
             >
-              <div className="flex items-center gap-1.5">
-                <CalendarDays size={13} className="text-[#5B574E]" />
-                <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Calendar</h2>
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="flex flex-1 min-h-0">
+            <div className="w-[300px] shrink-0 p-5 border-r border-scroll-300 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-sans text-sm text-[#5B574E]">{MONTH_NAMES[viewMonth]} {viewYear}</span>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month" className="text-ink-400 hover:text-ink-600">
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button type="button" onClick={() => changeMonth(1)} aria-label="Next month" className="text-ink-400 hover:text-ink-600">
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                onPointerDown={e => e.stopPropagation()}
-                aria-label="Close"
-                className="text-ink-400 hover:text-ink-600"
-              >
-                <X size={16} />
-              </button>
+
+              <div className="grid grid-cols-7 gap-y-1 text-center">
+                {WEEKDAYS.map((w, i) => (
+                  <span key={i} className="font-sans text-[9px] uppercase text-ink-400 py-1">{w}</span>
+                ))}
+                {grid.map(day => {
+                  const dayEvents = eventsByDay.get(day.iso) ?? []
+                  const isSelected = day.iso === selectedIso
+                  const isToday = day.iso === todayIso
+                  return (
+                    <button
+                      key={day.iso}
+                      type="button"
+                      onClick={() => selectDay(day)}
+                      className={`relative aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-xs font-sans transition-colors
+                        ${isSelected ? 'bg-[#5B574E] text-scroll-100' : 'hover:bg-scroll-200 text-[#5B574E]'}
+                        ${!day.inMonth ? 'opacity-30' : ''}
+                        ${isToday && !isSelected ? 'border border-ink-500/40' : ''}`}
+                    >
+                      {day.date.getDate()}
+                      <span className="flex gap-[2px] h-[3px]">
+                        {dayEvents.slice(0, 3).map((ev, i) => (
+                          <span key={i} className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: ev.dot_color }} />
+                        ))}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            <div className="flex flex-1 min-h-0">
-              <div className="w-[300px] shrink-0 p-5 border-r border-scroll-300 flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-sans text-sm text-[#5B574E]">{MONTH_NAMES[viewMonth]} {viewYear}</span>
-                  <div className="flex gap-1">
-                    <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month" className="text-ink-400 hover:text-ink-600">
-                      <ChevronLeft size={16} />
-                    </button>
-                    <button type="button" onClick={() => changeMonth(1)} aria-label="Next month" className="text-ink-400 hover:text-ink-600">
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
+            <div className="flex-1 min-w-0 p-5 flex flex-col overflow-y-auto">
+              <h3 className="font-sans text-sm text-[#5B574E] mb-3">
+                {new Date(selectedIso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              </h3>
 
-                <div className="grid grid-cols-7 gap-y-1 text-center">
-                  {WEEKDAYS.map((w, i) => (
-                    <span key={i} className="font-sans text-[9px] uppercase text-ink-400 py-1">{w}</span>
-                  ))}
-                  {grid.map(day => {
-                    const dayEvents = eventsByDay.get(day.iso) ?? []
-                    const isSelected = day.iso === selectedIso
-                    const isToday = day.iso === todayIso
-                    return (
-                      <button
-                        key={day.iso}
-                        type="button"
-                        onClick={() => selectDay(day)}
-                        className={`relative aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-xs font-sans transition-colors
-                          ${isSelected ? 'bg-[#5B574E] text-scroll-100' : 'hover:bg-scroll-200 text-[#5B574E]'}
-                          ${!day.inMonth ? 'opacity-30' : ''}
-                          ${isToday && !isSelected ? 'border border-ink-500/40' : ''}`}
-                      >
-                        {day.date.getDate()}
-                        <span className="flex gap-[2px] h-[3px]">
-                          {dayEvents.slice(0, 3).map((ev, i) => (
-                            <span key={i} className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: ev.dot_color }} />
-                          ))}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+              {error && <p className="field-error mb-2">{error}</p>}
+
+              <div className="space-y-2 mb-3">
+                {selectedEvents.length === 0 && <p className="text-[11px] font-sans text-ink-400">No events.</p>}
+                {selectedEvents.map(ev => {
+                  const Meta = VISIBILITY_META[ev.visibility]
+                  return (
+                    <div key={ev.id} className="group flex items-center gap-2 px-3 py-2 rounded border border-scroll-300 bg-scroll-50">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ev.dot_color }} />
+                      <span className="flex-1 text-sm text-[#5B574E] truncate">{ev.title}</span>
+                      <Meta.icon size={12} className="text-ink-400 shrink-0" />
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ev.id)}
+                          disabled={deletingId === ev.id}
+                          aria-label={`Remove ${ev.title}`}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 text-ink-400 hover:text-ember transition-opacity"
+                        >
+                          {deletingId === ev.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
-              <div className="flex-1 min-w-0 p-5 flex flex-col overflow-y-auto">
-                <h3 className="font-sans text-sm text-[#5B574E] mb-3">
-                  {new Date(selectedIso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                </h3>
+              {canEdit && !addingOpen && (
+                <button type="button" onClick={() => setAddingOpen(true)} className="btn-ghost text-xs self-start">
+                  <Plus size={13} /> Add event
+                </button>
+              )}
 
-                {error && <p className="field-error mb-2">{error}</p>}
-
-                <div className="space-y-2 mb-3">
-                  {selectedEvents.length === 0 && <p className="text-[11px] font-sans text-ink-400">No events.</p>}
-                  {selectedEvents.map(ev => {
-                    const Meta = VISIBILITY_META[ev.visibility]
-                    return (
-                      <div key={ev.id} className="group flex items-center gap-2 px-3 py-2 rounded border border-scroll-300 bg-scroll-50">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ev.dot_color }} />
-                        <span className="flex-1 text-sm text-[#5B574E] truncate">{ev.title}</span>
-                        <Meta.icon size={12} className="text-ink-400 shrink-0" />
-                        {canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(ev.id)}
-                            disabled={deletingId === ev.id}
-                            aria-label={`Remove ${ev.title}`}
-                            className="shrink-0 opacity-0 group-hover:opacity-100 text-ink-400 hover:text-ember transition-opacity"
-                          >
-                            {deletingId === ev.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {canEdit && !addingOpen && (
-                  <button type="button" onClick={() => setAddingOpen(true)} className="btn-ghost text-xs self-start">
-                    <Plus size={13} /> Add event
-                  </button>
-                )}
-
-                {canEdit && addingOpen && (
-                  <div className="border border-scroll-300 rounded-lg p-3 space-y-2.5">
+              {canEdit && addingOpen && (
+                <div className="border border-scroll-300 rounded-lg p-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
                     <input
-                      className="input text-sm"
+                      type="color"
+                      value={dotColor}
+                      onChange={e => setDotColor(e.target.value)}
+                      aria-label="Dot color"
+                      className="h-8 w-8 rounded-full border border-scroll-300 cursor-pointer shrink-0"
+                    />
+                    <input
+                      className="input text-sm flex-1 min-w-0"
                       placeholder="Event title"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       autoFocus
                     />
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-1">
-                        {(Object.keys(VISIBILITY_META) as EventVisibility[]).map(v => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => setVisibility(v)}
-                            className={`pill ${visibility === v ? 'pill-active' : ''}`}
-                          >
-                            {VISIBILITY_META[v].label}
-                          </button>
-                        ))}
-                      </div>
-                      <input
-                        type="color"
-                        value={dotColor}
-                        onChange={e => setDotColor(e.target.value)}
-                        aria-label="Dot color"
-                        className="h-8 w-8 rounded border border-scroll-300 cursor-pointer shrink-0"
-                      />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <button type="button" onClick={() => setAddingOpen(false)} className="btn-ghost text-xs">Cancel</button>
-                      <button type="button" onClick={handleAdd} disabled={saving} className="btn-primary text-xs">
-                        {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
-                      </button>
-                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="flex gap-1">
+                    {(Object.keys(VISIBILITY_META) as EventVisibility[]).map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setVisibility(v)}
+                        className={`pill ${visibility === v ? 'pill-active' : ''}`}
+                      >
+                        {VISIBILITY_META[v].label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button type="button" onClick={() => setAddingOpen(false)} className="btn-ghost text-xs">Cancel</button>
+                    <button type="button" onClick={handleAdd} disabled={saving} className="btn-primary text-xs">
+                      {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        ) : (
-          <div
-            onPointerDown={handleIconPointerDown}
-            onPointerMove={drag.handlers.onPointerMove}
-            onPointerUp={handleIconPointerUp}
-            onPointerCancel={drag.handlers.onPointerCancel}
-            className={`absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
-          >
-            <CalendarDockIcon size={ICON_SIZE} />
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )

@@ -185,6 +185,9 @@ export function CharacterPairDetail({
                 {activeProfile.pair_image_url ? (
                   <CharacterPairHero
                     imageUrl={activeProfile.pair_image_url}
+                    illustrationSource={activeProfile.illustration_source}
+                    illustrationSourceFont={activeProfile.illustration_source_font}
+                    illustrationSourceColor={activeProfile.illustration_source_color}
                     title={activeProfile.title}
                     titleFont={activeProfile.title_font}
                     titleColor={activeProfile.title_color}

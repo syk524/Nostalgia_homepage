@@ -6,7 +6,7 @@ import './globals.css'
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
+  weight: ['300', '400', '500', '700'],
   variable: '--font-noto-sans-kr',
 })
 

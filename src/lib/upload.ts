@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 
-type Bucket = 'user-icons' | 'gallery-images' | 'sticker-images'
+type Bucket = 'user-icons' | 'gallery-images' | 'sticker-images' | 'day-counter-photos'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_SIZE = 5 * 1024 * 1024
@@ -58,7 +58,7 @@ export async function uploadImage(file: File, ownerId: string, bucket: Bucket) {
   if (!ALLOWED_TYPES.includes(file.type))
     return { url: null, path: null, error: 'Must be JPEG, PNG, GIF, or WebP.' }
 
-  const uploadFile = bucket === 'gallery-images' || bucket === 'sticker-images' ? await optimizeForUpload(file) : file
+  const uploadFile = bucket === 'gallery-images' || bucket === 'sticker-images' || bucket === 'day-counter-photos' ? await optimizeForUpload(file) : file
 
   if (uploadFile.size > MAX_SIZE)
     return { url: null, path: null, error: 'File must be under 5 MB.' }

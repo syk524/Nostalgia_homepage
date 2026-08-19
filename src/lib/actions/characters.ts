@@ -21,7 +21,9 @@ type ProfileInput = {
   title: string; profileTitle: string; titleFont: string; titleColor: string; titleSize: number; iconColor: string
   linkText: string; linkUrl: string; linkFont: string; linkColor: string; hasMusic: boolean
   isPrimary: boolean; pageType: 'template' | 'custom_html'; customHtmlUrl: string | null
-  pairImageUrl: string | null; backgroundUrl: string | null; backgroundBlur: number
+  pairImageUrl: string | null
+  illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
+  backgroundUrl: string | null; backgroundBlur: number
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
   timelineEntries: TimelineEntryInput[]
   characters: [ProfileCharInput, ProfileCharInput]
@@ -148,7 +150,12 @@ async function saveProfiles(
     title_font: p.titleFont, title_color: p.titleColor, title_size: p.titleSize, icon_color: p.iconColor,
     link_text: p.linkText.trim() || null, link_url: p.linkUrl.trim() || null, link_font: p.linkFont, link_color: p.linkColor, has_music: p.hasMusic,
     is_primary: p.isPrimary, page_type: p.pageType, custom_html_url: p.pageType === 'custom_html' ? p.customHtmlUrl : null,
-    pair_image_url: p.pairImageUrl, background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
+    pair_image_url: p.pairImageUrl,
+    // Stripped of any leading © the editor typed themselves — the app
+    // always adds its own at render time, so a pasted one would double up.
+    illustration_source: p.illustrationSource.trim().replace(/^©\s*/, '') || null,
+    illustration_source_font: p.illustrationSourceFont, illustration_source_color: p.illustrationSourceColor,
+    background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
     timeline_subtitle_font: p.timelineSubtitleFont, timeline_title_font: p.timelineTitleFont, timeline_text_color: p.timelineTextColor,
     timeline_dot_color: p.timelineDotColor, timeline_line_color: p.timelineLineColor, timeline_shadow: p.timelineShadow,
     position,

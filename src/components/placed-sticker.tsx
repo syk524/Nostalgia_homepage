@@ -16,11 +16,15 @@ const MAX_SCALE = 3
 // via onCommit only when the pointer is released, matching
 // usePersistentDraggable's save-on-end pattern — dragging itself
 // stays purely local state, no network chatter per pixel moved.
-export function PlacedSticker({ sticker, panX, panY, selected, onSelect, onRemove, onCommit }: {
+export function PlacedSticker({ sticker, panX, panY, selected, justPlaced, onSelect, onRemove, onCommit }: {
   sticker: UserBackgroundSticker
   panX: number
   panY: number
   selected: boolean
+  // True only for the one render right after this sticker was dropped
+  // this session — see .animate-sticker-drop in globals.css and the
+  // justPlacedIds tracking in draggable-home-scene.tsx.
+  justPlaced?: boolean
   onSelect: () => void
   onRemove: () => void
   onCommit: (patch: { x: number; y: number; scale: number; rotation: number }) => void
@@ -80,11 +84,18 @@ export function PlacedSticker({ sticker, panX, panY, selected, onSelect, onRemov
     if (!gesture.current) return
     gesture.current = null
     setMode('idle')
-    setX(current => { onCommit({ x: current, y, scale, rotation }); return current })
-    // onCommit reads the latest x/y/scale/rotation via closures captured
-    // above at call time — safe here since endGesture only ever fires
-    // after a state-setting move, not concurrently with one.
-  }, [y, scale, rotation, onCommit])
+    onCommit({ x, y, scale, rotation })
+    // Reading x/y/scale/rotation directly off the closure (all four in
+    // the dependency array) rather than the setX(current => { onCommit(...);
+    // return current }) trick this used to do — that called onCommit,
+    // which calls the parent's setPlacements, from inside a setX updater,
+    // which React runs as part of processing this component's own state
+    // update. Updating a different component from inside that is exactly
+    // what "Cannot update a component while rendering a different
+    // component" is about, and it could abort before the commit actually
+    // went through — dragging/resizing would feel fine but silently fail
+    // to save.
+  }, [x, y, scale, rotation, onCommit])
 
   return (
     <div
@@ -103,7 +114,7 @@ export function PlacedSticker({ sticker, panX, panY, selected, onSelect, onRemov
         onPointerUp={endGesture}
         onPointerCancel={endGesture}
         draggable={false}
-        className={`block select-none pointer-events-auto ${mode === 'move' ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`block select-none pointer-events-auto ${mode === 'move' ? 'cursor-grabbing' : 'cursor-grab'} ${justPlaced ? 'animate-sticker-drop' : ''}`}
         style={{ width: SIZE, height: SIZE, objectFit: 'contain' }}
       />
 

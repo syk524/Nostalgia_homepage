@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDraggable } from '@/lib/use-draggable'
 import { Stickers } from '@/components/stickers'
 import { StickerGalleryModal } from '@/components/sticker-gallery-modal'
@@ -7,18 +7,50 @@ import { PlacedSticker } from '@/components/placed-sticker'
 import { DeskAppIcon } from '@/components/desk-app-icon'
 import { DockAppWindow } from '@/components/dock-app-window'
 import { CalendarDeskWidget } from '@/components/calendar-desk-widget'
+import { DayCounterDeskWidget } from '@/components/day-counter-desk-widget'
 import { DOCK_APPS } from '@/lib/dock-apps'
 import { savePlacement, removePlacement } from '@/lib/actions/stickers'
-import type { StickerGalleryImage, UserBackgroundSticker, CalendarEvent } from '@/types/database'
+import type { StickerGalleryImage, UserBackgroundSticker, CalendarEvent, DayCounter } from '@/types/database'
+
+// A guest (or a logged-in non-editor) still gets a sticker board — they
+// just can't write to Supabase (savePlacement/removePlacement both
+// require an editor session). Their arrangement lives in this browser's
+// localStorage instead: only the fields needed to reconstruct a
+// UserBackgroundSticker are stored, and `gallery` is re-joined from the
+// already-fetched galleryImages on load rather than snapshotted, so it
+// never goes stale if a gallery image is later edited/removed.
+const GUEST_PLACEMENTS_KEY = 'guest-sticker-placements'
+type StoredGuestPlacement = { id: string; gallery_id: string; pos_x: number; pos_y: number; scale: number; rotation: number; z: number }
+
+function readGuestPlacements(): StoredGuestPlacement[] {
+  try {
+    const raw = localStorage.getItem(GUEST_PLACEMENTS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function writeGuestPlacements(list: UserBackgroundSticker[]) {
+  try {
+    const stored: StoredGuestPlacement[] = list.map(p => ({
+      id: p.id, gallery_id: p.gallery_id, pos_x: p.pos_x, pos_y: p.pos_y, scale: p.scale, rotation: p.rotation, z: p.z,
+    }))
+    localStorage.setItem(GUEST_PLACEMENTS_KEY, JSON.stringify(stored))
+  } catch {
+    // Storage unavailable (private mode, quota) — the board still works
+    // for this page view, it just won't persist across reloads.
+  }
+}
 
 // Default scattered positions for the desk app icons — spread across
 // the lower half so they don't stack on top of each other or the
 // sticker (right-[8%]) before a visitor drags them anywhere else.
-// Calendar isn't here — it's rendered separately (calendar-desk-widget.tsx)
-// with its own persisted position, defaulted below.
+// Calendar and Day Counter aren't here — they're rendered separately
+// (calendar-desk-widget.tsx, day-counter-desk-widget.tsx) with their own
+// persisted positions, defaulted in those components.
 const APP_ICON_POSITION: Record<string, string> = {
   settings: 'left-[46%] bottom-[9%]',
-  daycounter: 'left-[58%] bottom-[15%]',
 }
 
 // The home page's decorative grid + wordmark + sticker + app icons all
@@ -31,16 +63,22 @@ const APP_ICON_POSITION: Record<string, string> = {
 // along with everything else. The pan/sticker/icon arrangement itself
 // is never persisted — every reload resets to the default layout, that
 // part stays a playful in-session interaction. Placed stickers from the
-// gallery are the one thing that IS persisted (per account, editor/admin
-// only — see page.tsx, which only passes canEdit/userId through for
-// those roles). Nav stays genuinely position:fixed throughout, since
-// none of this pan/drag machinery lives on an ancestor of Nav.
-export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, initialPlacements, initialEvents }: {
+// gallery are the one thing that IS persisted — for an editor/admin, to
+// Supabase (per-account, see page.tsx); for anyone else (a guest, or a
+// logged-in viewer), to this browser's own localStorage instead, since
+// writing to Supabase needs an owning editor account (see
+// GUEST_PLACEMENTS_KEY above). Either way the arrangement survives a
+// reload, just not synced anywhere for a guest. Nav stays genuinely
+// position:fixed throughout, since none of this pan/drag machinery
+// lives on an ancestor of Nav.
+export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryImages, initialPlacements, initialEvents, initialDayCounter }: {
   canEdit: boolean
+  isAdmin: boolean
   userId: string | null
   initialGalleryImages: StickerGalleryImage[]
   initialPlacements: UserBackgroundSticker[]
   initialEvents: CalendarEvent[]
+  initialDayCounter: DayCounter | null
 }) {
   const canvas = useDraggable()
   const sceneRef = useRef<HTMLDivElement>(null)
@@ -53,6 +91,34 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
   const [openApps, setOpenApps] = useState<string[]>([])
   const [zOrder, setZOrder] = useState<string[]>([])
   const [events, setEvents] = useState(initialEvents)
+  const [dayCounter, setDayCounter] = useState(initialDayCounter)
+  // Ids that were placed THIS session, so PlacedSticker knows to play
+  // its drop-in bounce (.animate-sticker-drop) — everything already in
+  // initialPlacements loaded from the DB shouldn't replay that on
+  // every page load, only a genuinely new drop should. Cleared per-id
+  // ~500ms after placement (comfortably past the 450ms animation) so
+  // this doesn't grow for the lifetime of the page.
+  const [justPlacedIds, setJustPlacedIds] = useState<Set<string>>(new Set())
+
+  // initialPlacements is always [] for a non-editor (page.tsx never
+  // fetches Supabase placements for them) — load whatever they'd
+  // previously arranged from localStorage instead, once, after mount.
+  // Reconstructs full UserBackgroundSticker objects by re-joining each
+  // stored gallery_id against the just-fetched galleryImages, dropping
+  // any that no longer resolve (e.g. an image an editor since removed).
+  useEffect(() => {
+    if (canEdit) return
+    const stored = readGuestPlacements()
+    if (!stored.length) return
+    const restored = stored
+      .map((p): UserBackgroundSticker | null => {
+        const gallery = galleryImages.find(g => g.id === p.gallery_id)
+        return gallery ? { ...p, user_id: 'guest', created_at: '', updated_at: '', gallery } : null
+      })
+      .filter((p): p is UserBackgroundSticker => p !== null)
+    setPlacements(restored)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const openApp = useCallback((id: string) => {
     setOpenApps(prev => (prev.includes(id) ? prev : [...prev, id]))
@@ -69,12 +135,10 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
   }, [])
 
   function handleDragOver(e: React.DragEvent) {
-    if (!canEdit) return
     if (e.dataTransfer.types.includes('text/sticker-gallery-id')) e.preventDefault()
   }
 
   async function handleDrop(e: React.DragEvent) {
-    if (!canEdit || !userId) return
     const galleryId = e.dataTransfer.getData('text/sticker-gallery-id')
     if (!galleryId) return
     e.preventDefault()
@@ -85,20 +149,63 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
     const gallery = galleryImages.find(g => g.id === galleryId)
     if (!gallery) return
 
-    const { placement, error } = await savePlacement({ galleryId, x, y, scale: 1, rotation: 0, z: placements.length })
-    if (!placement || error) return
-    setPlacements(prev => [...prev, { ...placement, gallery }])
+    const topZ = placements.reduce((max, p) => Math.max(max, p.z), -1) + 1
+
+    let placed: UserBackgroundSticker
+    if (canEdit && userId) {
+      const { placement, error } = await savePlacement({ galleryId, x, y, scale: 1, rotation: 0, z: topZ })
+      if (!placement || error) return
+      placed = { ...placement, gallery }
+      setPlacements(prev => [...prev, placed])
+    } else {
+      // Guest (or a logged-in non-editor): same shape, kept local —
+      // never sent to Supabase, see GUEST_PLACEMENTS_KEY above.
+      placed = {
+        id: crypto.randomUUID(), user_id: 'guest', gallery_id: galleryId,
+        pos_x: x, pos_y: y, scale: 1, rotation: 0, z: topZ,
+        created_at: '', updated_at: '', gallery,
+      }
+      setPlacements(prev => {
+        const next = [...prev, placed]
+        writeGuestPlacements(next)
+        return next
+      })
+    }
+
+    setJustPlacedIds(prev => new Set(prev).add(placed.id))
+    setTimeout(() => {
+      setJustPlacedIds(prev => {
+        const next = new Set(prev)
+        next.delete(placed.id)
+        return next
+      })
+    }, 500)
   }
 
   async function handleRemoveSticker(id: string) {
-    setPlacements(prev => prev.filter(p => p.id !== id))
+    setPlacements(prev => {
+      const next = prev.filter(p => p.id !== id)
+      if (!canEdit) writeGuestPlacements(next)
+      return next
+    })
     setSelectedId(null)
-    await removePlacement(id)
+    if (canEdit) await removePlacement(id)
   }
 
+  // Editing (move/resize/rotate) always brings the sticker to the top
+  // of the stack, not just placement — z is recomputed as one past the
+  // current highest z every time a gesture commits, same "one past the
+  // end" rule handleDrop uses for a brand-new sticker.
   function handleCommitSticker(id: string, patch: { x: number; y: number; scale: number; rotation: number }) {
-    setPlacements(prev => prev.map(p => p.id === id ? { ...p, pos_x: patch.x, pos_y: patch.y, scale: patch.scale, rotation: patch.rotation } : p))
-    savePlacement({ id, galleryId: placements.find(p => p.id === id)!.gallery_id, ...patch, z: placements.find(p => p.id === id)!.z })
+    const topZ = placements.reduce((max, p) => Math.max(max, p.z), -1) + 1
+    setPlacements(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, pos_x: patch.x, pos_y: patch.y, scale: patch.scale, rotation: patch.rotation, z: topZ } : p)
+      if (!canEdit) writeGuestPlacements(next)
+      return next
+    })
+    if (canEdit) {
+      savePlacement({ id, galleryId: placements.find(p => p.id === id)!.gallery_id, ...patch, z: topZ })
+    }
   }
 
   return (
@@ -121,10 +228,10 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
           className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] pointer-events-none"
           style={{ transform: `translate(${canvas.offset.x}px, ${canvas.offset.y}px) translate(-50%, -50%)` }}
         >
-          <img src="/images/nostalgio-wordmark.png" alt="Nostalgia" className="w-full select-none" draggable={false} />
+          <img src="/images/nostalgio-wordmark.webp" alt="Nostalgia" className="w-full select-none" draggable={false} />
         </div>
 
-        <Stickers panX={canvas.offset.x} panY={canvas.offset.y} onOpenGallery={canEdit ? () => setGalleryOpen(true) : undefined} />
+        <Stickers panX={canvas.offset.x} panY={canvas.offset.y} onOpenGallery={() => setGalleryOpen(true)} />
 
         {placements.map(p => (
           <PlacedSticker
@@ -133,13 +240,14 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
             panX={canvas.offset.x}
             panY={canvas.offset.y}
             selected={selectedId === p.id}
+            justPlaced={justPlacedIds.has(p.id)}
             onSelect={() => setSelectedId(p.id)}
             onRemove={() => handleRemoveSticker(p.id)}
             onCommit={patch => handleCommitSticker(p.id, patch)}
           />
         ))}
 
-        {DOCK_APPS.map(app => (
+        {DOCK_APPS.filter(app => !app.adminOnly || isAdmin).map(app => (
           <DeskAppIcon
             key={app.id}
             app={app}
@@ -157,6 +265,16 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
           canEdit={canEdit}
           onEventsChange={setEvents}
         />
+
+        {dayCounter && (
+          <DayCounterDeskWidget
+            panX={canvas.offset.x}
+            panY={canvas.offset.y}
+            dayCounter={dayCounter}
+            canEdit={canEdit}
+            onDayCounterChange={setDayCounter}
+          />
+        )}
       </div>
 
       {/* Rendered as siblings of the pan-handled canvas above, not
@@ -164,10 +282,11 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
           modal: nested inside that div, every click here would also
           bubble into the canvas's own onPointerDown and get captured as
           the start of a pan gesture. */}
-      {galleryOpen && canEdit && (
+      {galleryOpen && (
         <StickerGalleryModal
           images={galleryImages}
-          ownerId={userId!}
+          ownerId={userId}
+          canManage={canEdit}
           onClose={() => setGalleryOpen(false)}
           onImagesChange={setGalleryImages}
         />
@@ -175,7 +294,7 @@ export function DraggableHomeScene({ canEdit, userId, initialGalleryImages, init
 
       {openApps.map((id, i) => {
         const app = DOCK_APPS.find(a => a.id === id)
-        if (!app) return null
+        if (!app || (app.adminOnly && !isAdmin)) return null
         return (
           <DockAppWindow
             key={id}

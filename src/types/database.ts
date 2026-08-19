@@ -129,6 +129,9 @@ export type PairProfile = {
   page_type: PageType
   custom_html_url: string | null
   pair_image_url: string | null
+  illustration_source: string | null
+  illustration_source_font: string
+  illustration_source_color: string
   background_url: string | null
   background_blur: number
   timeline_subtitle_font: string
@@ -195,6 +198,15 @@ export type CalendarEvent = {
   updated_at: string
 }
 
+export type DayCounter = {
+  id: string
+  photo_url: string | null
+  photo_path: string | null
+  text_color: string
+  font: string
+  updated_at: string
+}
+
 export type TrackSource = 'youtube' | 'upload'
 
 export type PlaylistTrack = {
@@ -251,7 +263,7 @@ export type Database = {
       pair_profiles: {
         Row: Omit<PairProfile, 'profile_characters' | 'timeline_entries'>
         Insert: Omit<PairProfile, 'id' | 'created_at' | 'updated_at' | 'profile_characters' | 'timeline_entries'>
-        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'background_url' | 'background_blur' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
+        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'illustration_source' | 'illustration_source_font' | 'illustration_source_color' | 'background_url' | 'background_blur' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
         Relationships: []
       }
       profile_characters: {
@@ -288,6 +300,12 @@ export type Database = {
         Row: CalendarEvent
         Insert: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>
         Update: never
+        Relationships: []
+      }
+      day_counter: {
+        Row: DayCounter
+        Insert: Omit<DayCounter, 'id' | 'updated_at'>
+        Update: Partial<Pick<DayCounter, 'photo_url' | 'photo_path' | 'text_color' | 'font'>>
         Relationships: []
       }
     }

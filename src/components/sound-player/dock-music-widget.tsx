@@ -1,6 +1,7 @@
 'use client'
-import { useLayoutEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, ListMusic, Music, Pause, Play, Plus, SkipBack, SkipForward } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronDown, ChevronUp, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from 'lucide-react'
 import { QueueList } from './queue-list'
 import { AddTrackForm } from './add-track-form'
 import type { LoopMode } from './sound-player'
@@ -29,14 +30,18 @@ export function DockMusicWidget({
   currentIndex,
   isPlaying,
   elapsedSeconds,
+  durationSeconds,
+  loopMode,
   userId,
   canEdit,
   onPlayPause,
+  onCycleLoop,
   onPrev,
   onNext,
   onSelect,
   onShuffle,
   onRemove,
+  onReorder,
   onTrackAdded,
 }: {
   collapsed: boolean
@@ -45,20 +50,46 @@ export function DockMusicWidget({
   currentIndex: number
   isPlaying: boolean
   elapsedSeconds: number
+  durationSeconds: number
   loopMode: LoopMode
   userId: string | null
   canEdit: boolean
   onPlayPause: () => void
+  onCycleLoop: () => void
   onPrev: () => void
   onNext: () => void
   onSelect: (index: number) => void
   onShuffle: () => void
   onRemove: (track: QueueTrack) => void
+  onReorder: (reordered: QueueTrack[]) => void
   onTrackAdded: (track: PlaylistTrack) => void
 }) {
   const [listOpen, setListOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const current = queue[currentIndex]
+
+  // Must match --popout-close-dur in globals.css's .t-popout rule —
+  // this is how long the "closing" phase's fade-out actually takes, so
+  // the element needs to stay mounted (playing that CSS transition)
+  // for exactly this long before it's safe to unmount. Unlike the old
+  // conditional-render popout (which vanished the instant listOpen/
+  // addOpen went false, no closing animation possible), popoutPhase
+  // gives the close its own frame to play, and popoutContent keeps
+  // showing whichever panel was open through that fade rather than
+  // snapping to something else mid-close.
+  const POPOUT_CLOSE_DUR = 150
+  const [popoutPhase, setPopoutPhase] = useState<'closed' | 'open' | 'closing'>('closed')
+  const [popoutContent, setPopoutContent] = useState<'list' | 'add'>('list')
+  useEffect(() => {
+    if (addOpen) { setPopoutContent('add'); setPopoutPhase('open'); return }
+    if (listOpen) { setPopoutContent('list'); setPopoutPhase('open'); return }
+    setPopoutPhase(p => (p === 'open' ? 'closing' : p))
+  }, [listOpen, addOpen])
+  useEffect(() => {
+    if (popoutPhase !== 'closing') return
+    const t = setTimeout(() => setPopoutPhase('closed'), POPOUT_CLOSE_DUR)
+    return () => clearTimeout(t)
+  }, [popoutPhase])
 
   const pillRef = useRef<HTMLDivElement>(null)
   const [pillWidth, setPillWidth] = useState<number>()
@@ -76,31 +107,75 @@ export function DockMusicWidget({
     return () => observer.disconnect()
   }, [])
 
+  // The pill's and tag's motion is now driven entirely by declarative
+  // CSS keyframe animations (see .animate-pill-collapse/-expand and
+  // .animate-tag-collapse/-expand in globals.css), not hand-timed JS
+  // transitions — the two used to be independently-triggered CSS
+  // transitions nominally sharing a duration/delay, which could drift
+  // out of sync by a frame and read as a slight gap between them. A
+  // single browser-timed animation per element removes that whole
+  // class of bug. TOGETHER_DURATION/ALONE_DURATION must stay in sync
+  // with the 62.5%/37.5% keyframe split there (375ms / 225ms of each
+  // animation's 600ms total) — they're only used here for the tag's
+  // own docked/rounded-corner swap below, which (being a discrete,
+  // non-interpolatable property) can't live in the keyframes
+  // themselves and is instead flipped via a plain timeout landing
+  // exactly when the tag is fully hidden mid-animation, so the swap
+  // itself is never visible.
+  const TOGETHER_DURATION = 375
+  const ALONE_DURATION = 225
+  const [tagDocked, setTagDocked] = useState(collapsed)
+  useEffect(() => {
+    const timer = setTimeout(() => setTagDocked(collapsed), collapsed ? TOGETHER_DURATION : ALONE_DURATION)
+    return () => clearTimeout(timer)
+  }, [collapsed])
+
+  // Collapsing with the queue or add-music popout open used to leave it
+  // marked open internally — invisible while collapsed (it rides along
+  // inside the pill's own sliding wrapper), but still there waiting to
+  // reappear, already open, the next time the pill expands. Forcing both
+  // closed on the way down means every expand starts from the same
+  // clean state.
+  function handleToggleCollapse() {
+    if (!collapsed) { setListOpen(false); setAddOpen(false) }
+    onToggleCollapse()
+  }
+
   return (
     <div className="fixed bottom-0 right-6 z-40">
-      {/* Only this inner wrapper slides. Expanded lifts the pill up by
-          the tab's own height (28px) plus its own bottom-[10px] offset
-          (38px), landing its bottom edge flush against the tab's top —
-          no gap between them. Collapsed uses translateY(100%) measured
-          from the pill's natural (untransformed, tab-height-lower)
-          position — that's exactly its own height, so it still lands
-          fully below the outer wrapper's bottom-0 edge regardless of
-          the expanded-state offset. The tab is a sibling, not a
-          descendant, so it's untouched by this transform and stays
-          flush at the true bottom edge in both states. */}
-      <div className="transition-transform duration-300 ease-out" style={{ transform: `translateY(${collapsed ? '100%' : '-38px'})` }}>
-      {(listOpen || addOpen) && (
-        <div className="absolute bottom-full right-0 mb-3">
-          {addOpen ? (
+      {/* Only this inner wrapper carries the pill's own slide+fade —
+          see .animate-pill-collapse/-expand in globals.css. Expanded
+          rests at translateY(-42px): the tag's own height (32px) plus
+          its docked-open offset (10px), landing the pill's bottom edge
+          flush against the tag's top with no gap — an earlier pass
+          deliberately overlapped the two, but with both being
+          bg-ink-900/90 (not opaque) the overlap band composited
+          slightly more opaque than its surroundings, and that band's
+          edge read as a thin stray line during the animation; see the
+          CSS comment for the full reasoning. Both keyframe
+          animations hold the pill fully hidden (translateY(68px),
+          opacity 0) through whichever portion of the shared 600ms
+          timeline belongs to the tag's own solo phase — collapsing,
+          that's the back 225ms (62.5%–100%, after the together-exit);
+          expanding, it's the front 225ms (0%–37.5%, before the
+          together-entrance) — so the pill only ever visibly moves
+          during a "together" phase, on both directions. No React `key`
+          here — changing animation-name alone is enough for the
+          browser to restart it; forcing a remount on top of that only
+          adds an extra unmount/mount cycle for no benefit. */}
+      <div className={collapsed ? 'animate-pill-collapse' : 'animate-pill-expand'}>
+      {popoutPhase !== 'closed' && (
+        <div className={`absolute bottom-full right-0 mb-3 t-popout ${popoutPhase === 'open' ? 'is-open' : ''} ${popoutPhase === 'closing' ? 'is-closing' : ''}`}>
+          {popoutContent === 'add' ? (
             canEdit ? (
-              <div style={{ width: pillWidth }} className="rounded-2xl bg-ink-900/90 backdrop-blur-md p-4">
+              <div style={{ width: pillWidth }} className="rounded-xl bg-ink-900/90 backdrop-blur-md p-4">
                 <AddTrackForm
                   onClose={() => setAddOpen(false)}
                   onAdded={track => { onTrackAdded(track); setAddOpen(false) }}
                 />
               </div>
             ) : (
-              <div style={{ width: pillWidth }} className="rounded-2xl bg-ink-900/90 backdrop-blur-md p-4 space-y-3 text-sm">
+              <div style={{ width: pillWidth }} className="rounded-xl bg-ink-900/90 backdrop-blur-md p-4 space-y-3 text-sm">
                 <p className="text-scroll-100">
                   {userId ? 'You don’t have edit authority to add music.' : 'Log in with edit authority to add music.'}
                 </p>
@@ -108,85 +183,123 @@ export function DockMusicWidget({
               </div>
             )
           ) : (
-            <div style={{ width: pillWidth }} className="rounded-2xl bg-ink-900/90 backdrop-blur-md p-4">
+            <div style={{ width: pillWidth }} className="rounded-xl bg-ink-900/90 backdrop-blur-md p-4">
               <QueueList
                 queue={queue}
                 currentIndex={currentIndex}
                 canEdit={canEdit}
                 onSelect={onSelect}
-                onShuffle={onShuffle}
                 onRemove={onRemove}
+                onReorder={onReorder}
+                onAddClick={() => setAddOpen(true)}
               />
             </div>
           )}
         </div>
       )}
 
-      <div ref={pillRef} className="flex items-center gap-3 pl-2.5 pr-4 py-2.5 rounded-full bg-ink-900/90 backdrop-blur-md">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: '#282625' }}>
-          <Music size={16} className="text-scroll-100" />
-        </div>
-
-        <div className="min-w-0 w-36">
+      <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-ink-900/90 backdrop-blur-md">
+        <div className="min-w-0 w-36 font-mono">
           <p className="text-sm text-scroll-100 truncate font-medium">{current?.title ?? 'Nothing playing'}</p>
           <p className="text-xs text-scroll-400 truncate">{current?.artist ?? '—'}</p>
         </div>
 
         <div className="flex items-center gap-1 text-scroll-300">
-          <button onClick={onPrev} aria-label="Previous track" className="hover:text-scroll-100 transition-colors">
-            <SkipBack size={15} />
+          <button
+            onClick={onPrev}
+            disabled={queue.length <= 1}
+            aria-label="Previous track"
+            className="hover:text-scroll-100 transition-colors disabled:opacity-30 disabled:hover:text-scroll-300 disabled:cursor-not-allowed"
+          >
+            <SkipBack size={13} fill="currentColor" />
           </button>
           <button
             onClick={onPlayPause}
             aria-label={isPlaying ? 'Pause' : 'Play'}
-            className="w-7 h-7 rounded-full bg-scroll-100 text-ink-900 flex items-center justify-center hover:opacity-90 transition-opacity"
+            className="w-7 h-7 rounded-full bg-scroll-100 text-ink-900 flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
           >
-            {isPlaying ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
+            <AnimatePresence initial={false} mode="wait">
+              <motion.span
+                key={isPlaying ? 'pause' : 'play'}
+                initial={{ opacity: 0, scale: 0.84, rotate: isPlaying ? -8 : 8, filter: 'blur(2px)' }}
+                animate={{ opacity: 1, scale: 1, rotate: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.84, rotate: isPlaying ? 8 : -8, filter: 'blur(2px)' }}
+                transition={{ type: 'spring', stiffness: 1000, damping: 36, mass: 0.25 }}
+                className="inline-flex items-center justify-center"
+              >
+                {isPlaying ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" className="ml-0.5" />}
+              </motion.span>
+            </AnimatePresence>
           </button>
-          <button onClick={onNext} aria-label="Next track" className="hover:text-scroll-100 transition-colors">
-            <SkipForward size={15} />
+          <button
+            onClick={onNext}
+            disabled={queue.length <= 1}
+            aria-label="Next track"
+            className="hover:text-scroll-100 transition-colors disabled:opacity-30 disabled:hover:text-scroll-300 disabled:cursor-not-allowed"
+          >
+            <SkipForward size={13} fill="currentColor" />
           </button>
         </div>
 
         <span className="text-[11px] font-mono text-scroll-400 tabular-nums shrink-0">
-          {formatTime(elapsedSeconds)}{current?.duration_seconds ? ` / ${formatTime(current.duration_seconds)}` : ''}
+          {formatTime(elapsedSeconds)} / {formatTime(durationSeconds)}
         </span>
 
         <div className="w-px h-5 bg-scroll-100/15 shrink-0" />
 
         <button
+          onClick={onShuffle}
+          aria-label="Shuffle queue"
+          className="shrink-0 transition-colors text-scroll-400/40 hover:text-scroll-100"
+        >
+          <Shuffle size={15} />
+        </button>
+        <button
+          onClick={onCycleLoop}
+          aria-label={loopMode === 'off' ? 'Enable loop' : loopMode === 'all' ? 'Switch to loop one song' : 'Disable loop'}
+          className={`shrink-0 transition-colors ${loopMode !== 'off' ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
+        >
+          {loopMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
+        </button>
+        <button
           onClick={() => { setListOpen(v => !v); setAddOpen(false) }}
           aria-label={listOpen ? 'Hide queue' : 'Show queue'}
-          className={`shrink-0 transition-colors ${listOpen ? 'text-scroll-100' : 'text-scroll-400 hover:text-scroll-100'}`}
+          className={`shrink-0 transition-colors ${listOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
         >
           <ListMusic size={15} />
         </button>
-        {canEdit && (
-          <button
-            onClick={() => { setAddOpen(v => !v); setListOpen(false) }}
-            aria-label={addOpen ? 'Close add music' : 'Add music'}
-            className={`shrink-0 transition-colors ${addOpen ? 'text-scroll-100' : 'text-scroll-400 hover:text-scroll-100'}`}
-          >
-            <Plus size={15} />
-          </button>
-        )}
       </div>
       </div>
 
-      {/* Absolute, not a descendant of the sliding wrapper above — stays
-          put at the edge regardless of collapsed state. Collapsed: flush
-          at the true bottom edge, rounded top (it's the only thing
-          visible, reads as a small tab). Open: rounded bottom instead
-          (it now reads as its own little floating chip, with a visible
-          gap above it under the pill) and 10px clearance from the true
-          bottom edge. */}
-      <button
-        onClick={onToggleCollapse}
-        aria-label={collapsed ? 'Show music player' : 'Hide music player'}
-        className={`absolute left-1/2 -translate-x-1/2 flex items-center justify-center h-7 w-12 bg-ink-900/90 backdrop-blur-md text-scroll-400 hover:text-scroll-100 transition-colors ${collapsed ? 'bottom-0 rounded-t-lg' : 'bottom-[10px] rounded-b-lg'}`}
-      >
-        {collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
+      {/* Positioned independently of the sliding wrapper above (80px
+          right of center — see the translateX below): this outer div
+          only carries the fixed horizontal offset, so the inner button
+          is free to run its own keyframe animation (see
+          .animate-tag-collapse/-expand in globals.css) without the two
+          transforms fighting each other. Collapsed/docked: flush at the
+          true bottom edge, rounded top (it's the only thing visible,
+          reads as a small tab). Open/docked: rounded bottom instead
+          (its own little floating chip, no gap under the pill) and
+          10px clearance from the true bottom edge. h-8 (32px) — no
+          bounce/overshoot any more (see globals.css), so there's no
+          longer a need for the extra headroom a taller tag once gave
+          that motion. tagDocked lags the animation by design (flipped
+          via the plain setTimeout above, timed to land exactly when
+          the tag is mid-animation and fully hidden) — border-radius
+          and the chevron glyph aren't continuously-interpolatable
+          properties CSS keyframes can smoothly animate, so swapping
+          them the instant they'd be visible would pop; swapping them
+          off-screen instead doesn't. No React `key` here either — same
+          reasoning as the pill. */}
+      <div className="absolute left-1/2 bottom-0 z-30" style={{ transform: 'translateX(calc(-50% + 80px))' }}>
+        <button
+          onClick={handleToggleCollapse}
+          aria-label={collapsed ? 'Show music player' : 'Hide music player'}
+          className={`flex items-center justify-center h-8 w-12 bg-ink-900/90 backdrop-blur-md text-scroll-400 hover:text-scroll-100 transition-colors ${collapsed ? 'animate-tag-collapse' : 'animate-tag-expand'} ${tagDocked ? 'rounded-t-lg' : 'rounded-b-lg'}`}
+        >
+          {tagDocked ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      </div>
     </div>
   )
 }

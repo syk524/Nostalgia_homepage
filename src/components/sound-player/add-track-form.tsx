@@ -70,36 +70,52 @@ export function AddTrackForm({
         <button onClick={onClose} className="text-scroll-400 hover:text-scroll-100 text-xs transition-colors">Close</button>
       </div>
 
-      <div className="flex gap-1 text-xs">
+      <div className="flex gap-1 rounded-lg bg-scroll-100/5 p-1 text-xs">
         <button
           onClick={() => setTab('youtube')}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full transition-colors ${tab === 'youtube' ? 'bg-scroll-100 text-ink-900' : 'bg-scroll-100/10 text-scroll-400 hover:text-scroll-100'}`}
+          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md transition-colors ${tab === 'youtube' ? 'bg-scroll-100 text-ink-900 shadow-sm' : 'text-scroll-400 hover:text-scroll-100'}`}
         >
           <LinkIcon size={12} /> YouTube
         </button>
         <button
           onClick={() => setTab('upload')}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full transition-colors ${tab === 'upload' ? 'bg-scroll-100 text-ink-900' : 'bg-scroll-100/10 text-scroll-400 hover:text-scroll-100'}`}
+          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md transition-colors ${tab === 'upload' ? 'bg-scroll-100 text-ink-900 shadow-sm' : 'text-scroll-400 hover:text-scroll-100'}`}
         >
           <Upload size={12} /> Upload MP3
         </button>
       </div>
 
+      {/* Explicit keys on every input across both branches — without
+          them React reconciles by position, not identity: the youtube
+          branch has an extra field (URL) ahead of Title/Artist that the
+          upload branch doesn't, so switching tabs shifted everything by
+          one slot and matched the Artist text input's old DOM node
+          against the upload branch's hidden file input at that same
+          position — value went from a controlled string to file inputs'
+          undefined (they can't be value-controlled), which is exactly
+          the "changing a controlled input to be uncontrolled" warning.
+          Shared keys ("title"/"artist") let those two fields' state
+          carry over seamlessly between tabs since they really are the
+          same field either way; "url" and "file" get their own keys so
+          they're never confused with anything else. */}
       {tab === 'youtube' ? (
         <div className="space-y-2">
           <input
+            key="url"
             className="dark-input"
             placeholder="YouTube link"
             value={url}
             onChange={e => handleYoutubeFetch(e.target.value)}
           />
           <input
+            key="title"
             className="dark-input"
             placeholder="Title"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <input
+            key="artist"
             className="dark-input"
             placeholder="Artist"
             value={artist}
@@ -107,8 +123,8 @@ export function AddTrackForm({
           />
           <button
             onClick={handleYoutubeSubmit}
-            disabled={busy || !url.trim()}
-            className="w-full justify-center flex items-center gap-2 py-2 rounded-full bg-scroll-100 text-ink-900 text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={busy || !url.trim() || !title.trim() || !artist.trim()}
+            className="w-full justify-center flex items-center gap-2 py-2 rounded bg-scroll-100 text-ink-900 text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {busy ? 'Adding…' : 'Add track'}
           </button>
@@ -116,21 +132,23 @@ export function AddTrackForm({
       ) : (
         <div className="space-y-2">
           <input
+            key="title"
             className="dark-input"
-            placeholder="Title (optional)"
+            placeholder="Title"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <input
+            key="artist"
             className="dark-input"
-            placeholder="Artist (optional)"
+            placeholder="Artist"
             value={artist}
             onChange={e => setArtist(e.target.value)}
           />
-          <input ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="sr-only" onChange={handleFileChange} disabled={busy} />
+          <input key="file" ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="sr-only" onChange={handleFileChange} disabled={busy} />
           <button
             onClick={() => fileRef.current?.click()}
-            disabled={busy}
+            disabled={busy || !title.trim() || !artist.trim()}
             className="w-full justify-center flex items-center gap-2 py-2 rounded-full text-scroll-100 text-sm font-medium border border-scroll-100/20 hover:border-scroll-100/40 hover:bg-scroll-100/5 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {busy ? 'Uploading…' : 'Choose MP3 file'}

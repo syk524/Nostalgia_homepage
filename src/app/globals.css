@@ -171,6 +171,171 @@
 }
 .animate-spin-slow { animation: spin-slow 6s linear infinite; }
 
+/* The dock music player's pill + collapse tag, moving as one hinged
+   unit (see dock-music-widget.tsx). Declarative keyframes instead of
+   hand-timed setTimeout-chained CSS transitions — two independently
+   triggered transitions nominally sharing a duration/delay can drift
+   out of sync (a JS state update landing a frame late, etc.) and read
+   as a slight gap between them. One keyframe animation per element,
+   both driven by the same 600ms timeline (TOGETHER_DURATION 375ms +
+   ALONE_DURATION 225ms, kept in sync with the JS constants of the same
+   name — this is also the "make it faster" pass, down from 800ms),
+   removes that whole class of bug — the browser's compositor times
+   both natively, nothing to fall out of step.
+   Percentages: collapsing exits TOGETHER first (0–62.5% = 0–375ms),
+   then the tag alone reveals (62.5–100% = 375–600ms) — the pill has
+   nothing left to do there, it's already fully hidden. Expanding
+   reverses that: the tag alone hides first (0–37.5% = 0–225ms), then
+   both rise TOGETHER (37.5–100% = 225–600ms). One plain ease-out
+   throughout, the same curve on every segment and both directions —
+   no overshoot/back-ease; an earlier bounce pass was rolled back.
+   Y values: the tag is 32px tall (h-8) resting 10px clear of the true
+   bottom edge, so the pill's own open-resting Y is exactly -42
+   (32 + 10) — a precise, flush, zero-gap touch. An earlier pass
+   deliberately overlapped the two by 8px instead, as a hedge against
+   any hairline gap from sub-pixel/frame drift between the two
+   animations — but the pill and tag are each bg-ink-900/90, not a
+   fully opaque color, so stacking them raised the combined opacity in
+   the overlap band (two 90%-alpha layers compositing to ~99%), and
+   that band's own edge — brighter than the single-layer 90% area
+   around it, right at the seam above the tag — read as a thin stray
+   line during the animation. Flush (no overlap) doesn't have this
+   problem, and since both are driven by the same duration/delta on the
+   same compositor, there's nothing left to actually drift out of sync.
+   Both share EXIT_DISTANCE (110px, enough to clear the pill's own
+   ~60px height from its -42px resting offset) added onto that resting
+   Y for their hidden target, so pill and tag still always travel the
+   identical pixel delta during a "together" phase. */
+@keyframes pill-collapse {
+  0%    { transform: translateY(-42px); opacity: 1; }
+  62.5% { transform: translateY(68px); opacity: 0; }
+  100%  { transform: translateY(68px); opacity: 0; }
+}
+@keyframes pill-expand {
+  0%     { transform: translateY(68px); opacity: 0; }
+  37.5%  { transform: translateY(68px); opacity: 0; }
+  100%   { transform: translateY(-42px); opacity: 1; }
+}
+.animate-pill-collapse { animation: pill-collapse 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-pill-expand { animation: pill-expand 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes tag-collapse {
+  0%    { transform: translateY(-10px); opacity: 1; }
+  62.5% { transform: translateY(100px); opacity: 0; }
+  100%  { transform: translateY(0px); opacity: 1; }
+}
+@keyframes tag-expand {
+  0%     { transform: translateY(0px); opacity: 1; }
+  37.5%  { transform: translateY(100px); opacity: 0; }
+  100%   { transform: translateY(-10px); opacity: 1; }
+}
+.animate-tag-collapse { animation: tag-collapse 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-tag-expand { animation: tag-expand 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Adapted from Transitions.dev's "Modal open/close" recipe — scale +
+   fade, open slower than close — for the dock music player's queue/
+   add-music popout (dock-music-widget.tsx). transform-origin is
+   bottom right rather than the original's center, since this popout
+   grows up out of the pill's own top-right corner rather than being a
+   page-centered dialog. --popout-close-dur is also read directly in
+   JS (dock-music-widget.tsx's POPOUT_CLOSE_DUR) to time when the
+   closing element actually unmounts — keep the two in sync if either
+   changes. */
+:root {
+  --popout-open-dur: 250ms;
+  --popout-close-dur: 150ms;
+  --popout-scale: 0.96;
+  --popout-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.t-popout {
+  transform-origin: bottom right;
+  transform: scale(var(--popout-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--popout-open-dur) var(--popout-ease), opacity var(--popout-open-dur) var(--popout-ease);
+}
+.t-popout.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-popout.is-closing {
+  transform: scale(var(--popout-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--popout-close-dur) var(--popout-ease), opacity var(--popout-close-dur) var(--popout-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-popout { transition: none !important; }
+}
+
+/* Calendar and day-counter desk widgets' icon↔panel morph
+   (calendar-desk-widget.tsx, day-counter-desk-widget.tsx). The box
+   itself (.desk-widget-box, width/height) snaps directly between the
+   small icon size and the full panel size — no animated grow/shrink —
+   so the panel never visibly stretches into place. What actually
+   animates is the two faces stacked inside it
+   (.desk-widget-icon-face / .desk-widget-panel-face, both always
+   mounted) cross-fading by opacity alone: the icon dims out, the
+   panel dims in, at whatever size the box has already snapped to.
+   Opening uses a bouncier ease than closing, kept from the original
+   reference's own asymmetry — .desk-widget-icon-face/-panel-face's
+   base rule is the close transition, .is-open overrides it, so
+   removing .is-open falls back to the close values automatically. */
+:root {
+  --widget-morph-open-dur: 200ms;
+  --widget-morph-close-dur: 150ms;
+  --widget-morph-open-ease: cubic-bezier(0.34, 1.25, 0.64, 1);
+  --widget-morph-close-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.desk-widget-box {
+  transition: none;
+}
+.desk-widget-icon-face {
+  opacity: 1;
+  transition: opacity var(--widget-morph-close-dur) var(--widget-morph-close-ease);
+}
+.desk-widget-box.is-open .desk-widget-icon-face {
+  opacity: 0;
+  transition: opacity var(--widget-morph-open-dur) var(--widget-morph-open-ease);
+  pointer-events: none;
+}
+.desk-widget-panel-face {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--widget-morph-close-dur) var(--widget-morph-close-ease);
+}
+.desk-widget-box.is-open .desk-widget-panel-face {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity var(--widget-morph-open-dur) var(--widget-morph-open-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-widget-icon-face, .desk-widget-panel-face { transition: none !important; }
+}
+
+/* A dropped sticker's own settle-in bounce (placed-sticker.tsx). The
+   requested reference for this was transitions.dev's "Drag & drop
+   with physics" recipe, but that one's gated behind their Pro tier —
+   this is an original spring-scale entrance in the same spirit
+   (overshoot past rest, settle back), not a reproduction of their
+   actual recipe, which I couldn't access. Lives on the <img> itself,
+   not the sticker's outer positioned wrapper — that wrapper's own
+   transform already encodes the sticker's real position/rotation/
+   persisted scale from state, so animating transform there directly
+   would fight it; nesting the animation one level down composes with
+   it instead; a plain 1-shot animation with no held end state (the
+   default fill-mode) — nothing more to clean up once it's played. */
+@keyframes sticker-drop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-sticker-drop { animation: sticker-drop 450ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .animate-sticker-drop { animation: none !important; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -33,11 +33,15 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   const searchParams = useSearchParams()
   const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
   const activeCategory = searchParams.get('category')
+  // Archive is an admin-only debugging section — hidden from editors
+  // and logged-out visitors, not just unlinked (the page itself also
+  // 404s for anyone else, see archive/page.tsx).
+  const links = profile?.role === 'admin' ? LINKS : LINKS.filter(link => link.href !== '/archive')
 
   return (
     <>
       <nav className="font-mono fixed right-[2.6%] top-[3%] z-[60] flex items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
-        {LINKS.map(link => (
+        {links.map(link => (
           <Link
             key={link.href}
             href={link.href}

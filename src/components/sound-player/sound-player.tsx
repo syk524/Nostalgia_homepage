@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchQueue, type QueueTrack } from '@/lib/playlist'
-import { removeTrack } from '@/lib/actions/playlist'
+import { removeTrack, reorderTracks } from '@/lib/actions/playlist'
 import type { PlaylistTrack } from '@/types/database'
 import { DockMusicWidget } from './dock-music-widget'
 import { YoutubeFrame, YT_TARGET_ID } from './youtube-frame'
@@ -23,6 +23,12 @@ export function SoundPlayer() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  // Read live off the actual player, not track.duration_seconds —
+  // addYoutubeTrack/addUploadedTrack (lib/actions/playlist.ts) both
+  // hardcode that DB column to null at save time regardless of source,
+  // so the total half of the dock's time display was permanently
+  // stuck at 0:00 for every track, not just YouTube ones.
+  const [durationSeconds, setDurationSeconds] = useState(0)
   const [loopMode, setLoopMode] = useState<LoopMode>('all')
   const [collapsed, setCollapsed] = useState(false)
   const [ytReady, setYtReady] = useState(false)
@@ -162,6 +168,7 @@ export function SoundPlayer() {
       }
     }
     setElapsedSeconds(0)
+    setDurationSeconds(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, ytReady])
 
@@ -189,8 +196,10 @@ export function SoundPlayer() {
       if (track.source === 'youtube') {
         const yt = ytPlayerRef.current
         if (typeof yt?.getCurrentTime === 'function') setElapsedSeconds(yt.getCurrentTime())
+        if (typeof yt?.getDuration === 'function') setDurationSeconds(yt.getDuration() || 0)
       } else if (audioRef.current) {
         setElapsedSeconds(audioRef.current.currentTime)
+        setDurationSeconds(Number.isFinite(audioRef.current.duration) ? audioRef.current.duration : 0)
       }
     }, 500)
     return () => {
@@ -206,17 +215,24 @@ export function SoundPlayer() {
     setIsPlaying(v => !v)
   }
 
+  function handleCycleLoop() {
+    setLoopMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')
+  }
+
+  // Manual skip always wraps around, regardless of loop mode — loop
+  // only governs what happens when a track ends on its own (see
+  // advanceQueue above); pressing prev/next is a direct request to
+  // move to a specific track, so first-song-previous goes to the last
+  // song and last-song-next goes to the first, even with loop off.
   function handlePrev() {
-    setCurrentIndex(i => (i > 0 ? i - 1 : loopMode !== 'off' ? queue.length - 1 : 0))
+    setCurrentIndex(i => (i > 0 ? i - 1 : queue.length - 1))
     setIsPlaying(true)
   }
 
   function handleNext() {
-    // Manual skip always advances, even in loop-one mode.
     setCurrentIndex(i => {
       const next = i + 1
-      if (next < queue.length) return next
-      return loopMode !== 'off' ? 0 : i
+      return next < queue.length ? next : 0
     })
     setIsPlaying(true)
   }
@@ -257,6 +273,69 @@ export function SoundPlayer() {
     setQueue(q => [...q, { ...track, queuePosition: q.length }])
   }
 
+  // currentIndex is a plain array position, not a track id — QueueList
+  // already refuses to let the currently-playing row itself be picked
+  // up and dragged (see SortableTrackRow's useSortable `disabled`), but
+  // dragging OTHER tracks around it still shifts its position purely as
+  // a side effect (e.g. moving a later track earlier pushes the current
+  // one back by one slot). Re-deriving currentIndex by the current
+  // track's own id after every reorder — rather than trusting the old
+  // index number — is what actually keeps playback pointed at the same
+  // song regardless of how the rest of the queue gets rearranged.
+  function handleReorder(reordered: QueueTrack[]) {
+    const currentTrackId = queueRef.current[currentIndexRef.current]?.id
+    const nextQueue = reordered.map((t, i) => ({ ...t, queuePosition: i }))
+    setQueue(nextQueue)
+    if (currentTrackId) {
+      const newIndex = nextQueue.findIndex(t => t.id === currentTrackId)
+      if (newIndex !== -1) setCurrentIndex(newIndex)
+    }
+    reorderTracks(nextQueue.map(t => t.id))
+  }
+
+  // Hardware/OS-level transport controls — a headset's play/pause
+  // button, a lock-screen widget, a laptop's media keys — normally
+  // reach straight past React and toggle the underlying <audio>
+  // element directly (the browser's default behavior for a page with
+  // no registered handlers), which changed actual playback but left
+  // isPlaying, and so the dock's own play/pause icon, never told.
+  // Registering explicit handlers routes those controls through the
+  // exact same state setters the in-app buttons use, so the UI can't
+  // drift from real playback regardless of what triggered the change.
+  // 'play'/'pause' are separate explicit actions here, not a toggle —
+  // more correct than reusing handlePlayPause, since the OS is telling
+  // us which one happened rather than asking us to flip a coin.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true))
+    navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false))
+    navigator.mediaSession.setActionHandler('previoustrack', handlePrev)
+    navigator.mediaSession.setActionHandler('nexttrack', handleNext)
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null)
+      navigator.mediaSession.setActionHandler('pause', null)
+      navigator.mediaSession.setActionHandler('previoustrack', null)
+      navigator.mediaSession.setActionHandler('nexttrack', null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loopMode, queue.length])
+
+  // Keeps the OS's own play/pause affordance (lock screen, headset UI)
+  // showing the correct icon even when playback started or stopped for
+  // a reason other than a hardware button — e.g. picking a track from
+  // the queue, or a track ending and the next one auto-starting.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+  }, [isPlaying])
+
+  // Track metadata for the same OS-level surfaces, so they show the
+  // actual song instead of a generic "this page is playing audio."
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !current) return
+    navigator.mediaSession.metadata = new MediaMetadata({ title: current.title, artist: current.artist ?? undefined })
+  }, [current])
+
   return (
     <>
       <YoutubeFrame />
@@ -269,15 +348,18 @@ export function SoundPlayer() {
         currentIndex={currentIndex}
         isPlaying={isPlaying}
         elapsedSeconds={elapsedSeconds}
+        durationSeconds={durationSeconds}
         loopMode={loopMode}
         userId={userId}
         canEdit={canEdit}
         onPlayPause={handlePlayPause}
+        onCycleLoop={handleCycleLoop}
         onPrev={handlePrev}
         onNext={handleNext}
         onSelect={handleSelect}
         onShuffle={handleShuffle}
         onRemove={handleRemove}
+        onReorder={handleReorder}
         onTrackAdded={handleTrackAdded}
       />
     </>

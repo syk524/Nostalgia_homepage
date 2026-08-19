@@ -79,9 +79,13 @@ function CharacterCaption({ character, align }: { character: ProfileCharacter; a
 // why the image sits in its own inner wrapper while the overlay is
 // positioned against the outer, full-width one.
 export function CharacterPairHero({
-  imageUrl, title, titleFont, titleColor, titleSize, linkText, linkUrl, linkFont, linkColor, hasMusic, char1, char2,
+  imageUrl, illustrationSource, illustrationSourceFont, illustrationSourceColor,
+  title, titleFont, titleColor, titleSize, linkText, linkUrl, linkFont, linkColor, hasMusic, char1, char2,
 }: {
   imageUrl: string
+  illustrationSource: string | null
+  illustrationSourceFont: string
+  illustrationSourceColor: string
   title: string
   titleFont: string
   titleColor: string
@@ -161,6 +165,11 @@ export function CharacterPairHero({
       <div ref={containerRef} className="relative w-full">
         <div className="w-[60vw] mx-auto">
           <img src={imageUrl} alt="" className="w-full h-auto block rounded" />
+          {illustrationSource && (
+            <p className="text-center text-sm mt-3" style={{ fontFamily: pairFontFamily(illustrationSourceFont), color: illustrationSourceColor }}>
+              ©{illustrationSource}
+            </p>
+          )}
         </div>
 
         {/* right side matches Nav's own right-[2.6%] inset — the
