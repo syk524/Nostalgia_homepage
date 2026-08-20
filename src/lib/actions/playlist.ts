@@ -18,6 +18,36 @@ function parseYoutubeId(url: string): string | null {
   return null
 }
 
+// Catches the "video owner disabled embedding" case at add-time
+// instead of only discovering it later when someone hits play (see
+// sound-player.tsx's playError/onError handling for that fallback,
+// which still applies for anything this check can't catch — e.g. a
+// video that becomes unembeddable after being added). Fails open (lets
+// the add through) on anything that isn't a clear signal from the API
+// itself — no key configured, a network hiccup, a non-200 response —
+// since this is a UX improvement, not something correctness depends
+// on, and the playError fallback still catches a genuinely broken
+// video either way.
+async function checkYoutubeEmbeddable(videoId: string): Promise<string | null> {
+  const apiKey = process.env.YOUTUBE_API_KEY
+  if (!apiKey) return null
+
+  try {
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=status&id=${videoId}&key=${apiKey}`)
+    if (!res.ok) return null
+
+    const data = await res.json()
+    const item = data.items?.[0]
+    if (!item) return 'Video not found, private, or removed.'
+    if (item.status?.embeddable === false) {
+      return 'This video can’t be embedded — its owner has disabled playback outside YouTube. Try a different link.'
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 async function requireEditor() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,6 +66,9 @@ export async function addYoutubeTrack(url: string, title: string, artist: string
 
   const videoId = parseYoutubeId(url)
   if (!videoId) return { track: null, error: 'Could not find a YouTube video ID in that link.' }
+
+  const embedError = await checkYoutubeEmbeddable(videoId)
+  if (embedError) return { track: null, error: embedError }
 
   const { count } = await supabase.from('playlist_tracks').select('id', { count: 'exact', head: true })
 
