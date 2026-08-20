@@ -297,11 +297,17 @@
   background: transparent;
   cursor: pointer;
 }
+/* WebKit has no native "filled portion" for range inputs — unlike
+   Firefox's ::-moz-range-progress below, which does this for free —
+   so it's faked with a gradient that hard-stops at --volume-fill (set
+   inline on the input itself, from the live volume value). `to top`
+   is this track's own visual box, unaffected by the input's
+   writing-mode rotation, so it already fills from the bottom up. */
 .volume-slider::-webkit-slider-runnable-track {
   width: 4px;
   height: 100%;
   border-radius: 9999px;
-  background: rgba(241, 241, 241, 0.15);
+  background: linear-gradient(to top, #f1f1f1 var(--volume-fill, 0%), rgba(241, 241, 241, 0.15) var(--volume-fill, 0%));
 }
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;

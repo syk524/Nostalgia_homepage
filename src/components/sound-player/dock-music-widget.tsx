@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronUp, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
 import { QueueList } from './queue-list'
@@ -259,6 +259,12 @@ export function DockMusicWidget({
                 aria-label="Volume"
                 aria-orientation="vertical"
                 className="volume-slider"
+                // Read by the ::-webkit-slider-runnable-track gradient in
+                // globals.css — WebKit has no native "filled portion"
+                // concept for range inputs (unlike Firefox's own
+                // ::-moz-range-progress, used as-is below), so the fill
+                // is faked with a gradient hard-stopping at this value.
+                style={{ '--volume-fill': `${volume}%` } as CSSProperties}
               />
             </div>
           </div>
