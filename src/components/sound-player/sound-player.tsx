@@ -65,6 +65,23 @@ function writeStoredPlayback(state: StoredPlayback) {
   }
 }
 
+// A real user preference (not a same-tab-reload workaround like
+// PLAYBACK_STORAGE_KEY above), so this is localStorage — persists
+// across tabs and browser restarts, like calendar-desk-widget.tsx's
+// own open/closed state.
+const VOLUME_STORAGE_KEY = 'sound-player-volume'
+
+function readStoredVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOLUME_STORAGE_KEY)
+    if (raw === null) return 100
+    const n = Number(raw)
+    return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100
+  } catch {
+    return 100
+  }
+}
+
 export function SoundPlayer() {
   const [userId, setUserId] = useState<string | null>(null)
   const [canEdit, setCanEdit] = useState(false)
@@ -87,6 +104,7 @@ export function SoundPlayer() {
   // the video, not at add-track time. Without this, a track like that
   // just sits there cued-but-silent forever with no indication why.
   const [playError, setPlayError] = useState<string | null>(null)
+  const [volume, setVolume] = useState(100)
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const ytPlayerRef = useRef<any>(null)
@@ -157,6 +175,32 @@ export function SoundPlayer() {
       }
     })
   }, [])
+
+  // Read once on mount (not a lazy useState initializer) purely to
+  // match every other localStorage read in this codebase, which all
+  // read after mount rather than during the initial render.
+  useEffect(() => {
+    setVolume(readStoredVolume())
+  }, [])
+
+  useEffect(() => {
+    try { localStorage.setItem(VOLUME_STORAGE_KEY, String(volume)) } catch {
+      // Storage unavailable — volume still works this page view, it
+      // just resets to 100 next visit.
+    }
+  }, [volume])
+
+  // Applies to both source types unconditionally, rather than only the
+  // currently-active one — each API is a harmless no-op on the inactive
+  // element/player, and this way volume doesn't need to be re-applied
+  // every time `current` switches source type. ytReady is a dependency
+  // (not just volume) so a change made before the YT player finishes
+  // initializing still gets applied once it does, instead of the
+  // player silently starting at its own default volume.
+  useEffect(() => {
+    if (ytReady && ytPlayerRef.current?.setVolume) ytPlayerRef.current.setVolume(volume)
+    if (audioRef.current) audioRef.current.volume = volume / 100
+  }, [volume, ytReady])
 
   // Called when the current track finishes naturally (not via prev/next).
   const advanceQueue = useCallback(() => {
@@ -345,6 +389,10 @@ export function SoundPlayer() {
     setLoopMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')
   }
 
+  function handleVolumeChange(v: number) {
+    setVolume(Math.min(100, Math.max(0, v)))
+  }
+
   // Manual skip always wraps around, regardless of loop mode — loop
   // only governs what happens when a track ends on its own (see
   // advanceQueue above); pressing prev/next is a direct request to
@@ -497,10 +545,12 @@ export function SoundPlayer() {
         durationSeconds={durationSeconds}
         playError={playError}
         loopMode={loopMode}
+        volume={volume}
         userId={userId}
         canEdit={canEdit}
         onPlayPause={handlePlayPause}
         onCycleLoop={handleCycleLoop}
+        onVolumeChange={handleVolumeChange}
         onPrev={handlePrev}
         onNext={handleNext}
         onSelect={handleSelect}

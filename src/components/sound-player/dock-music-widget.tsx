@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronUp, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from 'lucide-react'
+import { ChevronDown, ChevronUp, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
 import { QueueList } from './queue-list'
 import { AddTrackForm } from './add-track-form'
 import type { LoopMode } from './sound-player'
@@ -33,10 +33,12 @@ export function DockMusicWidget({
   durationSeconds,
   playError,
   loopMode,
+  volume,
   userId,
   canEdit,
   onPlayPause,
   onCycleLoop,
+  onVolumeChange,
   onPrev,
   onNext,
   onSelect,
@@ -54,10 +56,12 @@ export function DockMusicWidget({
   durationSeconds: number
   playError: string | null
   loopMode: LoopMode
+  volume: number
   userId: string | null
   canEdit: boolean
   onPlayPause: () => void
   onCycleLoop: () => void
+  onVolumeChange: (volume: number) => void
   onPrev: () => void
   onNext: () => void
   onSelect: (index: number) => void
@@ -68,6 +72,7 @@ export function DockMusicWidget({
 }) {
   const [listOpen, setListOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [volumeOpen, setVolumeOpen] = useState(false)
   const current = queue[currentIndex]
 
   // Must match --popout-close-dur in globals.css's .t-popout rule —
@@ -81,12 +86,13 @@ export function DockMusicWidget({
   // snapping to something else mid-close.
   const POPOUT_CLOSE_DUR = 150
   const [popoutPhase, setPopoutPhase] = useState<'closed' | 'open' | 'closing'>('closed')
-  const [popoutContent, setPopoutContent] = useState<'list' | 'add'>('list')
+  const [popoutContent, setPopoutContent] = useState<'list' | 'add' | 'volume'>('list')
   useEffect(() => {
     if (addOpen) { setPopoutContent('add'); setPopoutPhase('open'); return }
     if (listOpen) { setPopoutContent('list'); setPopoutPhase('open'); return }
+    if (volumeOpen) { setPopoutContent('volume'); setPopoutPhase('open'); return }
     setPopoutPhase(p => (p === 'open' ? 'closing' : p))
-  }, [listOpen, addOpen])
+  }, [listOpen, addOpen, volumeOpen])
   useEffect(() => {
     if (popoutPhase !== 'closing') return
     const t = setTimeout(() => setPopoutPhase('closed'), POPOUT_CLOSE_DUR)
@@ -139,7 +145,7 @@ export function DockMusicWidget({
   // closed on the way down means every expand starts from the same
   // clean state.
   function handleToggleCollapse() {
-    if (!collapsed) { setListOpen(false); setAddOpen(false) }
+    if (!collapsed) { setListOpen(false); setAddOpen(false); setVolumeOpen(false) }
     onToggleCollapse()
   }
 
@@ -194,6 +200,26 @@ export function DockMusicWidget({
                 <button onClick={() => setAddOpen(false)} className="w-full justify-center flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-scroll-100 border border-scroll-100/20 hover:border-scroll-100/40 hover:bg-scroll-100/5 transition-all duration-150">Back</button>
               </div>
             )
+          ) : popoutContent === 'volume' ? (
+            // Fixed width, not pillWidth like the other two panels — a
+            // vertical slider strip doesn't need to match the pill's
+            // (much wider) own width, and forcing it to would leave a
+            // lot of dead horizontal space either side of the slider.
+            <div className="w-16 rounded-xl bg-ink-900/90 backdrop-blur-md p-3 flex flex-col items-center gap-2">
+              <span className="text-[11px] font-mono text-scroll-400 tabular-nums">{volume}</span>
+              <div className="h-28 flex items-center justify-center">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={volume}
+                  onChange={e => onVolumeChange(Number(e.target.value))}
+                  aria-label="Volume"
+                  aria-orientation="vertical"
+                  className="volume-slider"
+                />
+              </div>
+            </div>
           ) : (
             <div style={{ width: pillWidth }} className="rounded-xl bg-ink-900/90 backdrop-blur-md p-4">
               <QueueList
@@ -278,7 +304,14 @@ export function DockMusicWidget({
           {loopMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
         </button>
         <button
-          onClick={() => { setListOpen(v => !v); setAddOpen(false) }}
+          onClick={() => { setVolumeOpen(v => !v); setListOpen(false); setAddOpen(false) }}
+          aria-label={volumeOpen ? 'Hide volume' : 'Show volume'}
+          className={`shrink-0 transition-colors ${volumeOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
+        >
+          {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+        </button>
+        <button
+          onClick={() => { setListOpen(v => !v); setAddOpen(false); setVolumeOpen(false) }}
           aria-label={listOpen ? 'Hide queue' : 'Show queue'}
           className={`shrink-0 transition-colors ${listOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
         >

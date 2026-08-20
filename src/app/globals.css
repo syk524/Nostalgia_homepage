@@ -276,6 +276,63 @@
   .t-popout { transition: none !important; }
 }
 
+/* Vertical volume slider (dock-music-widget.tsx's volume popout) — a
+   plain <input type="range"> rotated via writing-mode rather than
+   -webkit-appearance:slider-vertical (old, WebKit-only, and Firefox
+   never supported it at all); direction:rtl is what makes higher
+   values move the thumb up instead of down. No existing range-input
+   styling anywhere else in this codebase to match against, so this is
+   a from-scratch look sized against the popout's own bg-ink-900/90:
+   scroll-100 (#f1f1f1) thumb/fill, matching every other "active/light"
+   element already used against that same dark backdrop (e.g. the
+   pill's own play button), over a faint scroll-100/15 track — the same
+   opacity already used for the pill's own divider line. */
+.volume-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 4px;
+  height: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.volume-slider::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  border-radius: 9999px;
+  background: rgba(241, 241, 241, 0.15);
+}
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-left: -5px;
+  border-radius: 9999px;
+  background: #f1f1f1;
+  cursor: pointer;
+}
+.volume-slider::-moz-range-track {
+  width: 4px;
+  height: 100%;
+  border-radius: 9999px;
+  background: rgba(241, 241, 241, 0.15);
+}
+.volume-slider::-moz-range-progress {
+  width: 4px;
+  border-radius: 9999px;
+  background: #f1f1f1;
+}
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: #f1f1f1;
+  cursor: pointer;
+}
+
 /* Adapted from Transitions.dev's "Plus to menu morph" recipe, for the
    calendar and day-counter desk widgets' icon↔panel morph
    (calendar-desk-widget.tsx, day-counter-desk-widget.tsx). Two parts:
