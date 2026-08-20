@@ -55,6 +55,12 @@ export default async function GalleryPage({
   // posts ambiguous, so filtered views stay read-only.
   const canReorder = canEdit && !activeCategory
 
+  // Carries the active category into the new-post form as a pre-fill,
+  // not a lock — matches the URL shape the category pills already use
+  // (?category=<name>), so new-post-form.tsx can resolve it the same
+  // way this page resolves activeCategory above.
+  const newPostHref = activeCategory ? `/gallery/new?category=${encodeURIComponent(activeCategory.name)}` : '/gallery/new'
+
   return (
     <>
       <Suspense fallback={null}>
@@ -77,25 +83,6 @@ export default async function GalleryPage({
           throws the match off), clearing their edge with a steady 60px gap. */}
       <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 sm:pl-[calc(2.6vw+159px)]">
         <div className="max-w-[1800px] animate-fade-up space-y-8">
-          {canEdit && (
-            // Plain <a>, not next/link — /gallery/new is a static sibling of
-            // the dynamic [id] route, but the modal's interception rewrite
-            // matches any single segment under /gallery/ on soft navigation,
-            // so a client-side Link click here landed in the post-detail
-            // modal with id="new" instead of the real page. A full
-            // navigation skips the client router (and its next-url header)
-            // entirely, so the rewrite never matches and this resolves
-            // normally server-side.
-            //
-            // In normal flow (not fixed) so the grid below it — a sibling in
-            // this space-y-8 container — always sits a clean 32px under it,
-            // instead of the two independently-positioned elements risking
-            // an overlap on shorter viewports.
-            <div className="flex justify-end">
-              <a href="/gallery/new" className="btn-primary">New Post</a>
-            </div>
-          )}
-
           {/* Category filters, inline at the top — only shown below sm, where
               Nav's floating category pills (see nav.tsx) are hidden for lack
               of room. */}
@@ -134,6 +121,8 @@ export default async function GalleryPage({
             key={activeCategory?.id ?? 'all'}
             posts={(posts ?? []) as unknown as (Post & { author: Profile; images: PostImage[]; category: Category })[]}
             canReorder={canReorder}
+            canEdit={canEdit}
+            newPostHref={newPostHref}
           />
         </div>
       </div>

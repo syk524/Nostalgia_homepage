@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Plus } from 'lucide-react'
 import { reorderPosts } from '@/lib/actions/gallery'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
@@ -52,6 +52,27 @@ function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.
   )
 }
 
+// Same quiet-at-rest, tint-on-hover tile as character-pair-grid.tsx's
+// AddPairCard — plain <a>, not next/link: /gallery/new is a static
+// sibling of the dynamic [id] route, but the modal's interception
+// rewrite (see gallery/page.tsx's own comment on its old New Post
+// button) matches any single segment under /gallery/ on soft
+// navigation, so a client-side Link here would land in the post-detail
+// modal with id="new" instead of the real page. aspect-video, not a
+// fixed height — matches PostCard's own image box exactly, and unlike
+// character-pair-grid's tile there's no separate caption row below it
+// to account for (PostCard's caption is an absolute overlay inside the
+// same box), so no self-end/row-height juggling is needed here.
+function AddPostTile({ href }: { href: string }) {
+  return (
+    <a href={href} className="group block rounded overflow-hidden">
+      <div className="w-full aspect-video flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20">
+        <Plus size={28} />
+      </div>
+    </a>
+  )
+}
+
 function SortablePostCard({ post }: { post: GalleryPost }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: post.id })
   const style = {
@@ -78,7 +99,7 @@ function SortablePostCard({ post }: { post: GalleryPost }) {
   )
 }
 
-export function GalleryGrid({ posts: initialPosts, canReorder }: { posts: GalleryPost[]; canReorder: boolean }) {
+export function GalleryGrid({ posts: initialPosts, canReorder, canEdit, newPostHref }: { posts: GalleryPost[]; canReorder: boolean; canEdit: boolean; newPostHref: string }) {
   const [posts, setPosts] = useState(initialPosts)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -107,6 +128,7 @@ export function GalleryGrid({ posts: initialPosts, canReorder }: { posts: Galler
   if (!canReorder) {
     return (
       <div className={GRID_CLASSES}>
+        {canEdit && <AddPostTile href={newPostHref} />}
         {posts.map(post => <PostCard key={post.id} post={post} />)}
       </div>
     )
@@ -120,6 +142,7 @@ export function GalleryGrid({ posts: initialPosts, canReorder }: { posts: Galler
     <DndContext id="gallery-grid" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={posts.map(p => p.id)} strategy={rectSortingStrategy}>
         <div className={GRID_CLASSES}>
+          {canEdit && <AddPostTile href={newPostHref} />}
           {posts.map(post => <SortablePostCard key={post.id} post={post} />)}
         </div>
       </SortableContext>

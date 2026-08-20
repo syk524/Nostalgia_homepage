@@ -11,7 +11,7 @@ import type { Category } from '@/types/database'
 
 type ImageItem = { file: File; preview: string; focalX: number; focalY: number }
 
-export function NewPostForm({ categories: initialCategories }: { categories: Category[] }) {
+export function NewPostForm({ categories: initialCategories, initialCategoryId = null }: { categories: Category[]; initialCategoryId?: string | null }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const navigateRef = useRef<HTMLAnchorElement>(null)
@@ -19,7 +19,11 @@ export function NewPostForm({ categories: initialCategories }: { categories: Cat
   const [title, setTitle] = useState('')
   const [body, setBody]   = useState('')
   const [categories, setCategories] = useState(initialCategories)
-  const [categoryId, setCategoryId] = useState<string | null>(null)
+  // Pre-filled when reached from a filtered gallery view (e.g. the "+"
+  // tile on the Commission page) — still just the CategoryPicker's
+  // ordinary starting selection, not locked in any way, so the user can
+  // freely pick a different category before publishing.
+  const [categoryId, setCategoryId] = useState<string | null>(initialCategoryId)
   const [images, setImages] = useState<ImageItem[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')

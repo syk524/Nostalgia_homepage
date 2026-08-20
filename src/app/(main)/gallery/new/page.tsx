@@ -2,7 +2,12 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { NewPostForm } from './new-post-form'
 
-export default async function NewPostPage() {
+export default async function NewPostPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>
+}) {
+  const { category: categoryName } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const profile = user
@@ -26,5 +31,13 @@ export default async function NewPostPage() {
     .select('*')
     .order('sort_order', { ascending: true })
 
-  return <NewPostForm categories={categories ?? []} />
+  // Reached from the "+" tile on a filtered gallery view (?category=<name>,
+  // matching the URL convention gallery/page.tsx's own category links
+  // already use) — an unknown/stale name just falls back to no
+  // pre-selection rather than erroring.
+  const initialCategoryId = categoryName
+    ? (categories ?? []).find(c => c.name === categoryName)?.id ?? null
+    : null
+
+  return <NewPostForm categories={categories ?? []} initialCategoryId={initialCategoryId} />
 }
