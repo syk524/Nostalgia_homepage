@@ -31,6 +31,7 @@ export function DockMusicWidget({
   isPlaying,
   elapsedSeconds,
   durationSeconds,
+  playError,
   loopMode,
   userId,
   canEdit,
@@ -51,6 +52,7 @@ export function DockMusicWidget({
   isPlaying: boolean
   elapsedSeconds: number
   durationSeconds: number
+  playError: string | null
   loopMode: LoopMode
   userId: string | null
   canEdit: boolean
@@ -211,7 +213,11 @@ export function DockMusicWidget({
       <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-[#2F2F2E]">
         <div className="min-w-0 w-36 font-mono">
           <p className="text-sm text-scroll-100 truncate font-medium">{current?.title ?? 'Nothing playing'}</p>
-          <p className="text-xs text-scroll-400 truncate">{current?.artist ?? '—'}</p>
+          {playError ? (
+            <p className="text-xs text-red-400 truncate">{playError}</p>
+          ) : (
+            <p className="text-xs text-scroll-400 truncate">{current?.artist ?? '—'}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-1 text-scroll-300">

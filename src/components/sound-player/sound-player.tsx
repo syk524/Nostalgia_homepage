@@ -41,6 +41,21 @@ function readStoredPlayback(): StoredPlayback | null {
   }
 }
 
+// YouTube IFrame API error codes: https://developers.google.com/youtube/iframe_api_reference#onError
+function youtubeErrorMessage(code: number): string {
+  switch (code) {
+    case 101:
+    case 150:
+      return 'Playback blocked by the video owner'
+    case 100:
+      return 'Video not found or private'
+    case 2:
+      return 'Invalid video link'
+    default:
+      return 'Video failed to play'
+  }
+}
+
 function writeStoredPlayback(state: StoredPlayback) {
   try {
     sessionStorage.setItem(PLAYBACK_STORAGE_KEY, JSON.stringify(state))
@@ -66,6 +81,12 @@ export function SoundPlayer() {
   const [loopMode, setLoopMode] = useState<LoopMode>('all')
   const [collapsed, setCollapsed] = useState(false)
   const [ytReady, setYtReady] = useState(false)
+  // Set from the YouTube player's onError — some videos (typically
+  // label/VEVO uploads) have embedding disabled by the rights holder,
+  // which the IFrame API can only report after actually trying to cue
+  // the video, not at add-track time. Without this, a track like that
+  // just sits there cued-but-silent forever with no indication why.
+  const [playError, setPlayError] = useState<string | null>(null)
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const ytPlayerRef = useRef<any>(null)
@@ -180,8 +201,17 @@ export function SoundPlayer() {
               ytPlayerRef.current?.playVideo?.()
             }
             if (event.data === window.YT.PlayerState.ENDED) advanceQueue()
-            if (event.data === window.YT.PlayerState.PLAYING) setIsPlaying(true)
+            if (event.data === window.YT.PlayerState.PLAYING) { setIsPlaying(true); setPlayError(null) }
             if (event.data === window.YT.PlayerState.PAUSED) setIsPlaying(false)
+          },
+          // Most commonly a track whose owner disabled embedding (error
+          // 101/150) — the IFrame API only surfaces that once it actually
+          // tries to cue the video, so this is the first point the app
+          // can know playback is impossible rather than just slow.
+          onError: (event: any) => {
+            autoplayOnCueRef.current = false
+            setIsPlaying(false)
+            setPlayError(youtubeErrorMessage(event.data))
           },
         },
       })
@@ -218,6 +248,7 @@ export function SoundPlayer() {
     const audio = audioRef.current
     const yt = ytPlayerRef.current
     const seekTo = pendingSeekRef.current
+    setPlayError(null)
 
     if (current.source === 'youtube') {
       audio?.pause()
@@ -364,19 +395,12 @@ export function SoundPlayer() {
     })
   }
 
-  // Unlike every other queue-mutating handler here, this used to just
-  // append and stop — currentIndex/isPlaying were left untouched, so
-  // adding a track while something else was already playing silently
-  // did nothing audible, and adding a track to an empty queue landed on
-  // isPlaying:false, cueing the video (paused) instead of playing it.
-  // Selecting + playing the newly added track, same as clicking it in
-  // the queue list (handleSelect), is what "add a track" actually
-  // implies.
+  // Appends only — adding a track queues it without disturbing whatever
+  // is currently playing. (Briefly auto-selected + played the new track
+  // here, matching handleSelect; reverted since that jumped away from
+  // whatever the listener already had playing, which wasn't wanted.)
   function handleTrackAdded(track: PlaylistTrack) {
-    const newIndex = queueRef.current.length
     setQueue(q => [...q, { ...track, queuePosition: q.length }])
-    setCurrentIndex(newIndex)
-    setIsPlaying(true)
   }
 
   // currentIndex is a plain array position, not a track id — QueueList
@@ -471,6 +495,7 @@ export function SoundPlayer() {
         isPlaying={isPlaying}
         elapsedSeconds={elapsedSeconds}
         durationSeconds={durationSeconds}
+        playError={playError}
         loopMode={loopMode}
         userId={userId}
         canEdit={canEdit}
