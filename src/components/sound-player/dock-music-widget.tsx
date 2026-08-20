@@ -101,16 +101,31 @@ export function DockMusicWidget({
 
   const pillRef = useRef<HTMLDivElement>(null)
   const [pillWidth, setPillWidth] = useState<number>()
+  const volumeButtonRef = useRef<HTMLButtonElement>(null)
+  const [volumeButtonCenter, setVolumeButtonCenter] = useState<number>()
 
   // Popouts (queue / add music) match the pill's own rendered width
   // exactly, rather than a guessed fixed width — the pill's width
   // shifts slightly with the "Add music" plus button (editor-only) and
   // could in principle shift with content, so this stays correct
-  // instead of drifting out of sync.
+  // instead of drifting out of sync. The volume popout instead centers
+  // itself on its own button — measured here too, in the same
+  // observer, since anything that shifts the pill's width (playError
+  // text appearing, canEdit toggling the add button) can also shift
+  // this button's own position even though its size never changes,
+  // which a ResizeObserver scoped to just the button wouldn't catch.
+  // offsetLeft is measured against the button's nearest positioned
+  // ancestor, which is the same outer `relative z-[25]` div the popout
+  // itself is absolutely positioned within below, so this value can be
+  // used directly as that popout's own `left`.
   useLayoutEffect(() => {
     const el = pillRef.current
     if (!el) return
-    const observer = new ResizeObserver(() => setPillWidth(el.getBoundingClientRect().width))
+    const observer = new ResizeObserver(() => {
+      setPillWidth(el.getBoundingClientRect().width)
+      const btn = volumeButtonRef.current
+      if (btn) setVolumeButtonCenter(btn.offsetLeft + btn.offsetWidth / 2)
+    })
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
@@ -215,6 +230,40 @@ export function DockMusicWidget({
           )}
         </div>
       )}
+      {/* Separate from the list/add popout above (not a third branch of
+          it) because it anchors differently: list/add hug the pill's
+          right edge (right-0), sized to the pill's own width, while
+          this one is a fixed 64px wide and centered on the volume
+          button specifically via the measured volumeButtonCenter — an
+          explicit `left` in px, not a `left-1/2 -translate-x-1/2`
+          transform, since .t-popout's own `transform: scale(...)` and
+          a translate utility both set the plain `transform` property on
+          the same element, and .t-popout's declaration (later in the
+          compiled stylesheet) silently wins, dropping the translate
+          entirely — computing the centered position in px sidesteps
+          that rather than fighting it. */}
+      {popoutPhase !== 'closed' && popoutContent === 'volume' && volumeButtonCenter !== undefined && (
+        <div
+          style={{ left: volumeButtonCenter - 32 }}
+          className={`absolute bottom-full mb-3 t-popout ${popoutPhase === 'open' ? 'is-open' : ''} ${popoutPhase === 'closing' ? 'is-closing' : ''}`}
+        >
+          <div className="w-16 rounded-xl bg-ink-900/90 backdrop-blur-md p-3 flex flex-col items-center gap-2">
+            <span className="text-[11px] font-mono text-scroll-400 tabular-nums">{volume}</span>
+            <div className="h-28 flex items-center justify-center">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={volume}
+                onChange={e => onVolumeChange(Number(e.target.value))}
+                aria-label="Volume"
+                aria-orientation="vertical"
+                className="volume-slider"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-[#2F2F2E]">
         <div className="min-w-0 w-36 font-mono">
@@ -283,55 +332,14 @@ export function DockMusicWidget({
         >
           {loopMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
         </button>
-        {/* relative wrapper scoped to just this button — the volume
-            popout centers on it directly (left-1/2 -translate-x-1/2)
-            rather than sharing the list/add popouts' right-0-of-the-
-            whole-pill anchor above, which would leave it floating well
-            left of this button instead of above it. The centering and
-            the .t-popout scale/fade live on two separate nested divs,
-            not one — .t-popout's own `transform: scale(...)` rule and
-            -translate-x-1/2 both set the plain `transform` property, so
-            combined on one element .t-popout's (later in the
-            stylesheet, so higher-priority) declaration silently wins
-            and drops the translate entirely, leaving the popout
-            centered under the whole 15px button box that DOMRect
-            reported, not the (correctly) centered position intended. */}
-        <div className="relative shrink-0">
-          {popoutPhase !== 'closed' && popoutContent === 'volume' && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3">
-              {/* bottom-center, not .t-popout's own default bottom-right
-                  — this popout scales in from directly below the button
-                  it's centered on, not from a corner. */}
-              <div
-                style={{ transformOrigin: 'bottom center' }}
-                className={`t-popout ${popoutPhase === 'open' ? 'is-open' : ''} ${popoutPhase === 'closing' ? 'is-closing' : ''}`}
-              >
-                <div className="w-16 rounded-xl bg-ink-900/90 backdrop-blur-md p-3 flex flex-col items-center gap-2">
-                  <span className="text-[11px] font-mono text-scroll-400 tabular-nums">{volume}</span>
-                  <div className="h-28 flex items-center justify-center">
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={volume}
-                      onChange={e => onVolumeChange(Number(e.target.value))}
-                      aria-label="Volume"
-                      aria-orientation="vertical"
-                      className="volume-slider"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => { setVolumeOpen(v => !v); setListOpen(false); setAddOpen(false) }}
-            aria-label={volumeOpen ? 'Hide volume' : 'Show volume'}
-            className={`transition-colors ${volumeOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
-          >
-            {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-          </button>
-        </div>
+        <button
+          ref={volumeButtonRef}
+          onClick={() => { setVolumeOpen(v => !v); setListOpen(false); setAddOpen(false) }}
+          aria-label={volumeOpen ? 'Hide volume' : 'Show volume'}
+          className={`shrink-0 transition-colors ${volumeOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
+        >
+          {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+        </button>
         <button
           onClick={() => { setListOpen(v => !v); setAddOpen(false); setVolumeOpen(false) }}
           aria-label={listOpen ? 'Hide queue' : 'Show queue'}
