@@ -364,8 +364,19 @@ export function SoundPlayer() {
     })
   }
 
+  // Unlike every other queue-mutating handler here, this used to just
+  // append and stop — currentIndex/isPlaying were left untouched, so
+  // adding a track while something else was already playing silently
+  // did nothing audible, and adding a track to an empty queue landed on
+  // isPlaying:false, cueing the video (paused) instead of playing it.
+  // Selecting + playing the newly added track, same as clicking it in
+  // the queue list (handleSelect), is what "add a track" actually
+  // implies.
   function handleTrackAdded(track: PlaylistTrack) {
+    const newIndex = queueRef.current.length
     setQueue(q => [...q, { ...track, queuePosition: q.length }])
+    setCurrentIndex(newIndex)
+    setIsPlaying(true)
   }
 
   // currentIndex is a plain array position, not a track id — QueueList
