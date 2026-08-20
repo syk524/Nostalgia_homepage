@@ -67,6 +67,7 @@ export type ProfileCharacter = {
   name: string
   name_color: string
   name_font: string
+  name_underline_color: string
   profile_image_url: string | null
   catchphrase: string | null
   catchphrase_color: string
@@ -269,7 +270,7 @@ export type Database = {
       profile_characters: {
         Row: Omit<ProfileCharacter, 'description_sections'>
         Insert: Omit<ProfileCharacter, 'id' | 'created_at' | 'updated_at' | 'description_sections'>
-        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y'>>
+        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y'>>
         Relationships: []
       }
       description_sections: {

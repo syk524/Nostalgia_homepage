@@ -27,15 +27,17 @@ function CharacterCaption({ character, align }: { character: ProfileCharacter; a
     // exact 1:1 pixel shift.
     <div className={`max-w-[650px] ${align === 'right' ? 'text-right' : 'text-left'}`} style={{ transform: `translateY(${character.caption_offset_y}px)` }}>
       {character.catchphrase && (
-        <>
-          {/* letter-spacing doesn't accept percentages in CSS — 140% is
-              expressed as 1.4em, i.e. 140% of the font size, the standard
-              reading of a percentage tracking value. */}
-          <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
-          <div className={`h-px max-w-[200px] bg-white/60 my-2 ${align === 'right' ? 'ml-auto' : ''}`} />
-        </>
+        // letter-spacing doesn't accept percentages in CSS — 140% is
+        // expressed as 1.4em, i.e. 140% of the font size, the standard
+        // reading of a percentage tracking value.
+        <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
       )}
       <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
+      {/* Per-character color, not the catchphrase divider's old fixed
+          bg-white/60 — always shown (not gated on catchphrase like that
+          one was), since this reads as the name's own underline now,
+          not a catchphrase/name separator. */}
+      <div className={`h-px max-w-[200px] my-2 ${align === 'right' ? 'ml-auto' : ''}`} style={{ background: character.name_underline_color }} />
       {character.quote && (
         // Narrower than the 650px caption block above it, so it wraps
         // sooner — ml-auto (mirroring the divider line) keeps its right

@@ -56,12 +56,14 @@ function CharacterCard({ character }: { character: ProfileCharacter }) {
   return (
     <div className="card p-6 space-y-2">
       {character.catchphrase && (
-        <>
-          <span className="tag inline-block" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</span>
-          <div className="h-px bg-scroll-300 my-2" />
-        </>
+        <span className="tag inline-block" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</span>
       )}
       <h2 className="text-2xl" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color }}>{character.name}</h2>
+      {/* Per-character color, not the old fixed bg-scroll-300 — same
+          field as the photo-overlay hero's own name underline (see
+          character-pair-hero.tsx), always shown now rather than gated
+          on catchphrase. */}
+      <div className="h-px my-2" style={{ background: character.name_underline_color }} />
       {character.quote && <p className="italic" style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color }}>“{character.quote}”</p>}
       {sections.length > 0 && (
         <div

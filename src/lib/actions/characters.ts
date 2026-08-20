@@ -9,7 +9,7 @@ type TimelineEntryInput = { subtitle: string; subtitleColor: string; title: stri
 // character is shared across a pair's profiles, so identity (name,
 // avatar) lives here alongside caption content.
 type ProfileCharInput = {
-  name: string; nameColor: string; nameFont: string; profileImageUrl: string | null
+  name: string; nameColor: string; nameFont: string; nameUnderlineColor: string; profileImageUrl: string | null
   catchphrase: string; catchphraseColor: string; catchphraseFont: string
   quote: string; quoteColor: string; quoteFont: string
   keyword1: string; keyword2: string; keyword3: string; keywordFont: string; keywordColor: string
@@ -167,7 +167,7 @@ async function saveProfiles(
     const p = profiles[profileRow.position]
 
     const charRows = p.characters.map((c, i) => ({
-      profile_id: profileRow.id, slot: (i + 1) as 1 | 2, name: c.name.trim(), name_color: c.nameColor, name_font: c.nameFont, profile_image_url: c.profileImageUrl,
+      profile_id: profileRow.id, slot: (i + 1) as 1 | 2, name: c.name.trim(), name_color: c.nameColor, name_font: c.nameFont, name_underline_color: c.nameUnderlineColor, profile_image_url: c.profileImageUrl,
       catchphrase: c.catchphrase.trim() || null, catchphrase_color: c.catchphraseColor, catchphrase_font: c.catchphraseFont,
       quote: c.quote.trim() || null, quote_color: c.quoteColor, quote_font: c.quoteFont,
       keyword_1: c.keyword1.trim() || null, keyword_2: c.keyword2.trim() || null, keyword_3: c.keyword3.trim() || null,

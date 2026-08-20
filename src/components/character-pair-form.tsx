@@ -33,7 +33,7 @@ function emptyTimelineEntry(): TimelineEntryState {
 // character (not even their name or avatar) is shared across a pair's
 // profiles, so identity and caption content both live here together.
 type ProfileCharState = {
-  name: string; nameColor: string; nameFont: string
+  name: string; nameColor: string; nameFont: string; nameUnderlineColor: string
   profileImageUrl: string | null; profileImageFile: File | null; profileImagePreview: string; uploadingProfileImage: boolean
   catchphrase: string; catchphraseColor: string; catchphraseFont: string
   quote: string; quoteColor: string; quoteFont: string
@@ -49,6 +49,7 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     name: existing?.name ?? '',
     nameColor: existing?.name_color ?? '#5c574d',
     nameFont: existing?.name_font ?? 'default',
+    nameUnderlineColor: existing?.name_underline_color ?? '#ffffff',
     profileImageUrl: existing?.profile_image_url ?? null,
     profileImageFile: null,
     profileImagePreview: existing?.profile_image_url ?? '',
@@ -322,7 +323,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
 
 function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null) {
   return {
-    name: c.name, nameColor: c.nameColor, nameFont: c.nameFont, profileImageUrl,
+    name: c.name, nameColor: c.nameColor, nameFont: c.nameFont, nameUnderlineColor: c.nameUnderlineColor, profileImageUrl,
     catchphrase: c.catchphrase, catchphraseColor: c.catchphraseColor, catchphraseFont: c.catchphraseFont,
     quote: c.quote, quoteColor: c.quoteColor, quoteFont: c.quoteFont,
     keyword1: c.keyword1, keyword2: c.keyword2, keyword3: c.keyword3, keywordFont: c.keywordFont, keywordColor: c.keywordColor,
@@ -700,6 +701,11 @@ function CharacterFieldset({
         onFontChange={v => onPatch({ nameFont: v })}
         onColorChange={v => onPatch({ nameColor: v })}
       />
+
+      <div>
+        <label className="label">Line under name</label>
+        <ColorSwatch value={state.nameUnderlineColor} onChange={v => onPatch({ nameUnderlineColor: v })} />
+      </div>
 
       <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Character Caption</p>
 
