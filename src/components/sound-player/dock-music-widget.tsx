@@ -356,7 +356,7 @@ export function DockMusicWidget({
       </div>
       </div>
 
-      {/* Positioned independently of the sliding wrapper above (80px
+      {/* Positioned independently of the sliding wrapper above (160px
           right of center — see the translateX below): this outer div
           only carries the fixed horizontal offset, so the inner button
           is free to run its own keyframe animation (see
@@ -376,7 +376,7 @@ export function DockMusicWidget({
           them the instant they'd be visible would pop; swapping them
           off-screen instead doesn't. No React `key` here either — same
           reasoning as the pill. */}
-      <div className={`absolute left-1/2 bottom-0 ${collapsed ? 'z-30' : 'z-20'}`} style={{ transform: 'translateX(calc(-50% + 80px))' }}>
+      <div className={`absolute left-1/2 bottom-0 ${collapsed ? 'z-30' : 'z-20'}`} style={{ transform: 'translateX(calc(-50% + 160px))' }}>
         <button
           onClick={handleToggleCollapse}
           aria-label={collapsed ? 'Show music player' : 'Hide music player'}
