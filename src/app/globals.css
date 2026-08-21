@@ -521,3 +521,41 @@ input[type="color"]::-moz-color-swatch {
   border: none;
   border-radius: 9999px;
 }
+
+/* Tiptap's EditorContent renders plain semantic HTML (h1/ul/hr/p) with no
+   styling of its own, and Tailwind's preflight strips all of it — without
+   this, a pasted/toolbar-made heading or list would render visually flat.
+   No Typography plugin installed, so this is hand-written rather than a
+   `prose` class. Shared by both the editable form (trpg-session-editor.tsx)
+   and the read-only detail-page render, so a session looks identical
+   whichever mode it's in. */
+.trpg-content {
+  @apply text-ink text-sm leading-relaxed;
+}
+.trpg-content:focus {
+  @apply outline-none;
+}
+.trpg-content h1 {
+  @apply text-2xl font-semibold text-ink mt-4 mb-2 first:mt-0;
+}
+.trpg-content h2 {
+  @apply text-lg font-semibold text-ink mt-3 mb-1.5 first:mt-0;
+}
+.trpg-content p {
+  @apply my-2;
+}
+.trpg-content ul {
+  @apply list-disc pl-5 my-2 space-y-1;
+}
+.trpg-content ol {
+  @apply list-decimal pl-5 my-2 space-y-1;
+}
+.trpg-content hr {
+  @apply border-t border-scroll-300 my-4;
+}
+.trpg-content strong {
+  @apply font-semibold;
+}
+.trpg-content em {
+  @apply italic;
+}

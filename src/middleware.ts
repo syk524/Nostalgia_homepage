@@ -10,7 +10,11 @@ const AUTH_PAGES = ['/auth/login', '/auth/register']
 // page (and everything else under /profile/) still requires login, so
 // browsing who's listed is open while actually reading a profile isn't.
 function isPublicRoute(path: string): boolean {
-  if (path === '/' || path === '/archive') return true
+  // Prefix match, not exact — /archive/trpg and /archive/links need the
+  // same guest-facing "pass through, then 404 at the page/layout level"
+  // treatment the bare /archive route already gets (its actual admin-only
+  // enforcement lives there, not here), same reasoning as /gallery/ below.
+  if (path === '/' || path === '/archive' || path.startsWith('/archive/')) return true
   if (path === '/profile') return true
   if (path === '/gallery') return true
   if (path.startsWith('/gallery/')) {

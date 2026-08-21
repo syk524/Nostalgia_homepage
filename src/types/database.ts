@@ -28,6 +28,15 @@ export type Category = {
   created_at: string
 }
 
+export type TrpgSession = {
+  id: string
+  title: string
+  body: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Post = {
   id: string
   author_id: string
@@ -247,6 +256,12 @@ export type Database = {
         Row: Category
         Insert: Omit<Category, 'id' | 'created_at' | 'sort_order'>
         Update: Partial<Pick<Category, 'name'>>
+        Relationships: []
+      }
+      trpg_sessions: {
+        Row: TrpgSession
+        Insert: Omit<TrpgSession, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Pick<TrpgSession, 'title' | 'body'>>
         Relationships: []
       }
       playlist_tracks: {
