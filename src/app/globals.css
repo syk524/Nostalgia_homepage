@@ -532,8 +532,23 @@ input[type="color"]::-moz-color-swatch {
 .trpg-content {
   @apply text-ink text-sm leading-relaxed;
 }
-.trpg-content:focus {
+/* The actual focusable/contentEditable element Tiptap renders is
+   .ProseMirror, a child of this div — not this div itself — so
+   `.trpg-content:focus` (targeting this div's own focus state) never
+   matched the browser's default focus outline, which is applied to
+   .ProseMirror. This is the rule that actually needed to exist. */
+.trpg-content .ProseMirror {
   @apply outline-none;
+}
+/* Editable form only (trpg-session-editor.tsx adds this class
+   alongside .trpg-content) — not the read-only detail-page render,
+   which shouldn't force a tall empty box under a short session.
+   .ProseMirror is otherwise only ever as tall as its real content (a
+   single empty line on a blank session), nowhere near this box's own
+   min-h-[400px], which is what made the field look like a single
+   thin line instead of a real text area. */
+.trpg-editable .ProseMirror {
+  min-height: 330px;
 }
 .trpg-content h1 {
   @apply text-2xl font-semibold text-ink mt-4 mb-2 first:mt-0;

@@ -122,7 +122,7 @@ export function TrpgSessionEditor({ content, onChange }: { content: string; onCh
   return (
     <div ref={wrapperRef} className="textarea min-h-[400px]" onMouseDown={focusEditorUnlessToolbar}>
       <Toolbar editor={editor} />
-      <EditorContent editor={editor} className="trpg-content" />
+      <EditorContent editor={editor} className="trpg-content trpg-editable" />
     </div>
   )
 }
