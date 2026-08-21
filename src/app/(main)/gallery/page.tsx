@@ -23,17 +23,19 @@ export default async function GalleryPage({
 }) {
   const { category: categoryName } = await searchParams
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  const profile = user
-    ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data as Profile | null
-    : null
-  const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
-
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .order('sort_order', { ascending: true })
+  // getUser() and categories don't depend on each other — the old code
+  // awaited them one after another (plus profile, plus posts: four
+  // sequential round trips in total), which is exactly the kind of wait
+  // that made Cancel on the edit/new-post forms look stuck for a second
+  // before finally landing here. profile depends on user.id, and posts
+  // depends on activeCategory (resolved from categories), so those two
+  // waterfalls are unavoidable — but each pair that doesn't depend on the
+  // other now runs together instead of back to back.
+  const [{ data: { user } }, { data: categories }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('categories').select('*').order('sort_order', { ascending: true }),
+  ])
 
   // Unknown/stale category name in the URL falls back to "All" rather than
   // showing an empty grid.
@@ -48,7 +50,13 @@ export default async function GalleryPage({
 
   if (activeCategory) postsQuery = postsQuery.eq('category_id', activeCategory.id)
 
-  const { data: posts } = await postsQuery
+  const [{ data: profile }, { data: posts }] = await Promise.all([
+    user
+      ? supabase.from('profiles').select('*').eq('id', user.id).single()
+      : Promise.resolve({ data: null }),
+    postsQuery,
+  ])
+  const canEdit = (profile as Profile | null)?.role === 'editor' || (profile as Profile | null)?.role === 'admin'
 
   // Drag-reordering only makes sense on the unfiltered view — reordering a
   // filtered subset would leave the interleaving with other categories'

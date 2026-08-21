@@ -7,6 +7,7 @@ import { uploadImages } from '@/lib/upload'
 import { updatePost } from '@/lib/actions/gallery'
 import { CategoryPicker } from '@/components/category-picker'
 import { ImageManager } from '@/components/image-manager'
+import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { Post, PostImage, Category } from '@/types/database'
 
 type ExistingImage = { kind: 'existing'; url: string; focalX: number; focalY: number }
@@ -27,6 +28,16 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  // router.push() to the destination page still has to wait for that
+  // page's own server render (a few un-parallelized Supabase calls) to
+  // resolve before React swaps the tree — until then, the outgoing form
+  // (already mounted, already has content) just stays exactly as it was
+  // rather than falling back to loading.tsx, which read as Cancel doing
+  // nothing for a second before finally navigating. Hiding this form the
+  // instant Cancel is clicked, in favor of the same loading indicator
+  // loading.tsx already shows everywhere else, makes the wait read as
+  // "navigating" instead of "stuck."
+  const [closing, setClosing] = useState(false)
 
   // router.push() doesn't participate in intercepting-route matching the
   // way an actual <Link> click does (verified: it always hits the
@@ -121,7 +132,11 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
     setSaved(true)
   }
 
-  if (loading) return <p className="text-ink-500">Loading…</p>
+  if (loading || closing) return (
+    <div className="flex items-center justify-center py-24">
+      <DotMatrixLoader size={40} />
+    </div>
+  )
 
   return (
     <div className="animate-fade-up max-w-2xl space-y-6 mx-auto">
@@ -177,7 +192,7 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? 'Saving…' : 'Save Changes'}
           </button>
-          <button type="button" onClick={() => router.push(`/gallery/${postId}`)} className="btn-ghost">
+          <button type="button" onClick={() => { setClosing(true); router.push(`/gallery/${postId}`) }} className="btn-ghost">
             Cancel
           </button>
         </div>

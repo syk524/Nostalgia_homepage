@@ -7,6 +7,7 @@ import { uploadImages } from '@/lib/upload'
 import { createPost } from '@/lib/actions/gallery'
 import { CategoryPicker } from '@/components/category-picker'
 import { ImageManager } from '@/components/image-manager'
+import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { Category } from '@/types/database'
 
 type ImageItem = { file: File; preview: string; focalX: number; focalY: number }
@@ -28,6 +29,11 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [createdPostId, setCreatedPostId] = useState<string | null>(null)
+  // See edit-post-form.tsx's own comment on the identical field — Cancel's
+  // router.push('/gallery') still has to wait for that page's server
+  // render, and hiding this form immediately (instead of leaving it
+  // visible unchanged for that whole wait) is what actually fixes it.
+  const [closing, setClosing] = useState(false)
 
   // router.push() doesn't participate in intercepting-route matching the
   // way an actual <Link> click does (verified: it always hits the
@@ -95,6 +101,12 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
     setCreatedPostId(result.postId)
   }
 
+  if (closing) return (
+    <div className="flex items-center justify-center py-24">
+      <DotMatrixLoader size={40} />
+    </div>
+  )
+
   return (
     <div className="max-w-2xl space-y-6 mx-auto">
       {createdPostId && (
@@ -147,7 +159,7 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? 'Publishing…' : 'Publish'}
           </button>
-          <button type="button" onClick={() => router.push('/gallery')} className="btn-ghost">
+          <button type="button" onClick={() => { setClosing(true); router.push('/gallery') }} className="btn-ghost">
             Cancel
           </button>
         </div>
