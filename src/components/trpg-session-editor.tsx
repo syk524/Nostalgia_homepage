@@ -1,4 +1,5 @@
 'use client'
+import { useRef } from 'react'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyle } from '@tiptap/extension-text-style'
@@ -77,11 +78,49 @@ export function TrpgSessionEditor({ content, onChange }: { content: string; onCh
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   })
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   if (!editor) return null
 
+  // The actual contentEditable region (.ProseMirror, inside EditorContent)
+  // is only ever as tall as its real content — a single empty line at
+  // first, nowhere near this box's own min-h-[400px] — so most of what
+  // visually reads as "the text field" isn't part of it at all, and
+  // clicking there focuses nothing (looks exactly like a broken input).
+  // Tried making the wrapper around EditorContent flex-1/h-full to grow
+  // the actual clickable region to match — the height never propagated
+  // down through Tiptap's own internal wrapper div to the real
+  // .ProseMirror element, so that click still landed outside it. Handling
+  // the click at the outer box level instead sidesteps that entirely: it
+  // only needs THIS div's own height (a real min-h-[400px], not something
+  // relying on a child growing to match it), with an explicit bail-out
+  // for clicks that started on a toolbar button so this can't fire after
+  // — and undo — a button's own focus-and-format action.
+  //
+  // Plain DOM .focus() on the .ProseMirror element, not
+  // editor.commands.focus() — confirmed by hand that in this dev
+  // environment editor.commands.focus() reports success (returns true)
+  // while document.activeElement never actually changes, but calling
+  // .focus() directly on the real DOM node works every time. Queried via
+  // wrapperRef rather than editor.view.dom for the same reason: whatever
+  // stale-reference issue makes the commands API unreliable here might
+  // affect editor.view.dom too, and a fresh querySelector sidesteps that
+  // possibility entirely rather than trusting either cached reference.
+  function focusEditorUnlessToolbar(e: React.MouseEvent) {
+    const target = e.target as HTMLElement
+    if (target.closest('button')) return
+    // A click that landed inside the real editable content (existing
+    // text, not the dead padding below/around it) already has its own
+    // native click-to-position-cursor behavior — jumping to 'end' here
+    // too would override wherever the user actually clicked.
+    if (target.closest('.ProseMirror')) return
+    e.preventDefault()
+    const pm = wrapperRef.current?.querySelector<HTMLElement>('.ProseMirror')
+    pm?.focus()
+  }
+
   return (
-    <div className="textarea min-h-[400px]">
+    <div ref={wrapperRef} className="textarea min-h-[400px]" onMouseDown={focusEditorUnlessToolbar}>
       <Toolbar editor={editor} />
       <EditorContent editor={editor} className="trpg-content" />
     </div>
