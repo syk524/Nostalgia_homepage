@@ -23,14 +23,19 @@ function AddSessionCard() {
   )
 }
 
-// No admin check here — archive/layout.tsx already gates every /archive/*
-// route, and RLS independently enforces the same thing at the DB level.
+// Viewing is public (see archive/layout.tsx) — canEdit gates just the
+// AddSessionCard tile below, same pattern as gallery-grid.tsx's own
+// canEdit-gated AddPostTile.
 export default async function TrpgListPage() {
   const supabase = await createClient()
-  const { data: sessions } = await supabase
-    .from('trpg_sessions')
-    .select('id, slug, title, date_range, description, cover_url')
-    .order('created_at', { ascending: false })
+  const [{ data: { user } }, { data: sessions }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('trpg_sessions').select('id, slug, title, date_range, description, cover_url').order('created_at', { ascending: false }),
+  ])
+  const profile = user
+    ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
+    : null
+  const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
   return (
     // Same breakout as profile/page.tsx: escapes the shared <main>'s
@@ -87,12 +92,7 @@ export default async function TrpgListPage() {
               )}
             </Link>
           ))}
-          {/* Unconditional, not gated behind a canEdit check — unlike the
-              pair grid, there's no "viewer without edit rights" case
-              anywhere under Archive at all (archive/layout.tsx already
-              gates the whole section to editor/admin), so anyone who can
-              see this grid can already add to it. */}
-          <AddSessionCard />
+          {canEdit && <AddSessionCard />}
         </div>
       </div>
     </div>

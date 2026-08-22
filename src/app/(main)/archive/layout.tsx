@@ -1,18 +1,13 @@
-import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ArchiveSideNav } from '@/components/archive-side-nav'
 
-// Centralizes the editor-or-admin gate that used to live inline in
-// archive/page.tsx — every route under /archive/* (trpg, links, and
-// whatever each of those add underneath) inherits this for free instead
-// of repeating the same profile-role check per page. Widened from
-// admin-only (this app's first role='admin'-only section) to match the
-// editor/admin split used everywhere else — reported directly. Middleware
-// deliberately passes /archive/* straight through instead of redirecting
-// guests to login (see its own comment), so this notFound() is the ONLY
-// enforcement: same flat 404 whether the request is a guest, a logged-in
-// viewer, or someone who typed the URL directly, never a distinguishing
-// "log in first" redirect that would leak that the route exists at all.
+// Viewing every route under /archive/* (trpg, links, and whatever each of
+// those add underneath) is open to everyone now, matching Gallery/Profile
+// — reported directly. There's no access gate here at all any more;
+// create/edit/delete stay editor-or-admin-only, but that's enforced where
+// each of those actually happens (trpg/new/page.tsx, [slug]/edit/page.tsx,
+// the canEdit checks in [slug]/page.tsx and trpg/page.tsx) plus RLS
+// underneath, not centrally here.
 export default async function ArchiveLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -20,9 +15,6 @@ export default async function ArchiveLayout({ children }: { children: React.Reac
     ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
     : null
   const isAdmin = profile?.role === 'admin'
-  const canAccess = isAdmin || profile?.role === 'editor'
-
-  if (!canAccess) notFound()
 
   return (
     <>

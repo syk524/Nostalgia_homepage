@@ -10,12 +10,22 @@ const AUTH_PAGES = ['/auth/login', '/auth/register']
 // page (and everything else under /profile/) still requires login, so
 // browsing who's listed is open while actually reading a profile isn't.
 function isPublicRoute(path: string): boolean {
-  // Prefix match, not exact — /archive/trpg and /archive/links need the
-  // same guest-facing "pass through, then 404 at the page/layout level"
-  // treatment the bare /archive route already gets (its actual admin-only
-  // enforcement lives there, not here), same reasoning as /gallery/ below.
+  // Prefix match, not exact — every /archive/* page (trpg, links, a
+  // session's own detail page, …) is genuinely public to view, reported
+  // directly. Creating/editing a session still requires editor-or-admin,
+  // enforced at the page level (trpg/new/page.tsx, [slug]/edit/page.tsx)
+  // plus RLS underneath, not here — same split as /gallery/ below.
   if (path === '/' || path === '/archive' || path.startsWith('/archive/')) return true
   if (path === '/profile') return true
+  // A pair's own detail page is now public too — reported directly. Its
+  // content is truncated for anyone below editor/admin at the RLS level
+  // (description_sections/timeline_entries stay editor/admin-only, see
+  // migration 066), not here, so this only needs to stop /new and /edit
+  // from letting a guest reach a write-only form, same split as /gallery/
+  // below.
+  if (path.startsWith('/profile/')) {
+    return path !== '/profile/new' && !path.endsWith('/edit')
+  }
   if (path === '/gallery') return true
   if (path.startsWith('/gallery/')) {
     return path !== '/gallery/new' && !path.endsWith('/edit')

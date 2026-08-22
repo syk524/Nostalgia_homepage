@@ -61,14 +61,12 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   // just the bare grid route. '/' is exact-only since every path starts
   // with it.
   const isActiveLink = (href: string) => href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
-  // Both Profile and Archive are shown to everyone, including guests —
-  // reported directly. The links themselves are just entry points; actual
-  // access is enforced where it always was (middleware.ts lets the
-  // /profile and /archive grids through but still gates each individual
-  // pair page and every /archive/* page behind login/role, see those
-  // files' own comments), so widening nav visibility here doesn't loosen
-  // anything a guest can actually reach.
-  const links = LINKS
+  // Archive is shown to everyone, including guests — reported directly.
+  // Profile reverted back to logged-in-only, same as before that change:
+  // guests aren't invited toward a grid where every pair's own detail
+  // page still redirects them to login (middleware.ts), even though the
+  // grid route itself stays technically reachable by URL.
+  const links = LINKS.filter(link => link.href !== '/profile' || !!profile)
 
   return (
     <>

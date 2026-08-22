@@ -8,18 +8,20 @@ import { DeleteSessionButton } from './delete-session-button'
 import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
 import type { TrpgSession } from '@/types/database'
 
-// No admin/canEdit check here — archive/layout.tsx already gates every
-// /archive/* route, so unlike gallery's post detail page, Edit/Delete are
-// always shown (there's no "viewer without edit rights" case under
-// Archive at all).
+// The list (trpg/page.tsx) is public, but an individual session's own
+// post is still editor-or-admin-only — reported directly. Same flat 404
+// as new/page.tsx and [slug]/edit/page.tsx, not a "log in first" redirect,
+// so a guest can't tell a session at this slug exists at all.
 export default async function TrpgSessionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
-  const { data: session } = await supabase
-    .from('trpg_sessions')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  const { data: { user } } = await supabase.auth.getUser()
+  const profile = user
+    ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
+    : null
+  if (profile?.role !== 'editor' && profile?.role !== 'admin') notFound()
+
+  const { data: session } = await supabase.from('trpg_sessions').select('*').eq('slug', slug).single()
 
   if (!session) notFound()
   const typedSession = session as TrpgSession
