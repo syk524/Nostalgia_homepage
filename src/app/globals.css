@@ -574,3 +574,124 @@ input[type="color"]::-moz-color-swatch {
 .trpg-content em {
   @apply italic;
 }
+/* Roll20 dice-roll results ("굴림", pass/fail thresholds) come in as real
+   <table> markup on paste — without table support the whole thing used to
+   collapse into one run-on paragraph of concatenated cell text. */
+.trpg-content table {
+  @apply my-3 w-full text-xs border-collapse;
+}
+.trpg-content th,
+.trpg-content td {
+  @apply border border-scroll-300 px-2 py-1 text-left align-top;
+}
+.trpg-content th {
+  @apply bg-scroll-100 font-semibold;
+}
+/* Roll20's own inline style="..." on a pasted table/row/cell (captured by
+   TableWithStyle/TableRowWithStyle/TableCellWithStyle's `style` attribute
+   in trpg-session-editor.tsx) already wins over these base rules on
+   specificity — inline style always beats a stylesheet selector — so
+   these are only ever the fallback for cells that came from somewhere
+   other than a Roll20 paste (i.e. never happens today, no toolbar inserts
+   a table, but still the correct default if that ever changes). */
+.trpg-content caption,
+.trpg-caption {
+  @apply text-left font-semibold;
+  caption-side: top;
+}
+/* trpgTableCaption renders as a plain sibling div right before the table
+   (see the comment on that node in trpg-session-editor.tsx for why it's
+   not part of the table's own content model) — table's own top margin
+   (my-3 above) then shows up as a visible gap between the two, since as
+   far as the box model's concerned they're just two unrelated adjacent
+   blocks. Zeroing it only in this specific adjacency, not on .trpg-content
+   table generally, since a table with no caption above it still wants
+   that spacing from whatever came before it. */
+.trpg-content .trpg-caption + .tableWrapper table {
+  @apply mt-0;
+}
+/* Roll20 colors each chat message by wrapping it in a div with its own
+   background (blue for the pasted-as-"you" speaker, gray for others, tan
+   for emotes), full row, one per message — the trpgMessage node in
+   trpg-session-editor.tsx carries that background forward onto a real
+   block element so pasted logs read as the same row-per-speaker layout,
+   not a highlight hugging just the text.
+   No margin/radius, deliberately: Roll20's own rows butt up flush against
+   each other with no gap or rounding — a colored stripe per speaker, not
+   individually rounded cards — so adding my-* here (an earlier version of
+   this rule did) was actively wrong, not just a stylistic choice; it
+   introduced gaps the source material doesn't have. */
+.trpg-content .trpg-message {
+  /* pb-2 only, deliberately no top padding — matches Roll20's own
+     div.message, which has `padding-bottom: 7px` inline and no top
+     padding at all. Confirmed by hand: a symmetric py-2 here left a
+     visible gap between adjacent ending-credits cards, because their
+     black-bar overlay's own negative top margin (captured verbatim,
+     see SAFE_STYLE_PROPS) is calibrated to cancel exactly Roll20's own
+     zero-top-padding — against OUR extra 8px of top padding it was
+     pulling from, it undershot and left that padding's gray/cream
+     background showing through as a seam. */
+  @apply block px-3 pb-2;
+  /* Roll20's own div.message has `position: relative` inline — the
+     positioning context its ending-credits cards' `position: absolute`
+     overlay labels anchor to (see the SAFE_STYLE_PROPS comment in
+     trpg-session-editor.tsx for why position is captured at all). Without
+     this on OUR message wrapper too, those labels have no positioned
+     ancestor within the message itself to anchor to at all, and would
+     resolve against whatever positioned element happens to be further up
+     the page — landing who-knows-where instead of overlaid on their own
+     black background bar. */
+  position: relative;
+}
+/* Ending-credits label pairs (see the long comment on TrpgMessage's
+   transformPastedHTML in trpg-session-editor.tsx) get rewritten at paste
+   time from Roll20's own position:absolute-on-negative-margin overlay
+   into one of these plain flex rows instead — after three straight
+   attempts at preserving the original mechanism each broke a different
+   way (empty backdrop vanishing, scroll-container clipping, bleed into
+   the row above, then over-aggressive overflow:hidden clipping the labels
+   themselves too), this is deliberately NOT trying to reproduce Roll20's
+   exact overlay positioning. Ordinary flow, ordinary box model — nothing
+   here can clip or bleed into a neighbor by construction. */
+.trpg-content .trpg-credit-row {
+  @apply flex items-center justify-between gap-3 px-4 py-1.5 bg-black;
+}
+/* Kill the paragraph's own vertical margin inside a message row — with
+   the row already carrying py-2, the child <p>'s default .trpg-content p
+   margin (my-2) just adds uneven extra space above/below the text instead
+   of centering it in the row's own padding. */
+.trpg-content .trpg-message > p {
+  @apply my-0;
+}
+/* Speaker avatar — arrives inline, first thing in the message's text (see
+   the Image extension comment in trpg-session-editor.tsx for why inline
+   rather than Roll20's own absolutely-positioned gutter placement). Sized
+   and rounded to read as a small avatar chip rather than an inline image
+   dropped in at native resolution — every image this schema will ever see
+   is a Roll20 avatar, never an author-inserted illustration, so a single
+   blanket rule for all <img>s is safe here. */
+/* w-7/h-7 = 28px, matching Roll20's own avatar max-width/max-height —
+   this is only the *fallback*: Roll20's own inline style="..." (captured
+   verbatim on <img> in trpg-session-editor.tsx, unlike the filtered
+   capture used for tables) wins per-property over these where it
+   specifies one, so an avatar renders at its own real declared size
+   rather than a size we guessed. rounded-full/object-fit stay ours
+   either way — Roll20's own circular crop comes from an external
+   stylesheet rule paste can never see, regardless of filtering. */
+.trpg-content img {
+  @apply inline-block w-7 h-7 rounded-full align-middle mr-1.5;
+  object-fit: cover;
+  max-width: 100%;
+}
+/* Scene-divider illustrations (rebuilt from Roll20's background-image
+   trick during paste, see trpg-session-editor.tsx) are real embedded
+   artwork, not speaker avatars — the small circular chip treatment above
+   would badly distort/clip one of these. `.trpg-content-image` overrides
+   every one of those avatar-specific rules back to a normal inline
+   illustration: its own real size (capped to the column width), square
+   corners, no forced crop, and enough vertical breathing room to read as
+   its own beat rather than crowding the text around it. */
+.trpg-content img.trpg-content-image {
+  @apply block w-auto h-auto max-w-full rounded-none align-baseline mr-0 my-3;
+  object-fit: contain;
+}

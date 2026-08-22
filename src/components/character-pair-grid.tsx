@@ -16,10 +16,12 @@ const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-5'
 
 const BACKGROUND_HEIGHT = 140
 
-// Fixed height (not an aspect ratio) so every card's image area stays this
-// tall regardless of the card's own width — previously this was aspect-[5/2],
-// which meant the crop got shorter/taller as the grid column width changed.
-const THUMBNAIL_HEIGHT = 238
+// aspect-[5/2] + a max-height cap, not a flat pixel height — the box (and
+// therefore the amount of the pair image's bottom edge that gets cropped)
+// now grows along with the column width instead of staying pinned, up to
+// MAX_THUMBNAIL_HEIGHT, past which it stops growing so very wide columns
+// don't blow the crop area out indefinitely.
+const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/2] max-h-[320px]'
 
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   const primaryProfile = pair.pair_profiles[0]
@@ -28,14 +30,15 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   return (
     <Link href={`/profile/${pair.slug}`} className="group block">
       {primaryProfile?.pair_image_url ? (
-        // Fixed-height box, not sized off the pair image's own height — the
-        // pair image is absolutely positioned inside it, so anything past
-        // the box's bottom edge (typically its legs/feet) is cropped by
-        // overflow-hidden instead of growing the card to fit. That's also
-        // what "brings the background up": since the background band stays
-        // bottom-anchored to this fixed-height box instead of the image's
-        // full height, it ends up sitting higher up the artwork.
-        <div className="relative w-full overflow-hidden rounded" style={{ height: THUMBNAIL_HEIGHT }}>
+        // Box sized off the column width (via aspect ratio), not off the
+        // pair image's own height — the pair image is absolutely
+        // positioned inside it, so anything past the box's bottom edge
+        // (typically its legs/feet) is cropped by overflow-hidden instead
+        // of growing the card to fit. That's also what "brings the
+        // background up": since the background band stays bottom-anchored
+        // to this box instead of the image's full height, it ends up
+        // sitting higher up the artwork.
+        <div className={`relative w-full overflow-hidden rounded ${THUMBNAIL_ASPECT_CLASSES}`}>
           {primaryProfile.background_url && (
             <div
               className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t"
@@ -101,8 +104,7 @@ function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block self-end">
       <div
-        className="w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20"
-        style={{ height: THUMBNAIL_HEIGHT }}
+        className={`w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20 ${THUMBNAIL_ASPECT_CLASSES}`}
       >
         <Plus size={28} />
       </div>
