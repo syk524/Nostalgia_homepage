@@ -228,7 +228,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] pointer-events-none"
           style={{ transform: `translate(${canvas.offset.x}px, ${canvas.offset.y}px) translate(-50%, -50%)` }}
         >
-          <img src="/images/nostalgio-wordmark.webp" alt="Nostalgia" className="w-full select-none" draggable={false} />
+          <img src="/images/nostalgio-wordmark.webp" alt="Nustalgio" className="w-full select-none" draggable={false} />
         </div>
 
         <Stickers panX={canvas.offset.x} panY={canvas.offset.y} onOpenGallery={() => setGalleryOpen(true)} />

@@ -8,8 +8,9 @@ import { uploadImage } from '@/lib/upload'
 import { updateSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
+import { PARTICLE_EFFECTS } from '@/components/particle-effects'
 
-export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur }: {
+export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur, initialParticleEffect }: {
   sessionId: string
   initialSlug: string
   initialTitle: string
@@ -18,6 +19,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   initialBody: string
   initialBackgroundUrl: string | null
   initialBackgroundBlur: number
+  initialParticleEffect: string | null
 }) {
   const router = useRouter()
   // Not state — the back button/Cancel only ever need the slug this page
@@ -34,6 +36,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
   const [backgroundPreview, setBackgroundPreview] = useState(initialBackgroundUrl ?? '')
   const [backgroundBlur, setBackgroundBlur] = useState(initialBackgroundBlur)
+  const [particleEffect, setParticleEffect] = useState(initialParticleEffect ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/[id]/edit/edit-post-form.tsx's identical field.
@@ -70,6 +73,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
       coverUrl,
       backgroundUrl: finalBackgroundUrl,
       backgroundBlur,
+      particleEffect: particleEffect || null,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not save the session.'); setSubmitting(false); return }
     router.push(`/archive/trpg/${result.slug}`)
@@ -157,6 +161,27 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
                 style={{ accentColor: '#5c574d' }}
               />
             </div>
+          </div>
+
+          {/* A dropdown, not a checkbox — reported directly: more effects
+              (snow, embers, …) are coming, so this needs to be a choice
+              among options from the start, not a boolean that would later
+              need reworking into one. Renders behind the log card but on
+              top of the background image (see particle-effects.tsx and
+              [slug]/page.tsx). */}
+          <div>
+            <label className="label" htmlFor="particle-effect">Particle effect</label>
+            <select
+              id="particle-effect"
+              className="input"
+              value={particleEffect}
+              onChange={e => setParticleEffect(e.target.value)}
+            >
+              <option value="">None</option>
+              {PARTICLE_EFFECTS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
           </div>
 
           <div>

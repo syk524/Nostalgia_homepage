@@ -6,6 +6,7 @@ import { uploadImage } from '@/lib/upload'
 import { createSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
+import { PARTICLE_EFFECTS } from '@/components/particle-effects'
 
 export function NewSessionForm() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export function NewSessionForm() {
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
   const [backgroundPreview, setBackgroundPreview] = useState('')
   const [backgroundBlur, setBackgroundBlur] = useState(1)
+  const [particleEffect, setParticleEffect] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/new/new-post-form.tsx's identical field — Cancel's
@@ -55,6 +57,7 @@ export function NewSessionForm() {
       coverUrl,
       backgroundUrl,
       backgroundBlur,
+      particleEffect: particleEffect || null,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not create the session.'); setSubmitting(false); return }
     router.push(`/archive/trpg/${result.slug}`)
@@ -130,6 +133,27 @@ export function NewSessionForm() {
               style={{ accentColor: '#5c574d' }}
             />
           </div>
+        </div>
+
+        {/* A dropdown, not a checkbox — reported directly: more effects
+            (snow, embers, …) are coming, so this needs to be a choice
+            among options from the start, not a boolean that would later
+            need reworking into one. Renders behind the log card but on
+            top of the background image (see particle-effects.tsx and
+            [slug]/page.tsx). */}
+        <div>
+          <label className="label" htmlFor="particle-effect">Particle effect</label>
+          <select
+            id="particle-effect"
+            className="input"
+            value={particleEffect}
+            onChange={e => setParticleEffect(e.target.value)}
+          >
+            <option value="">None</option>
+            {PARTICLE_EFFECTS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
         </div>
 
         <div>

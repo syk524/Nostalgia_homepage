@@ -56,22 +56,19 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
   const onPostDetail = /^\/gallery\/(?!new$)[^/]+$/.test(pathname)
   const activeCategory = searchParams.get('category')
-  // Archive is editor/admin only — hidden from plain viewers and
-  // logged-out visitors, not just unlinked (the page itself also 404s
-  // for anyone else, see archive/layout.tsx). Widened from admin-only
-  // to match that layout's own gate, reported directly — editors can
-  // reach every /archive/* page now, so the nav link needs to actually
-  // offer it to them instead of only admins. Profile is unlinked for
-  // guests too — the /profile grid route itself stays public
-  // (middleware still allows it, and an individual pair page still
-  // redirects a guest to login), this only hides the nav entry so a
-  // logged-out visitor isn't invited toward a section that immediately
-  // walls off anything they click into.
-  const links = LINKS.filter(link => {
-    if (link.href === '/archive') return profile?.role === 'admin' || profile?.role === 'editor'
-    if (link.href === '/profile') return !!profile
-    return true
-  })
+  // Prefix match, not exact — Archive and Profile stay underlined on
+  // their own subpages (/archive/trpg/[slug], /profile/[slug], etc.), not
+  // just the bare grid route. '/' is exact-only since every path starts
+  // with it.
+  const isActiveLink = (href: string) => href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+  // Both Profile and Archive are shown to everyone, including guests —
+  // reported directly. The links themselves are just entry points; actual
+  // access is enforced where it always was (middleware.ts lets the
+  // /profile and /archive grids through but still gates each individual
+  // pair page and every /archive/* page behind login/role, see those
+  // files' own comments), so widening nav visibility here doesn't loosen
+  // anything a guest can actually reach.
+  const links = LINKS
 
   return (
     <>
@@ -80,7 +77,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
           <Link
             key={link.href}
             href={link.href}
-            className={`flex items-center gap-2 ${pathname === link.href ? 'underline underline-offset-4' : ''}`}
+            className={`flex items-center gap-2 ${isActiveLink(link.href) ? 'underline underline-offset-4' : ''}`}
           >
             <NavDot />
             <ScrambleText text={link.label} />

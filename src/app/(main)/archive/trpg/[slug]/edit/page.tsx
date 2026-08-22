@@ -27,6 +27,7 @@ export default async function EditSessionPage({ params }: { params: Promise<{ sl
       initialBody={typedSession.body}
       initialBackgroundUrl={typedSession.background_url}
       initialBackgroundBlur={typedSession.background_blur}
+      initialParticleEffect={typedSession.particle_effect}
     />
   )
 }

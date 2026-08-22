@@ -76,7 +76,7 @@ const kunstlerScript = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Nostalgia',
+  title: 'Nustalgio',
   description: 'A place to keep and share what matters',
 }
 

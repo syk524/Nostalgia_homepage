@@ -16,7 +16,7 @@ type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 
 function AddSessionCard() {
   return (
     <Link href="/archive/trpg/new" className="group block self-start">
-      <div className="w-full aspect-[3/4] rounded-sm flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-scroll-200">
+      <div className="w-full aspect-[3/4] rounded flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20">
         <Plus size={28} />
       </div>
     </Link>
@@ -57,7 +57,7 @@ export default async function TrpgListPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12">
           {(sessions as ListedSession[] ?? []).map(session => (
             <Link key={session.id} href={`/archive/trpg/${session.slug}`} className="group flex flex-col items-center">
-              <div className="w-full aspect-[3/4] shadow-md group-hover:shadow-xl group-hover:-translate-y-1 transition-all duration-200 overflow-hidden rounded-sm bg-scroll-100">
+              <div className="w-full aspect-[3/4] group-hover:-translate-y-1 transition-all duration-200 overflow-hidden rounded bg-scroll-100">
                 {session.cover_url ? (
                   <img src={session.cover_url} alt="" className="w-full h-full object-cover" />
                 ) : (

@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { TrpgSessionView } from '@/components/trpg-session-editor'
+import { ParticleEffect } from '@/components/particle-effects'
 import { DeleteSessionButton } from './delete-session-button'
 import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
 import type { TrpgSession } from '@/types/database'
@@ -43,6 +44,13 @@ export default async function TrpgSessionPage({ params }: { params: Promise<{ sl
         </div>
       )}
 
+      {/* Optional ambient overlay (rain, more to come — see
+          particle-effects.tsx) picked in the create/edit form. z-[1] so
+          it sits above the background (z-0) — the log card below gets an
+          explicit z-10 so it stacks above this regardless of DOM order,
+          rather than relying on implicit stacking rules. */}
+      <ParticleEffect effect={typedSession.particle_effect} />
+
       {/* Fixed, icon-only, positioned like the pair-detail page's own back
           button (character-pair-detail.tsx) — same top-rail placement as
           Nav's own left-edge widgets. No per-page icon_color to drive it
@@ -57,7 +65,7 @@ export default async function TrpgSessionPage({ params }: { params: Promise<{ sl
         <ArrowLeft size={18} />
       </Link>
 
-      <div className="animate-fade-up max-w-3xl mx-auto space-y-6">
+      <div className="relative z-10 animate-fade-up max-w-3xl mx-auto space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-3xl text-ink">{typedSession.title}</h2>
