@@ -16,8 +16,21 @@ const SECTIONS = [
 export function ArchiveSideNav() {
   const pathname = usePathname()
 
+  // Only shown on a section's own root list page (/archive/trpg,
+  // /archive/links) — every sub-route under one (new, a session's
+  // detail page, its edit page, …) hides it instead, reported directly:
+  // these are focused single-task pages (create/edit a session, read
+  // one), not places to jump to a different section from.
+  const isSectionRoot = SECTIONS.some(section => pathname === section.href)
+  if (!isSectionRoot) return null
+
   return (
-    <div className="hidden sm:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">
+    // animate-fade-in, not animate-fade-up — this nav is fixed in place
+    // (left-[2.6%] top-1/2, never moving), so fade-up's own translateY
+    // would read as it sliding in relative to the page while the main
+    // content fades up beside it, rather than the two matching. Same
+    // 0.3s duration as animate-fade-up, opacity only.
+    <div className="hidden sm:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight animate-fade-in">
       {SECTIONS.map(section => {
         const active = pathname.startsWith(section.href)
         return (

@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { slugify } from '@/lib/slug'
+import { deleteOrphanedImages } from '@/lib/storage-cleanup'
 
 type SectionInput = { title: string; titleColor: string; titleFont: string; description: string; textColor: string }
 type TimelineEntryInput = { subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string }
@@ -122,8 +123,40 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
   if (error) return { error: error.message }
   if (!updated?.length) return { error: 'You don’t have permission to edit this pair.' }
 
+  // Every image URL this pair's OLD rows referenced, fetched before
+  // saveProfiles' own delete-then-reinsert below removes those rows
+  // (and with them, this app's only record of what they used to point
+  // at) — the diff against the new set happens after the save succeeds,
+  // see deleteOrphanedImages' own comment for why replaced-or-removed
+  // images get cleaned up this way instead of a dedicated *_path column
+  // per field. Two flat queries, not one embedded pair_profiles(*,
+  // profile_characters(*)) select — pair_profiles' own Relationships
+  // array in database.ts is empty (hand-maintained, not generated from
+  // the real schema), so the embedded form fails to type-check even
+  // though the underlying FK genuinely exists.
+  const { data: oldProfiles } = await supabase
+    .from('pair_profiles')
+    .select('id, pair_image_url, background_url')
+    .eq('pair_id', pairId)
+  const oldProfileIds = (oldProfiles ?? []).map(p => p.id)
+  const { data: oldChars } = oldProfileIds.length
+    ? await supabase.from('profile_characters').select('profile_image_url').in('profile_id', oldProfileIds)
+    : { data: [] as { profile_image_url: string | null }[] }
+  const oldImageUrls = [
+    ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
+    ...(oldChars ?? []).map(c => c.profile_image_url),
+  ]
+
   const profilesErr = await saveProfiles(supabase, pairId, input.profiles)
   if (profilesErr) return { error: profilesErr }
+
+  const newImageUrls = input.profiles.flatMap(p => [
+    p.pairImageUrl,
+    p.backgroundUrl,
+    p.characters[0].profileImageUrl,
+    p.characters[1].profileImageUrl,
+  ])
+  await deleteOrphanedImages(supabase, oldImageUrls, newImageUrls)
 
   revalidatePath('/profile')
   // 'layout' covers every /profile/[slug]/[profileSlug] under this pair in

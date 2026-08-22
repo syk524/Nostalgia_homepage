@@ -1,14 +1,21 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { uploadImage } from '@/lib/upload'
 import { createSession } from '@/lib/actions/trpg'
-import { TrpgSessionEditor } from '@/components/trpg-session-editor'
+import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 
 export function NewSessionForm() {
   const router = useRouter()
   const [title, setTitle] = useState('')
+  const [dateRange, setDateRange] = useState('')
+  const [description, setDescription] = useState('')
   const [body, setBody] = useState('')
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
+  const [backgroundPreview, setBackgroundPreview] = useState('')
+  const [backgroundBlur, setBackgroundBlur] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/new/new-post-form.tsx's identical field — Cancel's
@@ -17,14 +24,40 @@ export function NewSessionForm() {
   // visible unchanged for that wait) is what actually fixes the flash.
   const [closing, setClosing] = useState(false)
 
+  function handleBackgroundChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBackgroundFile(file)
+    setBackgroundPreview(URL.createObjectURL(file))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setSubmitting(true)
 
-    const result = await createSession(title, body)
-    if (result.error || !result.sessionId) { setError(result.error ?? 'Could not create the session.'); setSubmitting(false); return }
-    router.push(`/archive/trpg/${result.sessionId}`)
+    let backgroundUrl: string | null = null
+    if (backgroundFile) {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
+      const { url, error: uploadErr } = await uploadImage(backgroundFile, user.id, 'trpg-images')
+      if (uploadErr) { setError(uploadErr); setSubmitting(false); return }
+      backgroundUrl = url
+    }
+
+    const coverUrl = deriveCoverUrl(body)
+    const result = await createSession({
+      title,
+      body,
+      dateRange: dateRange.trim() || null,
+      description: description.trim() || null,
+      coverUrl,
+      backgroundUrl,
+      backgroundBlur,
+    })
+    if (result.error || !result.slug) { setError(result.error ?? 'Could not create the session.'); setSubmitting(false); return }
+    router.push(`/archive/trpg/${result.slug}`)
   }
 
   if (closing) return (
@@ -34,7 +67,7 @@ export function NewSessionForm() {
   )
 
   return (
-    <div className="animate-fade-up max-w-3xl space-y-6">
+    <div className="animate-fade-up max-w-3xl mx-auto space-y-6">
       <h2 className="text-3xl text-ink">New Session</h2>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
@@ -42,6 +75,61 @@ export function NewSessionForm() {
           <label className="label" htmlFor="title">Title</label>
           <input id="title" className="input" value={title}
             onChange={e => setTitle(e.target.value)} placeholder="Session title" required />
+        </div>
+
+        {/* Plain text, not a real date input — Roll20's own chat-log HTML
+            never carries a machine-readable session date/time anywhere,
+            so there's nothing to parse it from; freeform matches
+            whatever format the admin actually wants to record here
+            ("2026.01.03", "Session 4", a real range, etc). */}
+        <div>
+          <label className="label" htmlFor="date-range">Date range</label>
+          <input id="date-range" className="input" value={dateRange}
+            onChange={e => setDateRange(e.target.value)} placeholder="e.g. 2026.01.03 - 2026.01.10" />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="description">Description</label>
+          <textarea id="description" className="textarea" rows={2} value={description}
+            onChange={e => setDescription(e.target.value)} placeholder="A short summary of this session" />
+        </div>
+
+        {/* Same pattern as the pair-profile background picker
+            (character-pair-form.tsx) — a preview tile + file input, plus
+            a 1-100 blur-strength slider mapped onto a 0-40px CSS blur
+            radius at render time (archive/trpg/[id]/page.tsx). Uploads to
+            the trpg-images bucket used elsewhere in this editor. */}
+        <div>
+          <label className="label">Background</label>
+          <div className="flex items-center gap-4">
+            <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+              {backgroundPreview
+                ? <img src={backgroundPreview} alt="" className="w-full h-full object-cover" />
+                : <span className="text-2xl text-scroll-400">◯</span>
+              }
+            </div>
+            <label className="btn-ghost text-xs cursor-pointer">
+              Choose image
+              <input type="file" accept="image/*" onChange={handleBackgroundChange} className="sr-only" />
+            </label>
+          </div>
+          <div className="mt-3">
+            <label className="label flex items-center justify-between" htmlFor="background-blur">
+              <span>Background image blur strength</span>
+              <span className="text-ink-500 normal-case tracking-normal">{backgroundBlur}%</span>
+            </label>
+            <input
+              id="background-blur"
+              type="range"
+              min={1}
+              max={100}
+              step={1}
+              value={backgroundBlur}
+              onChange={e => setBackgroundBlur(Number(e.target.value))}
+              className="w-full block"
+              style={{ accentColor: '#5c574d' }}
+            />
+          </div>
         </div>
 
         <div>

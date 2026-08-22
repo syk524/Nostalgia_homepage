@@ -30,8 +30,14 @@ export type Category = {
 
 export type TrpgSession = {
   id: string
+  slug: string
   title: string
+  date_range: string | null
+  description: string | null
   body: string
+  cover_url: string | null
+  background_url: string | null
+  background_blur: number
   created_by: string | null
   created_at: string
   updated_at: string
@@ -261,7 +267,7 @@ export type Database = {
       trpg_sessions: {
         Row: TrpgSession
         Insert: Omit<TrpgSession, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Pick<TrpgSession, 'title' | 'body'>>
+        Update: Partial<Pick<TrpgSession, 'title' | 'slug' | 'date_range' | 'description' | 'body' | 'cover_url' | 'background_url' | 'background_blur'>>
         Relationships: []
       }
       playlist_tracks: {

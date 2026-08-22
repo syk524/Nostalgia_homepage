@@ -155,6 +155,17 @@
 }
 .animate-fade-up { animation: fade-up 0.3s ease both; }
 
+/* Opacity-only counterpart to fade-up above, same duration/easing — for a
+   fixed-position element (ArchiveSideNav) that should fade in alongside
+   the main content's own fade-up without sliding itself: it never moves
+   from its fixed spot, so animating its own position on top of that read
+   as a slide relative to the page, not a match to the content beside it. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.3s ease both; }
+
 /* Larger-distance slide for a section that should feel like it's rising
    into place (e.g. the New Post form), rather than the subtle page-level
    fade-up above. */
@@ -653,8 +664,20 @@ input[type="color"]::-moz-color-swatch {
    themselves too), this is deliberately NOT trying to reproduce Roll20's
    exact overlay positioning. Ordinary flow, ordinary box model — nothing
    here can clip or bleed into a neighbor by construction. */
+/* max-w-[480px] + mx-auto — reported directly: at this app's own content
+   width (max-w-3xl, 768px — wider than Roll20's own narrow chat panel),
+   justify-between spread the label pair edge-to-edge across the WHOLE
+   768px row, far more dramatic than Roll20's original proportions. This
+   caps the row itself to a narrower column instead, so the label/value
+   pairing keeps Roll20's own relative spacing regardless of how wide the
+   surrounding page is. Safe to narrow without reopening the gray-margin
+   bug this bg-black used to single-handedly prevent — the parent message
+   itself is ALSO set to black now (TrpgMessage's transformPastedHTML,
+   reusing its existing `color` attribute), so the space this narrower
+   row no longer reaches is still black, not the message's own lighter
+   background peeking through. */
 .trpg-content .trpg-credit-row {
-  @apply flex items-center justify-between gap-3 px-4 py-1.5 bg-black;
+  @apply flex items-center justify-between gap-3 px-4 py-1.5 bg-black max-w-[480px] mx-auto;
 }
 /* Kill the paragraph's own vertical margin inside a message row — with
    the row already carrying py-2, the child <p>'s default .trpg-content p
@@ -663,35 +686,35 @@ input[type="color"]::-moz-color-swatch {
 .trpg-content .trpg-message > p {
   @apply my-0;
 }
+/* Default for any <img> this schema sees — real embedded artwork (a
+   scene-divider illustration rebuilt from Roll20's background-image
+   trick, an image uploaded through the toolbar's "Add image" button, or
+   any other Roll20-embedded <img> that isn't the speaker avatar below) at
+   its own real size, capped to the column width, no forced crop. Used to
+   be the OTHER way around — small/circular by default, with
+   `.trpg-content-image` opting scene-dividers back out — but that meant
+   every newly-added image (nothing paste-time tags with that class)
+   silently inherited the tiny avatar-chip treatment instead. Flipping the
+   default here so only the one genuinely special case (the avatar rule
+   right below) needs its own class at all. */
+.trpg-content img {
+  @apply block w-auto h-auto max-w-full my-3;
+  object-fit: contain;
+}
 /* Speaker avatar — arrives inline, first thing in the message's text (see
    the Image extension comment in trpg-session-editor.tsx for why inline
-   rather than Roll20's own absolutely-positioned gutter placement). Sized
-   and rounded to read as a small avatar chip rather than an inline image
-   dropped in at native resolution — every image this schema will ever see
-   is a Roll20 avatar, never an author-inserted illustration, so a single
-   blanket rule for all <img>s is safe here. */
-/* w-7/h-7 = 28px, matching Roll20's own avatar max-width/max-height —
-   this is only the *fallback*: Roll20's own inline style="..." (captured
-   verbatim on <img> in trpg-session-editor.tsx, unlike the filtered
-   capture used for tables) wins per-property over these where it
+   rather than Roll20's own absolutely-positioned gutter placement), and
+   tagged `trpg-avatar` there specifically so it's the one image type that
+   opts INTO a small chip size instead of rendering at native resolution.
+   Square, not circular — Roll20's own circular crop comes from an
+   external stylesheet paste can never see, and rounding it here was never
+   actually matching the source, just an assumption. w-7/h-7 = 28px,
+   matching Roll20's own avatar max-width/max-height — this is only the
+   *fallback*: Roll20's own inline style="..." (captured verbatim on
+   <img> in trpg-session-editor.tsx) wins per-property over this where it
    specifies one, so an avatar renders at its own real declared size
-   rather than a size we guessed. rounded-full/object-fit stay ours
-   either way — Roll20's own circular crop comes from an external
-   stylesheet rule paste can never see, regardless of filtering. */
-.trpg-content img {
-  @apply inline-block w-7 h-7 rounded-full align-middle mr-1.5;
+   rather than a size we guessed. */
+.trpg-content img.trpg-avatar {
+  @apply inline-block w-7 h-7 align-middle mr-1.5 my-0;
   object-fit: cover;
-  max-width: 100%;
-}
-/* Scene-divider illustrations (rebuilt from Roll20's background-image
-   trick during paste, see trpg-session-editor.tsx) are real embedded
-   artwork, not speaker avatars — the small circular chip treatment above
-   would badly distort/clip one of these. `.trpg-content-image` overrides
-   every one of those avatar-specific rules back to a normal inline
-   illustration: its own real size (capped to the column width), square
-   corners, no forced crop, and enough vertical breathing room to read as
-   its own beat rather than crowding the text around it. */
-.trpg-content img.trpg-content-image {
-  @apply block w-auto h-auto max-w-full rounded-none align-baseline mr-0 my-3;
-  object-fit: contain;
 }
