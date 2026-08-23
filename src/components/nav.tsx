@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { ProfileMenu } from '@/components/profile-menu'
 import { ScrambleText } from '@/components/scramble-text'
 import type { Profile, Category } from '@/types/database'
@@ -69,9 +70,57 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
   // section guests can already reach by clicking into a card.
   const links = LINKS
 
+  // Below 1020px (this site's own mobile/desktop breakpoint) there's no
+  // room for the links row laid out horizontally, so it collapses behind
+  // a single toggle button that opens a full-screen menu instead —
+  // behavior modeled on a hamburger-triggered full-screen nav overlay
+  // (reported directly), reimplemented here with this app's own look
+  // (mono/uppercase links, NavDot bullets, --nav-icon-color) rather than
+  // any borrowed styling. 1020px+ never sees any of this — the plain
+  // links row above stays exactly as it always has.
+  const [menuPhase, setMenuPhase] = useState<'closed' | 'open' | 'closing'>('closed')
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Matches --popout-close-dur in globals.css's .t-nav-menu rule (shared
+  // with .t-popout — see that rule's own comment) — is-closing has to be
+  // removed via this timer, not left to linger, so a second open before
+  // it fires doesn't skip straight to 'open' with a stale is-closing
+  // class still attached.
+  function toggleMenu() {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    if (menuPhase === 'open') {
+      setMenuPhase('closing')
+      closeTimerRef.current = setTimeout(() => setMenuPhase('closed'), 150)
+    } else {
+      setMenuPhase('open')
+    }
+  }
+
+  // Tapping a link inside the open menu navigates away immediately, so
+  // there's nothing left to play the closing transition over — jumping
+  // straight to 'closed' (no 'closing' interim) avoids a dangling timer
+  // that would fire after the component's already moved on to whatever
+  // page-level UI the new route brings in.
+  function closeMenuImmediately() {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    setMenuPhase('closed')
+  }
+
+  useEffect(() => {
+    if (menuPhase !== 'open') return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') toggleMenu()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuPhase])
+
+  useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current) }, [])
+
   return (
     <>
-      <nav className="font-mono fixed right-[2.6%] top-[3%] z-[60] flex items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+      <nav className="hidden min-[1020px]:flex font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
         {links.map(link => (
           <Link
             key={link.href}
@@ -83,6 +132,44 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
           </Link>
         ))}
       </nav>
+
+      <button
+        type="button"
+        onClick={toggleMenu}
+        aria-label={menuPhase === 'open' ? 'Close menu' : 'Open menu'}
+        aria-expanded={menuPhase === 'open'}
+        className="flex min-[1020px]:hidden items-center gap-2 font-mono fixed right-[2.6%] top-[3%] z-[70] text-[14px] uppercase tracking-tight text-ink"
+        style={NAV_COLOR_STYLE}
+      >
+        <NavDot />
+        <ScrambleText text={menuPhase === 'open' ? 'Close' : 'Menu'} />
+      </button>
+
+      {menuPhase !== 'closed' && (
+        // Adapted from the same "modal open/close" scale+fade recipe as
+        // dock-music-widget.tsx's own .t-popout (see .t-nav-menu in
+        // globals.css) — full-viewport instead of a small anchored box,
+        // but the same is-open/is-closing 3-state dance and shared
+        // --popout-* timing/easing custom properties rather than a
+        // second copy of the same numbers under new names.
+        <div
+          className={`t-nav-menu min-[1020px]:hidden fixed inset-0 z-[65] bg-scroll-100 flex flex-col justify-center px-6 ${menuPhase === 'open' ? 'is-open' : 'is-closing'}`}
+        >
+          <nav className="font-mono flex flex-col items-start gap-8 text-[28px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+            {links.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={closeMenuImmediately}
+                className={`flex items-center gap-3 ${isActiveLink(link.href) ? 'underline underline-offset-4' : ''}`}
+              >
+                <NavDot />
+                <ScrambleText text={link.label} />
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
 
       {onGallery && (
         <div className="hidden min-[1020px]:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">

@@ -287,6 +287,34 @@
   .t-popout { transition: none !important; }
 }
 
+/* Full-screen mobile nav menu overlay (nav.tsx, below 1020px) — same
+   scale+fade "modal open/close" shape as .t-popout above, reusing its
+   --popout-* timing/easing custom properties rather than duplicating the
+   same numbers under new names, but no transform-origin override: this
+   overlay fills the whole viewport rather than growing out of one
+   anchored corner, so scaling from center (the default) is what reads as
+   a plain, un-anchored fade/pop rather than a dropdown-style reveal. */
+.t-nav-menu {
+  transform: scale(var(--popout-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--popout-open-dur) var(--popout-ease), opacity var(--popout-open-dur) var(--popout-ease);
+}
+.t-nav-menu.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-nav-menu.is-closing {
+  transform: scale(var(--popout-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--popout-close-dur) var(--popout-ease), opacity var(--popout-close-dur) var(--popout-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-nav-menu { transition: none !important; }
+}
+
 /* Vertical volume slider (dock-music-widget.tsx's volume popout) — a
    plain <input type="range"> rotated via writing-mode rather than
    -webkit-appearance:slider-vertical (old, WebKit-only, and Firefox
