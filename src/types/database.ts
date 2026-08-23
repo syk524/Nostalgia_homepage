@@ -28,6 +28,14 @@ export type Category = {
   created_at: string
 }
 
+export type ArchiveLink = {
+  id: string
+  title: string
+  url: string
+  position: number
+  created_at: string
+}
+
 export type TrpgSession = {
   id: string
   slug: string
@@ -277,6 +285,17 @@ export type Database = {
         Row: TrpgSession
         Insert: Omit<TrpgSession, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Pick<TrpgSession, 'title' | 'slug' | 'date_range' | 'description' | 'body' | 'cover_url' | 'background_url' | 'background_blur' | 'particle_effect' | 'icon_color'>>
+        Relationships: []
+      }
+      archive_links: {
+        Row: ArchiveLink
+        // position has a DB default (0) but createLink always computes and
+        // passes its own value explicitly (see that action's own
+        // comment), so it stays in the Insert shape rather than being
+        // omitted like id/created_at — matches post_images' own Insert
+        // type above for the same reason.
+        Insert: Omit<ArchiveLink, 'id' | 'created_at'>
+        Update: Partial<Pick<ArchiveLink, 'title' | 'url' | 'position'>>
         Relationships: []
       }
       playlist_tracks: {
