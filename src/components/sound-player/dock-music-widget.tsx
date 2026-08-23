@@ -318,7 +318,12 @@ export function DockMusicWidget({
           </button>
         </div>
 
-        <span className="text-[11px] font-mono text-scroll-400 tabular-nums shrink-0">
+        {/* Hidden below 1020px (this site's own mobile/desktop breakpoint)
+            — reported directly, the pill is narrow enough on a phone
+            screen that the elapsed/duration readout and the volume
+            button (below) were the two least essential controls to trim
+            first; play/pause/skip, shuffle, repeat, and queue all stay. */}
+        <span className="hidden min-[1020px]:block text-[11px] font-mono text-scroll-400 tabular-nums shrink-0">
           {formatTime(elapsedSeconds)} / {formatTime(durationSeconds)}
         </span>
 
@@ -338,11 +343,12 @@ export function DockMusicWidget({
         >
           {loopMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
         </button>
+        {/* Hidden below 1020px — see the time readout's own comment above. */}
         <button
           ref={volumeButtonRef}
           onClick={() => { setVolumeOpen(v => !v); setListOpen(false); setAddOpen(false) }}
           aria-label={volumeOpen ? 'Hide volume' : 'Show volume'}
-          className={`shrink-0 transition-colors ${volumeOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
+          className={`hidden min-[1020px]:block shrink-0 transition-colors ${volumeOpen ? 'text-scroll-100' : 'text-scroll-400/40 hover:text-scroll-100'}`}
         >
           {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
         </button>
