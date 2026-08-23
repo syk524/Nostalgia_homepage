@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export function AuthShell({ tagline, children }: { tagline?: string; children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-scroll-100 flex items-center justify-center px-4">
+    <div className="relative min-h-screen overflow-hidden flex items-center justify-center px-4">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-0 right-0 w-full h-full opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"

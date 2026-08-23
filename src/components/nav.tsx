@@ -35,14 +35,15 @@ function NavDot() {
 // everywhere else gets a normal soft-navigating Link, which never
 // touches the player. Excludes /gallery/new and /gallery/[id]/edit,
 // neither of which the modal slot ever intercepts.
-function CategoryLink({ href, hardNav, className, children }: {
+function CategoryLink({ href, hardNav, className, style, children }: {
   href: string
   hardNav: boolean
   className: string
+  style?: React.CSSProperties
   children: React.ReactNode
 }) {
-  if (hardNav) return <a href={href} className={className}>{children}</a>
-  return <Link href={href} className={className}>{children}</Link>
+  if (hardNav) return <a href={href} className={className} style={style}>{children}</a>
+  return <Link href={href} className={className} style={style}>{children}</Link>
 }
 
 // One Nav, mounted once for the whole app — it never remounts or changes
@@ -64,6 +65,14 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
+  // The Links archive's desktop preview pane (links-archive-view.tsx) is a
+  // fixed-position bg-scroll-200 panel that stays light regardless of
+  // theme (an earlier explicit "always light" decision for that specific
+  // pane) — on Noir, the top nav's own --theme-accent color (near-white)
+  // sits right over it and disappears. Scoped to this one route only, not
+  // Noir generally, since every other page's nav sits over the real
+  // themed background where the light accent reads fine.
+  const onLinksArchive = pathname === '/archive/links'
   const onPostDetail = /^\/gallery\/(?!new$)[^/]+$/.test(pathname)
   const activeCategory = searchParams.get('category')
   // Prefix match, not exact — Archive and Profile stay underlined on
@@ -135,7 +144,7 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
           few px above the back button's, reported directly. items-center
           then centers the text within that shared 32px box instead of the
           box just being taller than the glyphs need. */}
-      <nav className="hidden min-[1020px]:flex h-8 font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+      <nav className={`hidden min-[1020px]:flex h-8 font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink ${onLinksArchive ? 'noir-links-nav-color' : ''}`} style={NAV_COLOR_STYLE}>
         {links.map(link => (
           <Link
             key={link.href}
@@ -195,7 +204,12 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
               "decode" effect, not the use-scramble package itself).
               hardNav only kicks in on a post-detail path — see
               CategoryLink's own comment for why. */}
-          <CategoryLink href="/gallery" hardNav={onPostDetail} className={`flex items-center gap-2 ${!activeCategory ? 'text-ink font-medium' : 'text-ink-400'}`}>
+          <CategoryLink
+            href="/gallery"
+            hardNav={onPostDetail}
+            className={`flex items-center gap-2 ${!activeCategory ? 'font-medium' : ''}`}
+            style={{ color: !activeCategory ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
+          >
             <span><ScrambleText text="All" /> ({totalPostCount})</span>
             {!activeCategory && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
           </CategoryLink>
@@ -204,7 +218,8 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
               key={cat.id}
               href={`/gallery?category=${encodeURIComponent(cat.name)}`}
               hardNav={onPostDetail}
-              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'text-ink font-medium' : 'text-ink-400'}`}
+              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'font-medium' : ''}`}
+              style={{ color: activeCategory === cat.name ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
             >
               <span><ScrambleText text={cat.name} /> ({categoryPostCounts[cat.id] ?? 0})</span>
               {activeCategory === cat.name && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}

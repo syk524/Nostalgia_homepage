@@ -90,7 +90,7 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // just floating near the top of the whole (now much taller)
             // container, reported directly. */}
             <span
-              className="absolute right-1.5 bottom-[46px] min-[371px]:bottom-[101px] min-[520px]:bottom-[141px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              className="absolute right-1.5 bottom-[46px] min-[371px]:bottom-[101px] min-[520px]:bottom-[141px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none noir-accent-color"
               style={{ fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
             >
               ©{primaryProfile.illustration_source}
@@ -102,9 +102,9 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
       )}
 
       <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
-        <span style={{ fontFamily: pairFontFamily(char1?.name_font) }}>{char1?.name}</span>
-        <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font) }}>{primaryProfile?.title}</span>
-        <span className="text-right" style={{ fontFamily: pairFontFamily(char2?.name_font) }}>{char2?.name}</span>
+        <span style={{ fontFamily: pairFontFamily(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
+        <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font), color: 'var(--theme-accent)' }}>{primaryProfile?.title}</span>
+        <span className="text-right" style={{ fontFamily: pairFontFamily(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
       </div>
     </Link>
   )
@@ -132,7 +132,7 @@ function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block self-end">
       <div
-        className={`w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20 ${THUMBNAIL_ASPECT_CLASSES}`}
+        className={`w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20 noir-group-hover noir-icon-hover-accent ${THUMBNAIL_ASPECT_CLASSES}`}
       >
         <Plus size={28} />
       </div>

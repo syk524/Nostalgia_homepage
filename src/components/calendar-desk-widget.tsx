@@ -67,19 +67,27 @@ function readStoredOpen(): boolean {
 // never looks like it's stretching into place. Both position and
 // open/closed state persist per browser (localStorage) — if you leave
 // it open, it reopens open next time; if you close it, it reopens as
-// just the icon.
-export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange, pinned }: {
+// just the icon. None of this morph-in-place applies when `docked` —
+// see that prop for why.
+export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange, docked }: {
   panX: number
   panY: number
   events: CalendarEvent[]
   canEdit: boolean
   onEventsChange: (events: CalendarEvent[]) => void
-  // Set on a non-default theme (see draggable-home-scene.tsx) to force
-  // the panel open at a fixed top-right offset instead of its normal
-  // drag-offset position — deliberately NOT read from/written to
-  // usePersistentDraggable, so pinning here never touches the position
-  // the user set up for the default theme.
-  pinned?: { top: number; right: number }
+  // Set on a non-default theme (see draggable-home-scene.tsx). Unlike
+  // the default theme's icon-morphs-into-panel behavior, a docked
+  // widget keeps a plain, fixed trigger icon in the right-edge dock
+  // (dockTop, never resizing) and opens the actual panel as a separate
+  // element pinned to the top-left of the screen (panelTop, which the
+  // parent recomputes whenever either this or DayCounter's open state
+  // changes, so the two panels stack there without overlapping). Open
+  // state is lifted to the parent for that same reason. Deliberately
+  // NOT read from/written to usePersistentDraggable or this
+  // component's own localStorage-backed open state, so docking here
+  // never touches the position/open-state the user set up for the
+  // default theme.
+  docked?: { open: boolean; dockTop: string; panelTop: string; onOpenChange: (open: boolean) => void }
 }) {
   // Anchored from the desk's own bottom-left corner (see the wrapper's
   // left-0 bottom-0 below), so the default offset has to shift it well
@@ -184,25 +192,191 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
 
   if (!hydrated) return null
 
-  const effectiveOpen = pinned ? true : open
+  // Shared between the default theme's in-place panel face and the
+  // docked theme's standalone top-left panel — only the outer wrapper
+  // differs between the two.
+  const panelHeader = (
+    <div
+      {...(docked ? {} : drag.handlers)}
+      className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!docked && drag.dragging ? 'cursor-grabbing' : docked ? '' : 'cursor-grab'}`}
+    >
+      <div className="flex items-center gap-1.5">
+        <CalendarDays size={13} className="text-[#5B574E]" />
+        <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Calendar</h2>
+      </div>
+      <button
+        type="button"
+        onClick={() => docked ? docked.onOpenChange(false) : setOpen(false)}
+        onPointerDown={e => e.stopPropagation()}
+        aria-label="Close"
+        className="text-ink-400 hover:text-ink-600"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  )
+
+  const panelBody = (
+    <div className="flex flex-1 min-h-0">
+      <div className="w-[300px] shrink-0 p-5 border-r border-scroll-300 flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-sans text-sm text-[#5B574E]">{MONTH_NAMES[viewMonth]} {viewYear}</span>
+          <div className="flex gap-1">
+            <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month" className="text-ink-400 hover:text-ink-600">
+              <ChevronLeft size={16} />
+            </button>
+            <button type="button" onClick={() => changeMonth(1)} aria-label="Next month" className="text-ink-400 hover:text-ink-600">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-y-1 text-center">
+          {WEEKDAYS.map((w, i) => (
+            <span key={i} className="font-sans text-[9px] uppercase text-ink-400 py-1">{w}</span>
+          ))}
+          {grid.map(day => {
+            const dayEvents = eventsByDay.get(day.iso) ?? []
+            const isSelected = day.iso === selectedIso
+            const isToday = day.iso === todayIso
+            return (
+              <button
+                key={day.iso}
+                type="button"
+                onClick={() => selectDay(day)}
+                className={`relative aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-xs font-sans transition-colors
+                  ${isSelected ? 'bg-[#5B574E] text-scroll-100' : 'hover:bg-scroll-200 text-[#5B574E]'}
+                  ${!day.inMonth ? 'opacity-30' : ''}
+                  ${isToday && !isSelected ? 'border border-ink-500/40' : ''}`}
+              >
+                {day.date.getDate()}
+                <span className="flex gap-[2px] h-[3px]">
+                  {dayEvents.slice(0, 3).map((ev, i) => (
+                    <span key={i} className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: ev.dot_color }} />
+                  ))}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 p-5 flex flex-col overflow-y-auto">
+        <h3 className="font-sans text-sm text-[#5B574E] mb-3">
+          {new Date(selectedIso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </h3>
+
+        {error && <p className="field-error mb-2">{error}</p>}
+
+        <div className="space-y-2 mb-3">
+          {selectedEvents.length === 0 && <p className="text-[11px] font-sans text-ink-400">No events.</p>}
+          {selectedEvents.map(ev => {
+            const Meta = VISIBILITY_META[ev.visibility]
+            return (
+              <div key={ev.id} className="group flex items-center gap-2 px-3 py-2 rounded border border-scroll-300 bg-scroll-50">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ev.dot_color }} />
+                <span className="flex-1 text-sm text-[#5B574E] truncate">{ev.title}</span>
+                <Meta.icon size={12} className="text-ink-400 shrink-0" />
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(ev.id)}
+                    disabled={deletingId === ev.id}
+                    aria-label={`Remove ${ev.title}`}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 text-ink-400 hover:text-ember transition-opacity"
+                  >
+                    {deletingId === ev.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {canEdit && !addingOpen && (
+          <button type="button" onClick={() => setAddingOpen(true)} className="btn-ghost text-xs self-start">
+            <Plus size={13} /> Add event
+          </button>
+        )}
+
+        {canEdit && addingOpen && (
+          <div className="border border-scroll-300 rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={dotColor}
+                onChange={e => setDotColor(e.target.value)}
+                aria-label="Dot color"
+                className="h-8 w-8 rounded-full border border-scroll-300 cursor-pointer shrink-0"
+              />
+              <input
+                className="input text-sm flex-1 min-w-0"
+                placeholder="Event title"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-1">
+              {(Object.keys(VISIBILITY_META) as EventVisibility[]).map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVisibility(v)}
+                  className={`pill ${visibility === v ? 'pill-active' : ''}`}
+                >
+                  {VISIBILITY_META[v].label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setAddingOpen(false)} className="btn-ghost text-xs">Cancel</button>
+              <button type="button" onClick={handleAdd} disabled={saving} className="btn-primary text-xs">
+                {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  if (docked) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => docked.onOpenChange(!docked.open)}
+          aria-label={docked.open ? 'Close Calendar' : 'Open Calendar'}
+          className="fixed flex items-center justify-center rounded-2xl overflow-hidden"
+          style={{ top: docked.dockTop, right: 16, width: ICON_SIZE, height: ICON_SIZE, background: '#282625' }}
+        >
+          <CalendarDockIcon size={ICON_SIZE} />
+        </button>
+
+        {docked.open && (
+          <div
+            className="fixed rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden flex flex-col animate-fade-up"
+            style={{ top: docked.panelTop, left: 16, width: PANEL_WIDTH, height: PANEL_HEIGHT, transition: 'top 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}
+          >
+            {panelHeader}
+            {panelBody}
+          </div>
+        )}
+      </>
+    )
+  }
 
   return (
     <div
-      className={pinned ? 'absolute touch-none' : 'absolute left-0 bottom-0 touch-none'}
-      style={pinned
-        // .desk-widget-box below is itself absolutely positioned, so it
-        // never contributes to this wrapper's shrink-to-fit width — an
-        // explicit width here is required, or `right` ends up anchoring
-        // a zero-width box (left-aligned in practice) instead of the
-        // panel's actual right edge.
-        ? { top: pinned.top, right: pinned.right, width: PANEL_WIDTH }
-        : { transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
+      className="absolute left-0 bottom-0 touch-none"
+      style={{ transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
     >
       <div
-        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${effectiveOpen ? 'is-open' : ''}`}
+        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${open ? 'is-open' : ''}`}
         style={{
-          width: effectiveOpen ? PANEL_WIDTH : ICON_SIZE,
-          height: effectiveOpen ? PANEL_HEIGHT : ICON_SIZE,
+          width: open ? PANEL_WIDTH : ICON_SIZE,
+          height: open ? PANEL_HEIGHT : ICON_SIZE,
         }}
       >
         {/* Both faces stay mounted at all times and cross-fade via CSS
@@ -210,11 +384,11 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
             of one hard-swapping for the other — see that rule's own
             comment for why. */}
         <div
-          onPointerDown={pinned ? undefined : handleIconPointerDown}
-          onPointerMove={pinned ? undefined : drag.handlers.onPointerMove}
-          onPointerUp={pinned ? undefined : handleIconPointerUp}
-          onPointerCancel={pinned ? undefined : drag.handlers.onPointerCancel}
-          className={`desk-widget-icon-face absolute inset-0 touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-pointer'}`}
+          onPointerDown={handleIconPointerDown}
+          onPointerMove={drag.handlers.onPointerMove}
+          onPointerUp={handleIconPointerUp}
+          onPointerCancel={drag.handlers.onPointerCancel}
+          className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
         >
           <CalendarDockIcon size={ICON_SIZE} />
         </div>
@@ -231,151 +405,8 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
           style={{ width: PANEL_WIDTH, height: PANEL_HEIGHT }}
           onPointerDown={e => e.stopPropagation()}
         >
-          <div
-            {...(pinned ? {} : drag.handlers)}
-            className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
-          >
-            <div className="flex items-center gap-1.5">
-              <CalendarDays size={13} className="text-[#5B574E]" />
-              <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Calendar</h2>
-            </div>
-            {/* No close affordance while pinned — the whole point of
-                pinning is that this theme always shows it open. */}
-            {!pinned && (
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                onPointerDown={e => e.stopPropagation()}
-                aria-label="Close"
-                className="text-ink-400 hover:text-ink-600"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-1 min-h-0">
-            <div className="w-[300px] shrink-0 p-5 border-r border-scroll-300 flex flex-col">
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-sans text-sm text-[#5B574E]">{MONTH_NAMES[viewMonth]} {viewYear}</span>
-                <div className="flex gap-1">
-                  <button type="button" onClick={() => changeMonth(-1)} aria-label="Previous month" className="text-ink-400 hover:text-ink-600">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button type="button" onClick={() => changeMonth(1)} aria-label="Next month" className="text-ink-400 hover:text-ink-600">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 gap-y-1 text-center">
-                {WEEKDAYS.map((w, i) => (
-                  <span key={i} className="font-sans text-[9px] uppercase text-ink-400 py-1">{w}</span>
-                ))}
-                {grid.map(day => {
-                  const dayEvents = eventsByDay.get(day.iso) ?? []
-                  const isSelected = day.iso === selectedIso
-                  const isToday = day.iso === todayIso
-                  return (
-                    <button
-                      key={day.iso}
-                      type="button"
-                      onClick={() => selectDay(day)}
-                      className={`relative aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-xs font-sans transition-colors
-                        ${isSelected ? 'bg-[#5B574E] text-scroll-100' : 'hover:bg-scroll-200 text-[#5B574E]'}
-                        ${!day.inMonth ? 'opacity-30' : ''}
-                        ${isToday && !isSelected ? 'border border-ink-500/40' : ''}`}
-                    >
-                      {day.date.getDate()}
-                      <span className="flex gap-[2px] h-[3px]">
-                        {dayEvents.slice(0, 3).map((ev, i) => (
-                          <span key={i} className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: ev.dot_color }} />
-                        ))}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0 p-5 flex flex-col overflow-y-auto">
-              <h3 className="font-sans text-sm text-[#5B574E] mb-3">
-                {new Date(selectedIso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-              </h3>
-
-              {error && <p className="field-error mb-2">{error}</p>}
-
-              <div className="space-y-2 mb-3">
-                {selectedEvents.length === 0 && <p className="text-[11px] font-sans text-ink-400">No events.</p>}
-                {selectedEvents.map(ev => {
-                  const Meta = VISIBILITY_META[ev.visibility]
-                  return (
-                    <div key={ev.id} className="group flex items-center gap-2 px-3 py-2 rounded border border-scroll-300 bg-scroll-50">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ev.dot_color }} />
-                      <span className="flex-1 text-sm text-[#5B574E] truncate">{ev.title}</span>
-                      <Meta.icon size={12} className="text-ink-400 shrink-0" />
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(ev.id)}
-                          disabled={deletingId === ev.id}
-                          aria-label={`Remove ${ev.title}`}
-                          className="shrink-0 opacity-0 group-hover:opacity-100 text-ink-400 hover:text-ember transition-opacity"
-                        >
-                          {deletingId === ev.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-              {canEdit && !addingOpen && (
-                <button type="button" onClick={() => setAddingOpen(true)} className="btn-ghost text-xs self-start">
-                  <Plus size={13} /> Add event
-                </button>
-              )}
-
-              {canEdit && addingOpen && (
-                <div className="border border-scroll-300 rounded-lg p-3 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={dotColor}
-                      onChange={e => setDotColor(e.target.value)}
-                      aria-label="Dot color"
-                      className="h-8 w-8 rounded-full border border-scroll-300 cursor-pointer shrink-0"
-                    />
-                    <input
-                      className="input text-sm flex-1 min-w-0"
-                      placeholder="Event title"
-                      value={title}
-                      onChange={e => setTitle(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                  <div className="flex gap-1">
-                    {(Object.keys(VISIBILITY_META) as EventVisibility[]).map(v => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setVisibility(v)}
-                        className={`pill ${visibility === v ? 'pill-active' : ''}`}
-                      >
-                        {VISIBILITY_META[v].label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button type="button" onClick={() => setAddingOpen(false)} className="btn-ghost text-xs">Cancel</button>
-                    <button type="button" onClick={handleAdd} disabled={saving} className="btn-primary text-xs">
-                      {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {panelHeader}
+          {panelBody}
         </div>
       </div>
     </div>

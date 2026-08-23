@@ -36,19 +36,22 @@ function readStoredOpen(): boolean {
 // (photo/text color/font) temporarily grows the panel to EDIT_HEIGHT
 // rather than trying to cram a form into the display card's own 120px —
 // the 360×120 footprint is a display-mode spec, not a hard cap on every
-// state this widget can be in.
-export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCounterChange, pinned }: {
+// state this widget can be in. None of this morph-in-place applies when
+// `docked` — see that prop for why.
+export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCounterChange, docked }: {
   panX: number
   panY: number
   dayCounter: DayCounter
   canEdit: boolean
   onDayCounterChange: (d: DayCounter) => void
-  // Set on a non-default theme (see draggable-home-scene.tsx) to force
-  // the panel open at a fixed top-right offset instead of its normal
-  // drag-offset position — deliberately NOT read from/written to
-  // usePersistentDraggable, so pinning here never touches the position
-  // the user set up for the default theme.
-  pinned?: { top: number; right: number }
+  // Set on a non-default theme (see draggable-home-scene.tsx) — see the
+  // identical prop on CalendarDeskWidget for the full reasoning. Unlike
+  // the default theme's icon-morphs-into-panel behavior, a docked
+  // widget keeps a plain, fixed trigger icon in the right-edge dock
+  // (dockTop, never resizing) and opens the actual panel as a separate
+  // element pinned to the top-left of the screen (panelTop, recomputed
+  // by the parent relative to Calendar's own open state).
+  docked?: { open: boolean; dockTop: string; panelTop: string; onOpenChange: (open: boolean) => void }
 }) {
   // Offset well clear of the calendar widget's own default (420, -140)
   // so the two don't land stacked on first load.
@@ -140,26 +143,172 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
   if (!hydrated) return null
 
   const n = dayCount()
-  const effectiveOpen = pinned ? true : open
   const panelHeight = editing ? EDIT_HEIGHT : PANEL_HEIGHT
+
+  // Shared between the default theme's in-place panel face and the
+  // docked theme's standalone top-left panel — only the outer wrapper
+  // (and its width/height) differs between the two.
+  const panelInner = editing ? (
+    <div className="flex flex-col h-full">
+      <div
+        {...(docked ? {} : drag.handlers)}
+        className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!docked && drag.dragging ? 'cursor-grabbing' : docked ? '' : 'cursor-grab'}`}
+      >
+        <div className="flex items-center gap-1.5">
+          <Hourglass size={13} className="text-[#5B574E]" />
+          <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Edit Day Counter</h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          onPointerDown={e => e.stopPropagation()}
+          aria-label="Cancel"
+          className="text-ink-400 hover:text-ink-600"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+        <div>
+          <label className="label !text-ink-400">Photo</label>
+          <div className="flex items-center gap-3">
+            <div className="w-20 h-14 rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+              {photoPreview
+                ? <img src={photoPreview} alt="" className="w-full h-full object-cover" />
+                : <span className="text-xl text-scroll-400">◯</span>
+              }
+            </div>
+            <label className="btn-ghost text-xs cursor-pointer">
+              Choose image
+              <input type="file" accept="image/*" onChange={handlePhotoChange} className="sr-only" />
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="label !text-ink-400">Text color</label>
+          <input
+            type="color"
+            value={textColor}
+            onChange={e => setTextColor(e.target.value)}
+            aria-label="Text color"
+            className="h-10 w-10 rounded-full border border-scroll-300 cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label className="label !text-ink-400">Font</label>
+          <select
+            className="input"
+            value={font}
+            onChange={e => setFont(e.target.value)}
+            style={{ fontFamily: pairFontFamily(font) }}
+          >
+            {Object.entries(PAIR_FONTS).map(([key, { label, family }]) => (
+              <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        {error && <p className="field-error">{error}</p>}
+      </div>
+
+      <div className="flex gap-2 justify-end p-4 pt-0 shrink-0">
+        <button type="button" onClick={() => setEditing(false)} className="btn-ghost text-xs">Cancel</button>
+        <button type="button" onClick={handleSave} disabled={saving} className="btn-primary text-xs">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div
+      {...(docked ? {} : drag.handlers)}
+      className={`relative w-full h-full touch-none ${!docked && drag.dragging ? 'cursor-grabbing' : docked ? '' : 'cursor-grab'}`}
+      style={{ background: '#282625' }}
+    >
+      {dayCounter.photo_url && (
+        <img src={dayCounter.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
+      <div className="absolute inset-0 bg-black/30" />
+
+      <div className="relative h-full flex flex-col justify-between p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0" style={{ fontFamily: pairFontFamily(dayCounter.font) }}>
+            <p className="text-3xl font-bold leading-none" style={{ color: dayCounter.text_color }}>
+              D+{n}
+            </p>
+            <p className="text-sm mt-1 opacity-80" style={{ color: dayCounter.text_color }}>
+              Nustalgio
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={startEditing}
+                onPointerDown={e => e.stopPropagation()}
+                aria-label="Edit day counter"
+                className="text-scroll-100/70 hover:text-scroll-100"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => docked ? docked.onOpenChange(false) : setOpen(false)}
+              onPointerDown={e => e.stopPropagation()}
+              aria-label="Close"
+              className="text-scroll-100/70 hover:text-scroll-100"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (docked) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => docked.onOpenChange(!docked.open)}
+          aria-label={docked.open ? 'Close Day Counter' : 'Open Day Counter'}
+          className="fixed flex items-center justify-center rounded-2xl overflow-hidden"
+          style={{ top: docked.dockTop, right: 16, width: ICON_SIZE, height: ICON_SIZE, background: '#282625' }}
+        >
+          <DayCounterDockIcon
+            size={ICON_SIZE}
+            photoUrl={dayCounter.photo_url}
+            font={dayCounter.font}
+            textColor={dayCounter.text_color}
+          />
+        </button>
+
+        {docked.open && (
+          <div
+            className="fixed rounded-xl bg-scroll-50 overflow-hidden animate-fade-up"
+            style={{ top: docked.panelTop, left: 16, width: PANEL_WIDTH, height: panelHeight, transition: 'top 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}
+          >
+            {panelInner}
+          </div>
+        )}
+      </>
+    )
+  }
 
   return (
     <div
-      className={pinned ? 'absolute touch-none' : 'absolute left-0 bottom-0 touch-none'}
-      style={pinned
-        // .desk-widget-box below is itself absolutely positioned, so it
-        // never contributes to this wrapper's shrink-to-fit width — an
-        // explicit width here is required, or `right` ends up anchoring
-        // a zero-width box (left-aligned in practice) instead of the
-        // panel's actual right edge.
-        ? { top: pinned.top, right: pinned.right, width: PANEL_WIDTH }
-        : { transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
+      className="absolute left-0 bottom-0 touch-none"
+      style={{ transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
     >
       <div
-        className={`desk-widget-box absolute left-0 top-0 rounded-xl bg-scroll-50 overflow-hidden ${effectiveOpen ? 'is-open' : 'border border-scroll-300'}`}
+        className={`desk-widget-box absolute left-0 top-0 rounded-xl bg-scroll-50 overflow-hidden ${open ? 'is-open' : 'border border-scroll-300'}`}
         style={{
-          width: effectiveOpen ? PANEL_WIDTH : ICON_SIZE,
-          height: effectiveOpen ? panelHeight : ICON_SIZE,
+          width: open ? PANEL_WIDTH : ICON_SIZE,
+          height: open ? panelHeight : ICON_SIZE,
         }}
       >
         {/* Both faces stay mounted at all times and cross-fade via CSS
@@ -167,11 +316,11 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
             of one hard-swapping for the other — see that rule's own
             comment for why. */}
         <div
-          onPointerDown={pinned ? undefined : handleIconPointerDown}
-          onPointerMove={pinned ? undefined : drag.handlers.onPointerMove}
-          onPointerUp={pinned ? undefined : handleIconPointerUp}
-          onPointerCancel={pinned ? undefined : drag.handlers.onPointerCancel}
-          className={`desk-widget-icon-face absolute inset-0 touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-pointer'}`}
+          onPointerDown={handleIconPointerDown}
+          onPointerMove={drag.handlers.onPointerMove}
+          onPointerUp={handleIconPointerUp}
+          onPointerCancel={drag.handlers.onPointerCancel}
+          className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
         >
           <DayCounterDockIcon
             size={ICON_SIZE}
@@ -188,131 +337,7 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
           style={{ width: PANEL_WIDTH, height: panelHeight }}
           onPointerDown={e => e.stopPropagation()}
         >
-          {editing ? (
-            <div className="flex flex-col h-full">
-              <div
-                {...(pinned ? {} : drag.handlers)}
-                className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Hourglass size={13} className="text-[#5B574E]" />
-                  <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Edit Day Counter</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditing(false)}
-                  onPointerDown={e => e.stopPropagation()}
-                  aria-label="Cancel"
-                  className="text-ink-400 hover:text-ink-600"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-                <div>
-                  <label className="label !text-ink-400">Photo</label>
-                  <div className="flex items-center gap-3">
-                    <div className="w-20 h-14 rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
-                      {photoPreview
-                        ? <img src={photoPreview} alt="" className="w-full h-full object-cover" />
-                        : <span className="text-xl text-scroll-400">◯</span>
-                      }
-                    </div>
-                    <label className="btn-ghost text-xs cursor-pointer">
-                      Choose image
-                      <input type="file" accept="image/*" onChange={handlePhotoChange} className="sr-only" />
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="label !text-ink-400">Text color</label>
-                  <input
-                    type="color"
-                    value={textColor}
-                    onChange={e => setTextColor(e.target.value)}
-                    aria-label="Text color"
-                    className="h-10 w-10 rounded-full border border-scroll-300 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <label className="label !text-ink-400">Font</label>
-                  <select
-                    className="input"
-                    value={font}
-                    onChange={e => setFont(e.target.value)}
-                    style={{ fontFamily: pairFontFamily(font) }}
-                  >
-                    {Object.entries(PAIR_FONTS).map(([key, { label, family }]) => (
-                      <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {error && <p className="field-error">{error}</p>}
-              </div>
-
-              <div className="flex gap-2 justify-end p-4 pt-0 shrink-0">
-                <button type="button" onClick={() => setEditing(false)} className="btn-ghost text-xs">Cancel</button>
-                <button type="button" onClick={handleSave} disabled={saving} className="btn-primary text-xs">
-                  {saving ? <Loader2 size={13} className="animate-spin" /> : 'Save'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              {...(pinned ? {} : drag.handlers)}
-              className={`relative w-full h-full touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
-              style={{ background: '#282625' }}
-            >
-              {dayCounter.photo_url && (
-                <img src={dayCounter.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              )}
-              <div className="absolute inset-0 bg-black/30" />
-
-              <div className="relative h-full flex flex-col justify-between p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0" style={{ fontFamily: pairFontFamily(dayCounter.font) }}>
-                    <p className="text-3xl font-bold leading-none" style={{ color: dayCounter.text_color }}>
-                      D+{n}
-                    </p>
-                    <p className="text-sm mt-1 opacity-80" style={{ color: dayCounter.text_color }}>
-                      Nustalgio
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={startEditing}
-                        onPointerDown={e => e.stopPropagation()}
-                        aria-label="Edit day counter"
-                        className="text-scroll-100/70 hover:text-scroll-100"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                    )}
-                    {/* No close affordance while pinned — the whole
-                        point of pinning is that this theme always
-                        shows it open. */}
-                    {!pinned && (
-                      <button
-                        type="button"
-                        onClick={() => setOpen(false)}
-                        onPointerDown={e => e.stopPropagation()}
-                        aria-label="Close"
-                        className="text-scroll-100/70 hover:text-scroll-100"
-                      >
-                        <X size={15} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {panelInner}
         </div>
       </div>
     </div>

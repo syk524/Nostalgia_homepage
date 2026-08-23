@@ -12,12 +12,15 @@
     --ember:    #b23b2c;
     --sage:     #5c7364;
 
-    /* The signed-in user's chosen landing-page theme (see lib/themes.ts) —
-       set on <html> server-side in layout.tsx from profiles.theme, and
+    /* The signed-in user's chosen theme (see lib/themes.ts) — set on
+       <html> server-side in layout.tsx from profiles.theme, and
        overridden live (no reload) by the Settings dropdown via
        document.documentElement.style.setProperty, same pattern as
-       --nav-icon-color below. --theme-bg only matters on the landing page
-       itself; --theme-accent feeds nav, the login/register form, and
+       --nav-icon-color below. --theme-bg drives body's own background
+       (see body{} below), so every page follows it with no per-page
+       changes needed, except gallery post detail (post-modal.tsx),
+       which deliberately keeps its own fixed background regardless of
+       theme. --theme-accent feeds nav, the login/register form, and
        list-view titles, so it defaults to --ink rather than a literal, to
        stay correct for anyone whose theme hasn't loaded yet (guests). */
     --theme-bg: var(--bg);
@@ -46,7 +49,7 @@
   * { box-sizing: border-box; }
 
   body {
-    background-color: var(--bg);
+    background-color: var(--theme-bg);
     color: var(--ink);
     font-family: var(--font-roboto), var(--font-noto-sans-kr), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -476,6 +479,98 @@
 .animate-sticker-drop { animation: sticker-drop 450ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 @media (prefers-reduced-motion: reduce) {
   .animate-sticker-drop { animation: none !important; }
+}
+
+/* Noir-specific overrides that can't be expressed as a CSS variable
+   value swap alone (unlike --theme-accent/--theme-bg elsewhere) — a
+   button's default hover background is a genuinely different color on
+   Noir, not the same property resolving differently, so it needs a real
+   selector. data-theme is set server-side on <html> (layout.tsx) and
+   live by the Settings dropdown (draggable-home-scene.tsx). Specificity
+   here is deliberately bumped (attribute selector + class, vs. a plain
+   Tailwind utility's single class) so these reliably beat the element's
+   own default hover regardless of Tailwind's utility generation order —
+   same class of bug as the sticker z-index / shrink-to-fit issues
+   earlier this session, where "should win" on paper wasn't good enough. */
+[data-theme="noir"] .noir-hover:hover {
+  background-color: #313131;
+}
+[data-theme="noir"] .group:hover .noir-group-hover {
+  background-color: #313131;
+}
+/* Same accent regardless of resting vs. hover state (e.g. the "Add
+   post" tile's Plus icon, normally text-scroll-400 resting /
+   group-hover:text-ink-600 hovered — neither reads well on Noir) —
+   needs both rules since the plain one alone (0,2,0) can't beat the
+   Tailwind-generated group-hover rule's own specificity (0,3,0). */
+[data-theme="noir"] .noir-icon-accent {
+  color: #f1f1f1;
+}
+[data-theme="noir"] .group:hover .noir-icon-accent {
+  color: #f1f1f1;
+}
+/* Hover-only variant of .noir-icon-accent above — the pair-profile grid's
+   AddPairCard and the TRPG session list's AddSessionCard (both
+   character-pair-grid.tsx/archive/trpg's own "+" tiles) keep their
+   existing text-ink-400/text-scroll-400 resting color on Noir, only the
+   group-hover destination color (normally group-hover:text-ink-600)
+   swaps to the point color — unlike the gallery's AddPostTile, which
+   asked for the accent at rest too. No plain (non-hover) rule needed
+   here for that reason; only the group-hover rule, at (0,4,0) specificity
+   to beat Tailwind's own group-hover:text-ink-600 rule (0,3,0). */
+[data-theme="noir"] .group:hover .noir-icon-hover-accent {
+  color: #f1f1f1;
+}
+[data-theme="noir"] .noir-panel-bg {
+  background-color: #191919;
+}
+[data-theme="noir"] .noir-border {
+  border-color: #191919;
+}
+/* Only the desktop links-archive row uses this (min-[1020px]:bg-[#EFEFEF]
+   on selection) — the same row element is reused for mobile too (see
+   links-archive-view.tsx's dual-tree responsive architecture), where it
+   deliberately stays solid white regardless of theme or selection, so
+   this override needs the same min-[1020px] gate rather than applying
+   unconditionally. */
+@media (min-width: 1020px) {
+  [data-theme="noir"] .noir-selected-bg {
+    background-color: #313131;
+  }
+  /* Same reasoning as .noir-selected-bg just above — used on the link
+     row itself and the two "Add a link" buttons that sit in the same
+     panel, all reused for mobile too (which keeps hover:bg-[#EFEFEF]
+     N/A there, no :hover on touch), so no separate mobile carve-out is
+     needed, but the gate stays for consistency with its sibling rule.
+     Matches .noir-selected-bg's own #313131 — was #191919 for a few
+     turns, reverted back to #313131 directly. The color here (not just
+     background-color) is what turns the "Add a link" buttons' own Plus
+     icon #f1f1f1 on hover — those buttons carry no separate icon class
+     of their own, so the icon just inherits this rule's color the same
+     way it inherits the button's resting text-ink-400. On the plain
+     list row this is harmless: its title/icons all set their own color
+     directly (inline style or their own text-ink-* class), which wins
+     over an inherited value regardless. */
+  [data-theme="noir"] .noir-row-hover:hover {
+    background-color: #313131;
+    color: #f1f1f1;
+  }
+}
+/* Only ever applied to the top-right desktop nav on the Links archive
+   route (see nav.tsx's onLinksArchive) — that page's preview pane stays
+   a fixed light bg-scroll-200 regardless of theme, so the nav's usual
+   --theme-accent (near-white on Noir) sitting over it disappears.
+   !important since NAV_COLOR_STYLE sets color via an inline style. */
+[data-theme="noir"] .noir-links-nav-color {
+  color: #010101 !important;
+}
+/* For an element whose color is a hardcoded inline style (not a
+   className, so a plain specificity edge isn't enough to win) — e.g. a
+   per-context accent that's deliberately its own fixed color on Default
+   and has no other reason to reference --theme-accent at all. !important
+   is the only way a class-based rule ever beats an inline style. */
+[data-theme="noir"] .noir-accent-color {
+  color: var(--theme-accent) !important;
 }
 
 /* Scrollbar styling */

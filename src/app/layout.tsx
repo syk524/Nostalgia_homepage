@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue } from 'next/font/google'
+import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue, Playfair_Display } from 'next/font/google'
 import localFont from 'next/font/local'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
 import { CustomCursor } from '@/components/custom-cursor'
@@ -32,6 +32,16 @@ const bebasNeue = Bebas_Neue({
   subsets: ['latin'],
   weight: ['400'],
   variable: '--font-bebas-neue',
+})
+
+// Used only by the Noir theme's scattered/grain-distorted wordmark
+// (noir-background.tsx) — its thin, high-contrast strokes match the
+// reference design in a way none of the pair-selectable fonts above do.
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  style: ['italic', 'normal'],
+  variable: '--font-playfair-display',
 })
 
 // The "serif" pair-font choice (see lib/fonts.ts) — used for both Korean
@@ -104,15 +114,21 @@ export const metadata: Metadata = {
 // Reads the signed-in user's theme so nav, the auth forms, and list-view
 // titles render with the right --theme-accent from first paint — a guest
 // (or a user whose profile fetch fails) always gets 'default', same as
-// the migration's own column default.
+// the migration's own column default. Returns the key alongside the
+// resolved colors — most consumers only need the CSS variables, but a
+// few overrides (button hovers, panel backgrounds) can't be expressed as
+// a variable value swap alone and need a real selector to hook into
+// (see the [data-theme="noir"] rules in globals.css), hence data-theme
+// on <html> below.
 async function getUserTheme() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return THEMES.default
+  if (!user) return { key: 'default' as const, ...THEMES.default }
 
   const { data: profile } = await supabase.from('profiles').select('theme').eq('id', user.id).single()
   const theme = profile?.theme
-  return isThemeKey(theme ?? '') ? THEMES[theme as keyof typeof THEMES] : THEMES.default
+  const key = isThemeKey(theme ?? '') ? theme as keyof typeof THEMES : 'default'
+  return { key, ...THEMES[key] }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -121,11 +137,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
+      data-theme={theme.key}
       suppressHydrationWarning
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}

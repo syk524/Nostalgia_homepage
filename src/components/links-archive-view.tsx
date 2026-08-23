@@ -71,7 +71,7 @@ function SortableLinkRow({
       // generation order (not the order they're written in this string)
       // decides the winner, which silently made the selected row's own
       // #EFEFEF lose to the always-on transparent utility.
-      className={`group flex h-8 items-center gap-2 rounded bg-[#FFFFFF] ${selected ? 'min-[1020px]:bg-[#EFEFEF]' : 'min-[1020px]:bg-transparent min-[1020px]:hover:bg-[#EFEFEF]'}`}
+      className={`group flex h-8 items-center gap-2 rounded bg-[#FFFFFF] ${selected ? 'min-[1020px]:bg-[#EFEFEF] noir-selected-bg' : 'min-[1020px]:bg-transparent min-[1020px]:hover:bg-[#EFEFEF] noir-row-hover'}`}
     >
       {/* Grabber + title share their own tighter gap-1 (not the row's
           shared gap-2) — reported directly, so the handle sits closer to
@@ -104,8 +104,8 @@ function SortableLinkRow({
           className="hidden min-[1020px]:block flex-1 min-w-0 text-left px-1 py-1"
         >
           <p
-            className={`text-sm truncate ${selected ? 'font-medium' : 'text-ink-400'}`}
-            style={selected ? { color: 'var(--theme-accent)' } : undefined}
+            className={`text-sm truncate ${selected ? 'font-medium' : ''}`}
+            style={{ color: selected ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
           >{link.title}</p>
         </button>
         {/* Mobile only — there's no preview pane to select into there, so
@@ -117,7 +117,7 @@ function SortableLinkRow({
           rel="noopener noreferrer"
           className="min-[1020px]:hidden flex-1 min-w-0 text-left px-1 py-1"
         >
-          <p className="text-sm truncate text-ink-400">{link.title}</p>
+          <p className="text-sm truncate" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>{link.title}</p>
         </a>
       </div>
       {/* Desktop-only open/delete pair — hover-revealed, sharing their own
@@ -315,7 +315,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             onClick={() => setAdding(true)}
             aria-label="Add a link"
             title="Add a link"
-            className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] transition-colors"
+            className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] noir-row-hover transition-colors"
           >
             <Plus size={18} />
           </button>
@@ -385,9 +385,9 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             always-on overflow-y-auto here was clipping the tooltips even
             though overflow-x was "visible". */}
         <div
-          className={`shrink-0 border-scroll-300 bg-scroll-50 transition-[width,opacity] duration-300 ease-in-out h-full border-l border-r ${
+          className={`shrink-0 border-scroll-300 noir-border bg-scroll-50 noir-panel-bg transition-[width,opacity] duration-300 ease-in-out h-full border-l border-r ${
             sidebarOpen
-              ? 'w-[250px] opacity-100 overflow-y-auto'
+              ? 'w-[250px] opacity-100 overflow-y-auto overflow-x-hidden'
               : 'w-14 opacity-100 overflow-visible'
           }`}
         >
@@ -410,7 +410,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 type="button"
                 onClick={() => setSidebarOpen(false)}
                 aria-label="Hide link list"
-                className="self-end -mr-1 w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] transition-colors"
+                className="self-end -mr-1 w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-row-hover transition-colors"
               >
                 <PanelLeftClose size={16} />
               </button>
@@ -460,7 +460,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                   type="button"
                   onClick={() => { setSidebarOpen(true); setAdding(true) }}
                   aria-label="Add a link"
-                  className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] transition-colors"
+                  className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] noir-row-hover transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -487,9 +487,9 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                       onClick={() => setSelectedId(link.id)}
                       aria-label={link.title}
                       className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-sm font-medium transition-colors ${
-                        selectedId === link.id ? 'bg-[#EFEFEF]' : 'text-ink-400 hover:bg-[#EFEFEF]'
+                        selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'
                       }`}
-                      style={selectedId === link.id ? { color: 'var(--theme-accent)' } : undefined}
+                      style={{ color: selectedId === link.id ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
                     >
                       {(link.title.trim().charAt(0) || '?').toUpperCase()}
                     </button>

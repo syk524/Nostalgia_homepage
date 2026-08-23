@@ -27,7 +27,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const totalPostCount = postCategoryIds?.length ?? 0
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-scroll-100">
+    <div className="relative min-h-screen overflow-hidden">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-0 right-0 w-full h-full opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"

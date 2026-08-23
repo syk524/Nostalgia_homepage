@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Settings as SettingsIcon } from 'lucide-react'
 import { useDraggable } from '@/lib/use-draggable'
 import { Stickers } from '@/components/stickers'
 import { StickerGalleryModal } from '@/components/sticker-gallery-modal'
@@ -9,6 +10,7 @@ import { DockAppWindow } from '@/components/dock-app-window'
 import { CalendarDeskWidget } from '@/components/calendar-desk-widget'
 import { DayCounterDeskWidget } from '@/components/day-counter-desk-widget'
 import { SettingsPanel } from '@/components/settings-panel'
+import { NoirBackground } from '@/components/noir-background'
 import { DOCK_APPS } from '@/lib/dock-apps'
 import { THEMES, type ThemeKey } from '@/lib/themes'
 import { savePlacement, removePlacement } from '@/lib/actions/stickers'
@@ -97,16 +99,30 @@ const APP_ICON_POSITION: Record<string, string> = {
   settings: 'left-[46%] bottom-[9%]',
 }
 
-// On a non-default theme, Calendar and DayCounter are pinned open at a
-// fixed top-right stack instead of their normal (persisted, draggable)
-// position — see the `pinned` prop on each widget for why this is a
-// separate fixed offset rather than reusing/overwriting their drag
-// offset. DayCounter's open panel is the shorter of the two (120px vs.
-// Calendar's 400px), so it sits on top with Calendar stacked below it.
-const PIN_GAP = 16
-const DAY_COUNTER_PIN = { top: PIN_GAP, right: PIN_GAP }
-const DAY_COUNTER_PANEL_HEIGHT = 120
-const CALENDAR_PIN = { top: PIN_GAP + DAY_COUNTER_PANEL_HEIGHT + PIN_GAP, right: PIN_GAP }
+// On a non-default theme, Settings/Calendar/DayCounter dock as three
+// plain, fixed trigger icons at the right edge, vertically centered,
+// right-aligned to Settings — they never resize or morph (see the
+// `docked` prop on Calendar/DayCounter). Clicking one opens its actual
+// panel as a separate element pinned to the top-left of the screen
+// instead. There, Calendar/DayCounter still reflow between two slots as
+// they open — Calendar always takes the top slot whenever it's open;
+// DayCounter takes the top slot only when it's the only one of the two
+// open, otherwise the slot right below Calendar — computed live since it
+// depends on both widgets' open state at once (see
+// calendarPanelTop/dayCounterPanelTop below). The dock icons themselves
+// never reflow — their positions are fixed constants.
+const DOCK_GAP = 16
+const DOCK_ICON_SIZE = 44
+const DOCK_CALENDAR_OPEN_HEIGHT = 400
+// Settings' own height plus one gap — where the Calendar icon sits.
+// (Previously had an extra leading gap baked in, which doubled the
+// Settings→Calendar spacing relative to Calendar→DayCounter.)
+const DOCK_ITEMS_TOP = DOCK_ICON_SIZE + DOCK_GAP
+// Vertically centers the default (3-icon, all-collapsed) dock at rest —
+// see the settings/Calendar/DayCounter dock icons below, which never
+// move once mounted, so this offset is a plain constant.
+const DOCK_ANCHOR_OFFSET = (DOCK_ICON_SIZE * 3 + DOCK_GAP * 2) / 2
+const PANEL_MARGIN = 16
 
 // The home page's decorative grid + wordmark + sticker + app icons all
 // live on one draggable "desk": dragging empty background pans the
@@ -163,7 +179,36 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
     const t = THEMES[next]
     document.documentElement.style.setProperty('--theme-accent', t.pointColor)
     document.documentElement.style.setProperty('--theme-bg', t.background)
+    // Some overrides (button hovers, panel backgrounds — see globals.css's
+    // [data-theme="noir"] rules) can't be expressed as a CSS variable
+    // value swap alone; they need a real selector to hook into.
+    document.documentElement.setAttribute('data-theme', next)
   }
+
+  // Ephemeral — deliberately not persisted, matching "show collapsed as
+  // default" for the dock. Only meaningful on a non-default theme;
+  // Calendar/DayCounter keep their own independent, localStorage-backed
+  // open state for the default theme's undocked rendering.
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [dayCounterOpen, setDayCounterOpen] = useState(false)
+
+  // The three dock icons never move — Settings sits at the top, Calendar
+  // and DayCounter fixed right below it, all right-aligned and centered
+  // as one group at rest (see DOCK_ANCHOR_OFFSET above). Positioned from
+  // the viewport's own vertical center (not a separate wrapper) since
+  // Calendar/DayCounter already render inside the scene div, which is
+  // itself full-viewport.
+  const dockTop = (offset: number) => `calc(50% - ${DOCK_ANCHOR_OFFSET}px + ${offset}px)`
+  const calendarDockTop = dockTop(DOCK_ITEMS_TOP)
+  const dayCounterDockTop = dockTop(DOCK_ITEMS_TOP + DOCK_ICON_SIZE + DOCK_GAP)
+
+  // The actual panels, opened separately at the top-left of the screen,
+  // still reflow the way the dock icons used to: Calendar's panel is
+  // always first (top) whenever it's open; DayCounter's panel takes that
+  // same top slot only when Calendar's isn't open, otherwise it sits
+  // right below Calendar's.
+  const calendarPanelTop = `${PANEL_MARGIN}px`
+  const dayCounterPanelTop = calendarOpen ? `${PANEL_MARGIN + DOCK_CALENDAR_OPEN_HEIGHT + DOCK_GAP}px` : `${PANEL_MARGIN}px`
 
   const [openApps, setOpenApps] = useState<string[]>([])
   const [zOrder, setZOrder] = useState<string[]>([])
@@ -316,12 +361,14 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
         onDrop={handleDrop}
         className={`absolute inset-0 touch-none ${theme === 'default' ? (canvas.dragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
       >
-        {theme === 'default' && (
+        {theme === 'default' ? (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"
             style={{ backgroundPosition: `${canvas.offset.x}px ${canvas.offset.y}px` }}
           />
+        ) : (
+          <NoirBackground />
         )}
 
         {theme === 'default' && (
@@ -351,7 +398,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           />
         ))}
 
-        {DOCK_APPS.filter(app => !app.requiresAuth || userId).map(app => (
+        {theme === 'default' && DOCK_APPS.filter(app => !app.requiresAuth || userId).map(app => (
           <DeskAppIcon
             key={app.id}
             app={app}
@@ -362,13 +409,25 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           />
         ))}
 
+        {theme !== 'default' && userId && (
+          <button
+            type="button"
+            onClick={() => openApp('settings')}
+            aria-label="Open Settings"
+            className="fixed flex items-center justify-center rounded-2xl"
+            style={{ top: dockTop(0), right: DOCK_GAP, width: DOCK_ICON_SIZE, height: DOCK_ICON_SIZE, background: '#282625' }}
+          >
+            <SettingsIcon size={18} className="text-scroll-100" />
+          </button>
+        )}
+
         <CalendarDeskWidget
           panX={canvas.offset.x}
           panY={canvas.offset.y}
           events={events}
           canEdit={canEdit}
           onEventsChange={setEvents}
-          pinned={theme === 'default' ? undefined : CALENDAR_PIN}
+          docked={theme === 'default' ? undefined : { open: calendarOpen, dockTop: calendarDockTop, panelTop: calendarPanelTop, onOpenChange: setCalendarOpen }}
         />
 
         {dayCounter && (
@@ -378,7 +437,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             dayCounter={dayCounter}
             canEdit={canEdit}
             onDayCounterChange={setDayCounter}
-            pinned={theme === 'default' ? undefined : DAY_COUNTER_PIN}
+            docked={theme === 'default' ? undefined : { open: dayCounterOpen, dockTop: dayCounterDockTop, panelTop: dayCounterPanelTop, onOpenChange: setDayCounterOpen }}
           />
         )}
       </div>

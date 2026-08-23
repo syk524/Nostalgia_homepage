@@ -17,7 +17,7 @@ type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 
 function AddSessionCard() {
   return (
     <Link href="/archive/trpg/new" className="group block self-start">
-      <div className="w-full aspect-[3/4] rounded flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20">
+      <div className="w-full aspect-[3/4] rounded flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20 noir-group-hover noir-icon-hover-accent">
         <Plus size={28} />
       </div>
     </Link>
@@ -50,12 +50,18 @@ function SessionCard({ session, clickable }: { session: ListedSession; clickable
           formatDate's own small mono caption had on the old list-row
           layout this grid replaced. */}
       {session.date_range && (
-        <p className="mt-0.5 text-center text-[11px] font-mono text-ink-400 truncate w-full">
+        <p
+          className="mt-0.5 text-center text-[11px] font-mono truncate w-full"
+          style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
+        >
           {session.date_range}
         </p>
       )}
       {session.description && (
-        <p className="mt-1 text-center text-xs text-ink-400 line-clamp-2 w-full">
+        <p
+          className="mt-1 text-center text-xs line-clamp-2 w-full"
+          style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
+        >
           {session.description}
         </p>
       )}

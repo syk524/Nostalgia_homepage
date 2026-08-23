@@ -48,7 +48,8 @@ export function ArchiveSideNav() {
           <Link
             key={section.href}
             href={section.href}
-            className={`flex items-center gap-2 ${active ? 'text-ink font-medium' : 'text-ink-400'}`}
+            className={`flex items-center gap-2 ${active ? 'font-medium' : ''}`}
+            style={{ color: active ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
           >
             <ScrambleText text={section.label} />
             {active && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}

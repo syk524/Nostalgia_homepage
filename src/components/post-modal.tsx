@@ -132,7 +132,11 @@ export function PostModal({
     // so it now extends the full length of the image instead of cutting
     // off partway down. Desktop (min-[1020px]:) keeps the original
     // independently-scrolling side-by-side panes, unchanged.
-    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
+    // bg-scroll-100 here, not var(--theme-bg) — a post's own detail view
+    // deliberately keeps its normal light background regardless of the
+    // viewer's site theme (e.g. Noir's #010101), so it doesn't need its
+    // own explicit background on every other page that opens it.
+    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up bg-scroll-100">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. 1020px,
@@ -140,7 +144,7 @@ export function PostModal({
           sm:), matching gallery/page.tsx and nav.tsx's own category rail.
           No max-h/overflow-y-auto of its own below 1020px — it's part of
           the single root-level scroll there instead (see comment above). */}
-      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
+      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
         {/* Same rounded (not rounded-full) + hover:bg-[#EFEFEF] treatment
             as the link bar's own collapse/expand toggle
             (links-archive-view.tsx's "Hide/Show link list" buttons) —
@@ -151,7 +155,7 @@ export function PostModal({
           <button
             onClick={close}
             aria-label="Close"
-            className="w-8 h-8 rounded text-ink-400 hover:text-ink hover:bg-[#EFEFEF] flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover flex items-center justify-center transition-colors"
           >
             <X size={16} />
           </button>
@@ -165,7 +169,7 @@ export function PostModal({
             onClick={() => goTo(prevId)}
             disabled={!prevId || navigating}
             aria-label="Previous post"
-            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${prevId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF]' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${prevId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronLeft size={16} />
           </button>
@@ -174,7 +178,7 @@ export function PostModal({
             onClick={() => goTo(nextId)}
             disabled={!nextId || navigating}
             aria-label="Next post"
-            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${nextId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF]' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${nextId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronRight size={16} />
           </button>
@@ -187,27 +191,27 @@ export function PostModal({
             depending on a full route-level navigation transition. */}
         <div key={post.id} className="flex flex-col gap-4 animate-fade-up">
           <div className="space-y-2 pt-2">
-            <p className="text-ink-400 text-xs font-mono uppercase tracking-wide">Gallery</p>
-            <h1 className="text-2xl text-ink leading-tight">{post.title}</h1>
+            <p className="text-xs font-mono uppercase tracking-wide" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Gallery</p>
+            <h1 className="text-2xl leading-tight" style={{ color: 'var(--theme-accent)' }}>{post.title}</h1>
           </div>
 
-          <p className="text-ink-400 text-xs font-mono">{formatDate(post.created_at)}{post.is_edited ? ' · edited' : ''}</p>
+          <p className="text-xs font-mono" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>{formatDate(post.created_at)}{post.is_edited ? ' · edited' : ''}</p>
 
           <div className="space-y-3 text-sm pt-4 mt-2 border-t border-scroll-300">
             <div className="flex justify-between items-baseline gap-4">
-              <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Author</span>
-              <span className="text-ink text-right">{post.author?.display_name || post.author?.username}</span>
+              <span className="font-mono text-xs uppercase tracking-wide" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Author</span>
+              <span className="text-right" style={{ color: 'var(--theme-accent)' }}>{post.author?.display_name || post.author?.username}</span>
             </div>
             {post.category && (
               <div className="flex justify-between items-baseline gap-4">
-                <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Category</span>
+                <span className="font-mono text-xs uppercase tracking-wide" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Category</span>
                 <span className="tag">{post.category.name}</span>
               </div>
             )}
           </div>
 
           {post.body && (
-            <p className="text-ink whitespace-pre-wrap leading-relaxed text-sm pt-4 mt-2 border-t border-scroll-300">{post.body}</p>
+            <p className="whitespace-pre-wrap leading-relaxed text-sm pt-4 mt-2 border-t border-scroll-300" style={{ color: 'var(--theme-accent)' }}>{post.body}</p>
           )}
         </div>
 
