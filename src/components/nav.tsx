@@ -120,7 +120,13 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
 
   return (
     <>
-      <nav className="hidden min-[1020px]:flex font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+      {/* h-8 matches the pair detail page's back button (w-8 h-8) exactly
+          — both anchored at the same top-[3%], so without a matching box
+          height here this row's own (shorter, text-only) box centers a
+          few px above the back button's, reported directly. items-center
+          then centers the text within that shared 32px box instead of the
+          box just being taller than the glyphs need. */}
+      <nav className="hidden min-[1020px]:flex h-8 font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
         {links.map(link => (
           <Link
             key={link.href}
@@ -138,7 +144,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
         onClick={toggleMenu}
         aria-label={menuPhase === 'open' ? 'Close menu' : 'Open menu'}
         aria-expanded={menuPhase === 'open'}
-        className="flex min-[1020px]:hidden items-center gap-2 font-mono fixed right-[2.6%] top-[3%] z-[70] text-[14px] uppercase tracking-tight text-ink"
+        className="flex min-[1020px]:hidden h-8 items-center gap-2 font-mono fixed right-[2.6%] top-[3%] z-[70] text-[14px] uppercase tracking-tight text-ink"
         style={NAV_COLOR_STYLE}
       >
         <NavDot />
