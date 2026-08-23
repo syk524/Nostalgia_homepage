@@ -7,6 +7,10 @@ import { Settings, type LucideIcon } from 'lucide-react'
 // placeholder still does.
 export type DockApp = { id: string; label: string; icon: LucideIcon; requiresAuth?: boolean }
 
+// Settings itself needs no account — a guest can open it and try any
+// theme same as anyone else, it just won't be saved anywhere for them
+// (updateTheme in lib/actions/theme.ts no-ops without a signed-in user,
+// rather than writing a guest-only row nobody would ever read back).
 export const DOCK_APPS: DockApp[] = [
-  { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]

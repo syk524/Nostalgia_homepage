@@ -409,7 +409,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           />
         ))}
 
-        {theme !== 'default' && userId && (
+        {theme !== 'default' && (
           <button
             type="button"
             onClick={() => openApp('settings')}
