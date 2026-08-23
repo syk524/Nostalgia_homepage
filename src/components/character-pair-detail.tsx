@@ -80,14 +80,23 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           alignment with the hero content directly above it. No bottom
           padding either — the grid's own gap-6 between rows is already
           enough separation under a single line of stats, reported
-          separately. */}
-      <div
-        className={`description-section-cell rounded pr-6 pt-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
-        style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
-      >
-        <h3 className="text-xl min-[1020px]:text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
-        <CharacterStatsLine character={character} />
-      </div>
+          separately. Gated on sections.length — reported directly: with
+          no description sections below it, this was showing as a lone
+          name (and maybe stats) heading a description column with
+          nothing under it. This is specifically the name re-shown down
+          here for the stats line to sit under (see this function's own
+          top comment) — the hero's own catchphrase/name/quote overlay
+          above the image is untouched by this and always shows
+          regardless. */}
+      {sections.length > 0 && (
+        <div
+          className={`description-section-cell rounded pr-6 pt-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
+          style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
+        >
+          <h3 className="text-xl min-[1020px]:text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
+          <CharacterStatsLine character={character} />
+        </div>
+      )}
       {sections.map((section, sectionIdx) => (
         <div
           key={section.id}
