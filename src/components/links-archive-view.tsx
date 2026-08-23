@@ -210,7 +210,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open ${link.title} in a new tab`}
-                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
+                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all"
                   >
                     <ArrowUpRight size={13} />
                   </a>
