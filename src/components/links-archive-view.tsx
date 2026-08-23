@@ -119,6 +119,58 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             <PanelLeftClose size={15} />
           </button>
 
+          {/* Same quiet-icon-then-tinted-hover treatment as the profile
+              grid's own "add new" tile (character-pair-grid.tsx's
+              AddPairCard: text-ink-400 → hover:text-ink-600 with a
+              hover:bg-[#5C574D]/20 tint) — referenced rather than reused
+              directly since that one is a full grid tile sized to match a
+              pair card, which doesn't fit a compact sidebar list. Moved to
+              the top of the list (not the old bottom placement) so opening
+              the form doesn't feel disconnected from the button that
+              opened it. */}
+          {adding ? (
+            <form onSubmit={handleAdd} className="flex flex-col gap-2 pb-2 border-b border-scroll-300">
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Title"
+                autoFocus
+                className="input"
+              />
+              <input
+                type="url"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://…"
+                className="input"
+              />
+              {error && <p className="field-error text-xs">{error}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                  {submitting ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setError('') }}
+                  className="btn-ghost"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              aria-label="Add a link"
+              title="Add a link"
+              className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
+            >
+              <Plus size={18} />
+            </button>
+          )}
+
           <div className="flex flex-col gap-1">
             {links.length === 0 && !adding && (
               <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
@@ -156,48 +208,6 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               </div>
             ))}
           </div>
-
-          {adding ? (
-            <form onSubmit={handleAdd} className="flex flex-col gap-2 pt-4 mt-2 border-t border-scroll-300">
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Title"
-                autoFocus
-                className="input"
-              />
-              <input
-                type="url"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="https://…"
-                className="input"
-              />
-              {error && <p className="field-error text-xs">{error}</p>}
-              <div className="flex gap-2">
-                <button type="submit" disabled={submitting} className="btn-primary flex-1">
-                  {submitting ? 'Adding…' : 'Add'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAdding(false); setError('') }}
-                  className="btn-ghost"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="flex items-center gap-2 text-sm text-ink-400 hover:text-ink pt-4 mt-2 border-t border-scroll-300 transition-colors"
-            >
-              <Plus size={14} />
-              Add a link
-            </button>
-          )}
         </div>
       </div>
 
