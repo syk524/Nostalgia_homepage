@@ -45,35 +45,45 @@ function SortableLinkRow({
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
 
   return (
+    // h-8 — matches the "+ Add a link" button's own w-8 h-8 square
+    // directly above this list, rather than sizing to content (a
+    // shorter row than that button made the two feel inconsistent).
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 rounded ${selected ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
+      className={`group flex h-8 items-center gap-2 rounded ${selected ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
     >
-      {/* Same GripVertical icon/drag mechanism as gallery-grid.tsx's own
-          image-reorder handle, restyled to match this row's own
-          open-in-new-tab button (rounded, text-ink-400 default,
-          hover:bg-[#C9C9C8]) instead of that one's circular black-chip
-          look — that styling belongs to a photo-thumbnail overlay, a
-          different context from a plain list row. Always visible (not
-          opacity-0 group-hover like the arrow/delete buttons) — reported
-          directly, so the handle itself is discoverable without first
-          having to hover the row to notice reordering is possible. */}
-      <button
-        {...attributes}
-        {...listeners}
-        aria-label={`Drag to reorder ${link.title}`}
-        className="shrink-0 w-6 h-6 ml-1 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-all cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical size={13} />
-      </button>
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex-1 min-w-0 text-left px-1 py-1"
-      >
-        <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
-      </button>
+      {/* Grabber + title share their own tighter gap-1 (not the row's
+          shared gap-2) — reported directly, so the handle sits closer to
+          the text it's dragging than the row's other icon buttons sit
+          from each other. */}
+      <div className="flex flex-1 min-w-0 items-center gap-1">
+        {/* Same GripVertical icon/drag mechanism as gallery-grid.tsx's own
+            image-reorder handle, restyled to match this row's own
+            open-in-new-tab button (rounded, text-ink-400 default,
+            hover:bg-[#C9C9C8]) instead of that one's circular black-chip
+            look — that styling belongs to a photo-thumbnail overlay, a
+            different context from a plain list row. Always visible (not
+            opacity-0 group-hover like the arrow/delete buttons) —
+            reported directly, so the handle itself is discoverable
+            without first having to hover the row to notice reordering
+            is possible. */}
+        <button
+          {...attributes}
+          {...listeners}
+          aria-label={`Drag to reorder ${link.title}`}
+          className="shrink-0 w-6 h-6 ml-1 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-all cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical size={13} />
+        </button>
+        <button
+          type="button"
+          onClick={onSelect}
+          className="flex-1 min-w-0 text-left px-1 py-1"
+        >
+          <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+        </button>
+      </div>
       <a
         href={link.url}
         target="_blank"
