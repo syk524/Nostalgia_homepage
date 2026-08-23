@@ -155,13 +155,13 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
         <div
           className={`t-nav-menu min-[1020px]:hidden fixed inset-0 z-[65] bg-scroll-100 flex flex-col justify-center px-6 ${menuPhase === 'open' ? 'is-open' : 'is-closing'}`}
         >
-          <nav className="font-mono flex flex-col items-start gap-8 text-[28px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+          <nav className="font-mono flex flex-col items-start gap-4 text-[16px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
             {links.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={closeMenuImmediately}
-                className={`flex items-center gap-3 ${isActiveLink(link.href) ? 'underline underline-offset-4' : ''}`}
+                className={`flex items-center gap-2 ${isActiveLink(link.href) ? 'underline underline-offset-4' : ''}`}
               >
                 <NavDot />
                 <ScrambleText text={link.label} />
