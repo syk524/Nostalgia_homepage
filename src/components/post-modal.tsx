@@ -71,11 +71,17 @@ export function PostModal({
     // gallery/page.tsx for why vw, not %. Nav is mounted once at the
     // root layout, sits above this modal's z-50 via its own z-[60], and
     // never remounts between posts, so it's the same nav everywhere rather
-    // than something owned by this modal. bg-scroll-100 matches the root
-    // layout's own page background, so this gutter fully covers the
-    // gallery grid behind the modal (previously left transparent, which
-    // let grid thumbnails show through and clip against the modal edge)
-    // while the category links still render on top via Nav's z-[60].
+    // than something owned by this modal.
+    //
+    // Transparent, not bg-scroll-100 — reported directly, matching
+    // links-archive-view.tsx's own root wrapper. Unlike that one, this
+    // modal is a true parallel-route intercept (@modal/(.)[id]) sitting
+    // on top of the real, still-mounted gallery grid page — bg-scroll-100
+    // was added here specifically because an earlier transparent version
+    // let those grid thumbnails show through and clip messily against
+    // the modal edge and Nav's category links. Reintroducing that
+    // tradeoff was a deliberate choice, not an oversight — revisit if it
+    // turns out to look wrong in practice.
     // Below 1020px, the whole modal is one scrolling page (root itself
     // overflow-y-auto, sidebar and image area both in normal flow) instead
     // of the sidebar and image each owning a separate clipped scroll pane —
@@ -87,7 +93,7 @@ export function PostModal({
     // so it now extends the full length of the image instead of cutting
     // off partway down. Desktop (min-[1020px]:) keeps the original
     // independently-scrolling side-by-side panes, unchanged.
-    <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
+    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. 1020px,
