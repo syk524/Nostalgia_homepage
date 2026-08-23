@@ -296,7 +296,12 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 />
                 {error && <p className="field-error text-xs">{error}</p>}
                 <div className="flex gap-2">
-                  <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                  {/* justify-center — .btn-primary itself has no
+                      justify-content (fine where it's only as wide as its
+                      own content elsewhere), but flex-1 here stretches it
+                      to fill the row, which left the text sitting at the
+                      button's left edge instead of centered. */}
+                  <button type="submit" disabled={submitting} className="btn-primary flex-1 justify-center">
                     {submitting ? 'Adding…' : 'Add'}
                   </button>
                   <button
