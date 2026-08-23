@@ -48,13 +48,23 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
           (aria-label/aria-expanded already reflect whichever action that
           tap will now perform). Only the shimmer animation itself pauses
           while open, via caption-dot-open below, so an already-open dot
-          reads as "on" rather than still pulsing "tap me". */}
+          reads as "on" rather than still pulsing "tap me". z-10 is load-
+          bearing, not decorative: .t-caption-popout's own `transform`
+          (for its open/close scale animation) creates a stacking context,
+          which paints it above this absolute-positioned button by default
+          once it goes pointer-events:auto on open — since its padding-box
+          (pt-7 below) physically overlaps this same top-0/right-0-or-
+          left-0 16×16 corner, that swallowed the tap meant for the dot
+          and the info couldn't be closed by tapping it again, reported
+          directly. z-10 gives the button an explicit stacking order the
+          popout's default (z-index:auto) can't beat, regardless of which
+          one is later in the DOM. */}
       <button
         type="button"
         onClick={onToggle}
         aria-label={isOpen ? `Hide ${character.name}’s info` : `Show ${character.name}’s info`}
         aria-expanded={isOpen}
-        className={`caption-dot min-[1020px]:hidden absolute top-0 w-4 h-4 rounded-full pointer-events-auto ${isOpen ? 'caption-dot-open' : ''} ${align === 'right' ? 'right-0' : 'left-0'}`}
+        className={`caption-dot min-[1020px]:hidden absolute top-0 z-10 w-4 h-4 rounded-full pointer-events-auto ${isOpen ? 'caption-dot-open' : ''} ${align === 'right' ? 'right-0' : 'left-0'}`}
         style={{ background: character.name_underline_color, boxShadow: `0 0 10px ${character.name_underline_color}` }}
       />
       {/* min-[1020px]:!-prefixed utilities beat .t-caption-popout's own
