@@ -15,6 +15,7 @@ export const PAIR_FONTS = {
   antroVectraBold: { label: 'Antro Vectra Bold (Eng)', family: 'var(--font-antro-vectra-bold), sans-serif' },
   kunstlerScript: { label: 'Kunstler Script (Eng)', family: 'var(--font-kunstler-script), cursive' },
   hotra: { label: 'Hotra (Eng)', family: 'var(--font-hotra), sans-serif' },
+  popstar: { label: 'Popstar (Eng)', family: 'var(--font-popstar), sans-serif' },
 } as const
 
 export type PairFontKey = keyof typeof PAIR_FONTS

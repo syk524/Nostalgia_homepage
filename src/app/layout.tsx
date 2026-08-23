@@ -82,6 +82,12 @@ const hotra = localFont({
   display: 'swap',
 })
 
+const popstar = localFont({
+  src: './fonts/Popstar-Regular.otf',
+  variable: '--font-popstar',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nustalgio',
   description: 'A place to keep and share what matters',
@@ -91,7 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}
