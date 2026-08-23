@@ -84,24 +84,29 @@ function SortableLinkRow({
           <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
         </button>
       </div>
-      <a
-        href={link.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open ${link.title} in a new tab`}
-        className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all"
-      >
-        <ArrowUpRight size={13} />
-      </a>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deleting}
-        aria-label={`Delete ${link.title}`}
-        className="shrink-0 w-6 h-6 mr-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
-      >
-        <X size={13} />
-      </button>
+      {/* Open + delete share their own tighter gap-1 (not the row's
+          shared gap-2) — reported directly, same tightening approach as
+          the grabber/title pair above. */}
+      <div className="flex items-center gap-1">
+        <a
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${link.title} in a new tab`}
+          className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all"
+        >
+          <ArrowUpRight size={13} />
+        </a>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label={`Delete ${link.title}`}
+          className="shrink-0 w-6 h-6 mr-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
+        >
+          <X size={13} />
+        </button>
+      </div>
     </div>
   )
 }
