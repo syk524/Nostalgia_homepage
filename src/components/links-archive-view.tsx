@@ -60,7 +60,18 @@ function SortableLinkRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex h-8 items-center gap-2 rounded ${selected ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
+      // bg-[#FFFFFF] is the mobile default (row sits directly over the
+      // page background there otherwise, unlike desktop's own opaque
+      // sidebar panel behind it) — reported directly. min-[1020px]:
+      // reverts to the existing transparent/selected/hover-tinted
+      // behavior, unchanged. bg-transparent has to live inside the
+      // ternary's own else-branch, not applied unconditionally alongside
+      // it — two min-[1020px]:bg-* utilities active on the same element
+      // at once compete over the same CSS property, and Tailwind's own
+      // generation order (not the order they're written in this string)
+      // decides the winner, which silently made the selected row's own
+      // #EFEFEF lose to the always-on transparent utility.
+      className={`group flex h-8 items-center gap-2 rounded bg-[#FFFFFF] ${selected ? 'min-[1020px]:bg-[#EFEFEF]' : 'min-[1020px]:bg-transparent min-[1020px]:hover:bg-[#EFEFEF]'}`}
     >
       {/* Grabber + title share their own tighter gap-1 (not the row's
           shared gap-2) — reported directly, so the handle sits closer to
