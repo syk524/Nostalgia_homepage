@@ -1,7 +1,13 @@
 'use client'
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowUpRight, ExternalLink, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
-import { createLink, deleteLink } from '@/lib/actions/archive-links'
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ArrowUpRight, ExternalLink, GripVertical, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
+import { createLink, deleteLink, reorderLinks } from '@/lib/actions/archive-links'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { ArchiveLink } from '@/types/database'
 
@@ -20,6 +26,71 @@ function getEmbedUrl(url: string): string {
   const [, type, id] = match
   if (type === 'forms') return `https://docs.google.com/forms/d/${id}/viewform?embedded=true`
   return `https://docs.google.com/${type}/d/${id}/${type === 'presentation' ? 'embed' : 'preview'}`
+}
+
+// Drag-reorder for the EXPANDED list only — the collapsed rail's own
+// icon list stays static, since a drag gesture on a 32px icon column
+// with no visible label to confirm what's being moved isn't a usable
+// affordance the way it is with a full title row.
+function SortableLinkRow({
+  link, selected, onSelect, onDelete, deleting,
+}: {
+  link: ArchiveLink
+  selected: boolean
+  onSelect: () => void
+  onDelete: () => void
+  deleting: boolean
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: link.id })
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-2 rounded ${selected ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
+    >
+      {/* Same GripVertical icon/drag mechanism as gallery-grid.tsx's own
+          image-reorder handle, restyled to match this row's own
+          open-in-new-tab button (rounded, text-ink-400 default,
+          hover:bg-[#C9C9C8]) instead of that one's circular black-chip
+          look — that styling belongs to a photo-thumbnail overlay, a
+          different context from a plain list row. */}
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label={`Drag to reorder ${link.title}`}
+        className="shrink-0 w-6 h-6 ml-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical size={13} />
+      </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex-1 min-w-0 text-left px-2 py-2"
+      >
+        <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+      </button>
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${link.title} in a new tab`}
+        className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all"
+      >
+        <ArrowUpRight size={13} />
+      </a>
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={deleting}
+        aria-label={`Delete ${link.title}`}
+        className="shrink-0 w-6 h-6 mr-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
+      >
+        <X size={13} />
+      </button>
+    </div>
+  )
 }
 
 // Mirrors post-modal.tsx's own sidebar + large-content-pane layout
@@ -63,6 +134,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   const [showSlowNotice, setShowSlowNotice] = useState(false)
 
   const selected = links.find(l => l.id === selectedId) ?? null
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
     setIframeLoading(true)
@@ -95,6 +167,21 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
       if (selectedId === link.id) setSelectedId(next[0]?.id ?? null)
       return next
     })
+  }
+
+  // Simpler than gallery-grid.tsx's own handleDragEnd — this is a plain
+  // vertical list of uniform-height rows, not a variable-height masonry
+  // grid, so the standard event.over (via closestCenter) is reliable
+  // here and doesn't need that file's own collisions-array workaround.
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = links.findIndex(l => l.id === active.id)
+    const newIndex = links.findIndex(l => l.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const reordered = arrayMove(links, oldIndex, newIndex)
+    setLinks(reordered)
+    await reorderLinks(reordered.map(l => l.id))
   }
 
   return (
@@ -193,38 +280,26 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               {links.length === 0 && !adding && (
                 <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
               )}
-              {links.map(link => (
-                <div
-                  key={link.id}
-                  className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(link.id)}
-                    className="flex-1 min-w-0 text-left px-2 py-2"
-                  >
-                    <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
-                  </button>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open ${link.title} in a new tab`}
-                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all"
-                  >
-                    <ArrowUpRight size={13} />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(link)}
-                    disabled={deletingId === link.id}
-                    aria-label={`Delete ${link.title}`}
-                    className="shrink-0 w-6 h-6 mr-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
+              {/* Explicit id — without one, dnd-kit auto-generates its a11y
+                  description id from a module-level counter, which can land
+                  on a different number for the server render vs. the
+                  client's first render and trip a hydration mismatch on
+                  aria-describedby (same reasoning as gallery-grid.tsx's
+                  own DndContext). */}
+              <DndContext id="archive-links-list" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={links.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                  {links.map(link => (
+                    <SortableLinkRow
+                      key={link.id}
+                      link={link}
+                      selected={selectedId === link.id}
+                      onSelect={() => setSelectedId(link.id)}
+                      onDelete={() => handleDelete(link)}
+                      deleting={deletingId === link.id}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
         ) : (

@@ -3,10 +3,12 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 // New links land at the TOP of the list — position is just "insertion
-// order" here (no drag-reorder UI yet, unlike posts' own reorderPosts),
-// and the list itself is fetched ascending by position (see
+// order" here, and the list itself is fetched ascending by position (see
 // archive/links/page.tsx), so the simplest correct value is one below
-// whatever the lowest position currently is.
+// whatever the lowest position currently is. A drag-reorder (see
+// reorderLinks below) renormalizes every position to a clean 0-based
+// sequence, so this keeps working correctly afterward too — the next
+// new link still lands at position -1, one below the new 0.
 export async function createLink(title: string, url: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,6 +48,23 @@ export async function deleteLink(linkId: string) {
 
   const { error } = await supabase.from('archive_links').delete().eq('id', linkId)
   if (error) return { error: error.message }
+
+  revalidatePath('/archive/links')
+  return { success: true }
+}
+
+// Same shape as gallery.ts's own reorderPosts — every id's position is
+// just its index in the array the caller already dragged into place.
+export async function reorderLinks(orderedIds: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const results = await Promise.all(
+    orderedIds.map((id, position) => supabase.from('archive_links').update({ position }).eq('id', id))
+  )
+  const failed = results.find(r => r.error)
+  if (failed?.error) return { error: failed.error.message }
 
   revalidatePath('/archive/links')
   return { success: true }
