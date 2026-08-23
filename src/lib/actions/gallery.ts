@@ -1,9 +1,22 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getPostDetail } from '@/lib/post-detail'
 
 type PostImageInput = { url: string; focalX: number; focalY: number }
 type PostInput = { title: string; body: string; images: PostImageInput[]; categoryId: string }
+
+// getPostDetail itself is a plain server-only function (called directly by
+// both gallery/[id]/page.tsx and the intercepted @modal route) — this just
+// exposes it as a callable action for post-modal.tsx's own prev/next, which
+// fetches a new post's data client-side instead of navigating through
+// Next's router, so the whole modal doesn't remount on every click (see
+// that component's own comment for why the remount mattered).
+export async function fetchPostDetail(id: string) {
+  const detail = await getPostDetail(id)
+  if (!detail) return { error: 'Post not found.' }
+  return { success: true, ...detail }
+}
 
 export async function createPost(input: PostInput) {
   const { title, body, images, categoryId } = input

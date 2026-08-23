@@ -1,17 +1,17 @@
 'use client'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import { DeletePostButton } from '@/app/(main)/gallery/[id]/delete-button'
 import { getLastListView } from '@/lib/list-view-tracker'
+import { fetchPostDetail } from '@/lib/actions/gallery'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 type FullPost = Post & { author: Profile; images: PostImage[]; category: Category }
 
 export function PostModal({
-  post, canEdit, prevId, nextId,
+  post: initialPost, canEdit: initialCanEdit, prevId: initialPrevId, nextId: initialNextId,
 }: {
   post: FullPost
   canEdit: boolean
@@ -20,8 +20,47 @@ export function PostModal({
 }) {
   const router = useRouter()
   const [closing, setClosing] = useState(false)
+  // Prev/next used to be plain <Link>s — a real Next.js navigation to a
+  // new /gallery/[id]. That's an intercepted parallel route
+  // (@modal/(.)[id]), and confirmed directly (a marker attribute set on
+  // the root element, gone after clicking prev/next): Next fully remounts
+  // this whole component on every dynamic-segment change, which is what
+  // made browsing feel like "the whole thing refreshing" rather than a
+  // smooth content swap. Holding the current post in local state instead,
+  // fetched client-side via fetchPostDetail (see lib/actions/gallery.ts),
+  // keeps this one component instance mounted across prev/next — only the
+  // key={post.id} content wrappers below remount now, which is what
+  // actually lets their own animate-fade-up entrance mean something.
+  const [current, setCurrent] = useState({ post: initialPost, canEdit: initialCanEdit, prevId: initialPrevId, nextId: initialNextId })
+  const [navigating, setNavigating] = useState(false)
+  const { post, canEdit, prevId, nextId } = current
   const images = [...(post.images ?? [])].sort((a, b) => a.position - b.position)
   const backdrop = images[0]?.image_url
+
+  // Bypasses Next's router entirely (a plain history.replaceState, not
+  // router.replace) — router.replace would re-trigger the exact same
+  // full-remount navigation this function exists to avoid. The one real
+  // tradeoff: Next's own usePathname() (nav.tsx's category highlighting)
+  // goes stale, still reporting the URL from before this call. Checked
+  // directly — nav.tsx only tests the general route SHAPE
+  // (/^\/gallery\/(?!new$)[^/]+$/, "some post detail page", not which
+  // post), which a stale-but-still-/gallery/{some-other-id} pathname
+  // still matches identically, so this doesn't change what it highlights.
+  // replaceState (not pushState) to match the old Link replace={true} —
+  // browsing prev/next shouldn't pile up its own history entries.
+  async function goTo(id: string | null | undefined) {
+    if (!id || navigating) return
+    setNavigating(true)
+    const result = await fetchPostDetail(id)
+    setNavigating(false)
+    // Falls back to a real navigation on error (e.g. the post was deleted
+    // between clicks) — that rare path can afford to be a full page
+    // transition; it doesn't need to be smooth, it needs to be correct
+    // (a real 404, not a silently stuck modal).
+    if (!('post' in result) || !result.post) { router.push(`/gallery/${id}`); return }
+    setCurrent({ post: result.post, canEdit: result.canEdit, prevId: result.prevId, nextId: result.nextId })
+    window.history.replaceState(null, '', `/gallery/${id}`)
+  }
 
   // Always jump straight to the actual gallery list the user last saw —
   // router.back() depends on exactly how this popover was reached (edit →
@@ -52,12 +91,12 @@ export function PostModal({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') close()
-      if (e.key === 'ArrowLeft' && prevId) router.replace(`/gallery/${prevId}`)
-      if (e.key === 'ArrowRight' && nextId) router.replace(`/gallery/${nextId}`)
+      if (e.key === 'ArrowLeft' && prevId) goTo(prevId)
+      if (e.key === 'ArrowRight' && nextId) goTo(nextId)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [router, prevId, nextId])
+  }, [prevId, nextId, navigating])
 
   // After every hook above — an early return before them would call a
   // different number of hooks between the open and closing renders,
@@ -102,59 +141,75 @@ export function PostModal({
           No max-h/overflow-y-auto of its own below 1020px — it's part of
           the single root-level scroll there instead (see comment above). */}
       <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
+        {/* Same rounded (not rounded-full) + hover:bg-[#EFEFEF] treatment
+            as the link bar's own collapse/expand toggle
+            (links-archive-view.tsx's "Hide/Show link list" buttons) —
+            reported directly. Disabled prev/next (no prevId/nextId) keeps
+            its own separate text-scroll-300/cursor-default state,
+            unrelated to this hover restyle. */}
         <div className="flex items-center gap-1 -ml-2">
           <button
             onClick={close}
             aria-label="Close"
-            className="w-8 h-8 rounded-full hover:bg-scroll-200 text-ink flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded text-ink-400 hover:text-ink hover:bg-[#EFEFEF] flex items-center justify-center transition-colors"
           >
             <X size={16} />
           </button>
-          <Link
-            href={prevId ? `/gallery/${prevId}` : '#'}
-            replace={!!prevId}
+          {/* Plain buttons now, not <Link>s — see goTo's own comment
+              above for why (a real Link navigation is exactly the
+              full-remount this whole change avoids). disabled (not just
+              a style/cursor swap) blocks both click and keyboard
+              activation outright when there's nowhere to go. */}
+          <button
+            type="button"
+            onClick={() => goTo(prevId)}
+            disabled={!prevId || navigating}
             aria-label="Previous post"
-            aria-disabled={!prevId}
-            onClick={e => { if (!prevId) e.preventDefault() }}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${prevId ? 'hover:bg-scroll-200 text-ink' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${prevId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF]' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronLeft size={16} />
-          </Link>
-          <Link
-            href={nextId ? `/gallery/${nextId}` : '#'}
-            replace={!!nextId}
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(nextId)}
+            disabled={!nextId || navigating}
             aria-label="Next post"
-            aria-disabled={!nextId}
-            onClick={e => { if (!nextId) e.preventDefault() }}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${nextId ? 'hover:bg-scroll-200 text-ink' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${nextId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF]' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronRight size={16} />
-          </Link>
+          </button>
         </div>
 
-        <div className="space-y-2 pt-2">
-          <p className="text-ink-400 text-xs font-mono uppercase tracking-wide">Gallery</p>
-          <h1 className="text-2xl text-ink leading-tight">{post.title}</h1>
-        </div>
-
-        <p className="text-ink-400 text-xs font-mono">{formatDate(post.created_at)}{post.is_edited ? ' · edited' : ''}</p>
-
-        <div className="space-y-3 text-sm pt-4 mt-2 border-t border-scroll-300">
-          <div className="flex justify-between items-baseline gap-4">
-            <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Author</span>
-            <span className="text-ink text-right">{post.author?.display_name || post.author?.username}</span>
+        {/* Keyed on post.id, separately from the nav row above and the
+            edit/delete row below — reported directly, so clicking prev/
+            next re-triggers this block's own animate-fade-up entrance
+            (a smooth swap) without remounting the buttons around it or
+            depending on a full route-level navigation transition. */}
+        <div key={post.id} className="flex flex-col gap-4 animate-fade-up">
+          <div className="space-y-2 pt-2">
+            <p className="text-ink-400 text-xs font-mono uppercase tracking-wide">Gallery</p>
+            <h1 className="text-2xl text-ink leading-tight">{post.title}</h1>
           </div>
-          {post.category && (
+
+          <p className="text-ink-400 text-xs font-mono">{formatDate(post.created_at)}{post.is_edited ? ' · edited' : ''}</p>
+
+          <div className="space-y-3 text-sm pt-4 mt-2 border-t border-scroll-300">
             <div className="flex justify-between items-baseline gap-4">
-              <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Category</span>
-              <span className="tag">{post.category.name}</span>
+              <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Author</span>
+              <span className="text-ink text-right">{post.author?.display_name || post.author?.username}</span>
             </div>
+            {post.category && (
+              <div className="flex justify-between items-baseline gap-4">
+                <span className="text-ink-400 font-mono text-xs uppercase tracking-wide">Category</span>
+                <span className="tag">{post.category.name}</span>
+              </div>
+            )}
+          </div>
+
+          {post.body && (
+            <p className="text-ink whitespace-pre-wrap leading-relaxed text-sm pt-4 mt-2 border-t border-scroll-300">{post.body}</p>
           )}
         </div>
-
-        {post.body && (
-          <p className="text-ink whitespace-pre-wrap leading-relaxed text-sm pt-4 mt-2 border-t border-scroll-300">{post.body}</p>
-        )}
 
         {canEdit && (
           <div className="flex gap-2 pt-4 mt-auto border-t border-scroll-300">
@@ -191,7 +246,14 @@ export function PostModal({
           overrides shrink-0 back on at that breakpoint, restoring the
           original bounded/clipped desktop pane. */}
       {images.length > 0 && (
-        <div className="relative overflow-hidden shrink-0 min-[1020px]:flex-1 min-[1020px]:min-h-0">
+        // key={post.id} — same reasoning as the metadata block above:
+        // remounts just this pane's own content on prev/next so its
+        // animate-fade-up entrance replays as a smooth swap, instead of
+        // the images instantly snapping to the new post's images (they'd
+        // already remount individually via their own key={img.id}, since
+        // a new post's image ids necessarily differ — but with no
+        // transition on that swap, it happened as a hard cut).
+        <div key={post.id} className="relative overflow-hidden shrink-0 min-[1020px]:flex-1 min-[1020px]:min-h-0 animate-fade-up">
           {/* Transparent, not bg-scroll-200 — reported directly. Whatever
               shows through (the blurred backdrop img still covers most of
               it at 70% opacity once loaded; before that, or wherever it
