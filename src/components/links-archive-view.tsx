@@ -262,8 +262,16 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             {/* Each link collapses to its initial in a small circle — there's
                 no per-link icon/favicon to fall back to instead — with the
                 full title as a hover tooltip, mirroring how the expanded
-                list's own title text works but compressed to fit the rail. */}
-            <div className="flex w-full flex-col items-center gap-2 overflow-y-auto">
+                list's own title text works but compressed to fit the rail.
+                Deliberately NOT overflow-y-auto: that non-visible Y axis
+                would force this div's own X axis to compute as auto too
+                (the same spec quirk documented on the outer wrapper above),
+                clipping every link's tooltip even though the outer wrapper
+                is visible — exactly what broke here before. A very long
+                link list will just extend past the rail without its own
+                scrollbar until the outer root's own overflow-hidden clips
+                it; revisit if that turns out to matter in practice. */}
+            <div className="flex w-full flex-col items-center gap-2">
               {links.map(link => (
                 <button
                   key={link.id}
