@@ -233,7 +233,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               type="button"
               onClick={() => setSidebarOpen(true)}
               aria-label="Show link list"
-              className="group relative w-8 h-8 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
+              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
             >
               <PanelLeftOpen size={16} />
               <span
@@ -270,7 +270,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                   type="button"
                   onClick={() => setSelectedId(link.id)}
                   aria-label={link.title}
-                  className={`group relative w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                  className={`group relative w-8 h-8 shrink-0 rounded flex items-center justify-center text-xs font-medium transition-colors ${
                     selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-scroll-200/60'
                   }`}
                 >
