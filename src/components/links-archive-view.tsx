@@ -228,7 +228,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           always-on overflow-y-auto here was clipping the tooltips even
           though overflow-x was "visible". */}
       <div
-        className={`shrink-0 border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full border-b min-[1020px]:border-b-0 min-[1020px]:border-r ${
+        className={`shrink-0 border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full border-b min-[1020px]:border-b-0 min-[1020px]:border-r min-[1020px]:border-l ${
           sidebarOpen
             ? 'w-full min-[1020px]:w-[250px] max-h-[80vh] min-[1020px]:max-h-full opacity-100 overflow-hidden min-[1020px]:overflow-y-auto'
             : 'w-full min-[1020px]:w-14 max-h-0 min-[1020px]:max-h-full opacity-0 min-[1020px]:opacity-100 overflow-visible'
@@ -253,7 +253,12 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 pair card, which doesn't fit a compact sidebar list. Moved to
                 the top of the list (not the old bottom placement) so opening
                 the form doesn't feel disconnected from the button that
-                opened it. */}
+                opened it. Wrapped together with the list below in their
+                own gap-2 (8px) column — unified with the list's own
+                item-to-item gap (also 8px, was 4px) so the "+"-to-first-
+                item spacing (was 16px, inherited from the outer column's
+                gap-4) now matches item-to-item spacing exactly. */}
+            <div className="flex flex-col gap-2">
             {adding ? (
               <form onSubmit={handleAdd} className="flex flex-col gap-2 pb-2 border-b border-scroll-300">
                 <input
@@ -297,7 +302,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               </button>
             )}
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {links.length === 0 && !adding && (
                 <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
               )}
@@ -321,6 +326,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                   ))}
                 </SortableContext>
               </DndContext>
+            </div>
             </div>
           </div>
         ) : (
