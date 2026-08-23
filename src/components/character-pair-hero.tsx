@@ -72,8 +72,25 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
         {character.catchphrase && (
           // letter-spacing doesn't accept percentages in CSS — 140% is
           // expressed as 1.4em, i.e. 140% of the font size, the standard
-          // reading of a percentage tracking value.
-          <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
+          // reading of a percentage tracking value. letter-spacing adds
+          // its gap after every character, including the last one — with
+          // text-align:right (align === 'right', inherited from the outer
+          // wrapper) that trailing 1.4em counts toward the line's measured
+          // width, so the browser right-aligns to a box that's 1.4em wider
+          // than the visible glyphs and the actual text reads as sitting
+          // short of the name/quote/keywords' own flush-right edge below
+          // it, reported directly. A matching -1.4em margin-right cancels
+          // that phantom trailing gap so the last glyph itself lands flush
+          // right; left-aligned is unaffected (the trailing gap falls
+          // after the text either way, off to the right, not before it).
+          <p
+            className="drop-shadow"
+            style={{
+              fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color,
+              fontSize: 11, letterSpacing: '1.4em', textShadow,
+              marginRight: align === 'right' ? '-1.4em' : undefined,
+            }}
+          >{character.catchphrase}</p>
         )}
         <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
         {/* Per-character color, not the catchphrase divider's old fixed
