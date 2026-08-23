@@ -78,7 +78,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
     const result = await createLink(title, url)
     setSubmitting(false)
     if (result.error || !result.link) { setError(result.error ?? 'Could not add the link.'); return }
-    setLinks(prev => [...prev, result.link])
+    setLinks(prev => [result.link, ...prev])
     setSelectedId(result.link.id)
     setTitle('')
     setUrl('')

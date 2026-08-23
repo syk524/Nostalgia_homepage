@@ -2,10 +2,11 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
-// New links land at the end of the list — position is just "insertion
+// New links land at the TOP of the list — position is just "insertion
 // order" here (no drag-reorder UI yet, unlike posts' own reorderPosts),
-// so the simplest correct value is one past whatever the highest position
-// currently is.
+// and the list itself is fetched ascending by position (see
+// archive/links/page.tsx), so the simplest correct value is one below
+// whatever the lowest position currently is.
 export async function createLink(title: string, url: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,13 +15,13 @@ export async function createLink(title: string, url: string) {
   if (!title.trim()) return { error: 'Title is required.' }
   if (!url.trim()) return { error: 'URL is required.' }
 
-  const { data: last } = await supabase
+  const { data: first } = await supabase
     .from('archive_links')
     .select('position')
-    .order('position', { ascending: false })
+    .order('position', { ascending: true })
     .limit(1)
     .maybeSingle()
-  const position = (last?.position ?? -1) + 1
+  const position = (first?.position ?? 1) - 1
 
   // Returns the whole row (not just id) — the caller keeps its own local
   // copy of the list for instant UI feedback (see links-archive-view.tsx)
