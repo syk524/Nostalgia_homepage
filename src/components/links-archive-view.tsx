@@ -196,7 +196,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               {links.map(link => (
                 <div
                   key={link.id}
-                  className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-scroll-200/60'}`}
+                  className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-[#EFEFEF]'}`}
                 >
                   <button
                     type="button"
@@ -339,11 +339,11 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 <DotMatrixLoader size={28} busyCursor={false} />
                 {showSlowNotice && (
                   <p className="max-w-[240px] text-xs text-ink-400">
-                    Taking a while — a private Google Doc or Sheet can hang here while it tries to sign you in.{' '}
+                    로딩이 오래 걸리고 있어요 — 비공개 Google 문서나 시트는 로그인 시도 중 멈출 수 있습니다. 대신{' '}
                     <a href={selected.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-ink">
-                      Open it in a new tab
-                    </a>{' '}
-                    instead.
+                      새 탭에서 열어보세요
+                    </a>
+                    .
                   </p>
                 )}
               </div>
