@@ -9,24 +9,26 @@ import { motion, useReducedMotion } from 'framer-motion'
 // actually uses and framer-motion (already installed) has the same API.
 const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const
 
-export function DotMatrixLoader({ size = 32, speed = 1, color = '#5C574D' }: {
+export function DotMatrixLoader({ size = 32, speed = 1, color = '#5C574D', busyCursor = true }: {
   size?: number
   speed?: number
   color?: string
+  // Every other call site in this app (loading.tsx's route boundary, and
+  // each form's own closing/loading state) is a full-page replacement,
+  // where mounting this really does mean "the whole page is busy" — see
+  // custom-cursor.tsx, which reads this flag to override whatever's under
+  // the pointer with its own page-wide "Busy" cursor. An inline use next
+  // to still-interactive UI (e.g. an iframe preview loading while the
+  // rest of the page stays clickable) isn't that, so it opts out.
+  busyCursor?: boolean
 }) {
   const reduce = useReducedMotion() ?? false
 
-  // Every call site in this app (loading.tsx's route boundary, and each
-  // form's own closing/loading state) is a full-page replacement — there
-  // is no smaller inline use of this component anywhere — so mounting it
-  // really does mean "the whole page is busy" for as long as it's on
-  // screen. custom-cursor.tsx reads this flag to override whatever's
-  // under the pointer with its own "busy" state, matching the Windows
-  // "Busy" cursor's own page-wide (not per-element) semantics.
   useEffect(() => {
+    if (!busyCursor) return
     document.body.dataset.cursorBusy = 'true'
     return () => { delete document.body.dataset.cursorBusy }
-  }, [])
+  }, [busyCursor])
 
   const n = 3
   const gap = size * 0.14

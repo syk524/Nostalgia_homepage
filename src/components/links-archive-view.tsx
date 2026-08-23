@@ -1,7 +1,8 @@
 'use client'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { ExternalLink, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
 import { createLink, deleteLink } from '@/lib/actions/archive-links'
+import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { ArchiveLink } from '@/types/database'
 
 // Google's own edit/view URLs (docs.google.com/{type}/d/{id}/edit) send
@@ -47,8 +48,16 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Tracks the CURRENTLY MOUNTED iframe, not the selected link — reset
+  // whenever selectedId changes so switching links shows the loader again
+  // instead of holding the previous link's "loaded" state over the new src.
+  const [iframeLoading, setIframeLoading] = useState(true)
 
   const selected = links.find(l => l.id === selectedId) ?? null
+
+  useEffect(() => {
+    setIframeLoading(true)
+  }, [selectedId])
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
@@ -209,12 +218,23 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           </a>
         )}
         {selected ? (
-          <iframe
-            key={selected.id}
-            src={getEmbedUrl(selected.url)}
-            title={selected.title}
-            className="w-full h-full min-h-[50vh] min-[1020px]:min-h-0 border-0"
-          />
+          <>
+            {/* Sits over the iframe rather than replacing it, so the frame
+                is already mounted and loading underneath by the time the
+                loader fades out — no extra round trip after onLoad fires. */}
+            {iframeLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-scroll-200">
+                <DotMatrixLoader size={28} busyCursor={false} />
+              </div>
+            )}
+            <iframe
+              key={selected.id}
+              src={getEmbedUrl(selected.url)}
+              title={selected.title}
+              onLoad={() => setIframeLoading(false)}
+              className="w-full h-full min-h-[50vh] min-[1020px]:min-h-0 border-0"
+            />
+          </>
         ) : (
           <p className="text-ink-400 text-sm px-6 text-center">
             {links.length === 0 ? 'Add a link to preview it here.' : 'Select a link to preview it here.'}
