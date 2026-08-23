@@ -386,14 +386,15 @@ export function DockMusicWidget({
           them the instant they'd be visible would pop; swapping them
           off-screen instead doesn't. No React `key` here either — same
           reasoning as the pill. */}
-      {/* translate-x-[calc(-50%+120px)] (mobile only) — 40px further left
-          than desktop's own +160px offset, reported directly: only the
-          tag itself, not the pill/outer wrapper, which stays at its
-          original right-6 position (a previous pass moved the whole
-          wrapper instead, which wasn't what was asked). Expressed as
-          Tailwind classes now instead of a single plain inline transform,
-          since only this piece needs to vary by breakpoint. */}
-      <div className={`absolute left-1/2 bottom-0 translate-x-[calc(-50%+120px)] min-[1020px]:translate-x-[calc(-50%+160px)] ${collapsed ? 'z-30' : 'z-20'}`}>
+      {/* translate-x-[calc(-50%+110px)] (mobile only) — 50px further left
+          than desktop's own +160px offset (40px, then another 10px on
+          top, both reported directly): only the tag itself, not the
+          pill/outer wrapper, which stays at its original right-6
+          position (a previous pass moved the whole wrapper instead,
+          which wasn't what was asked). Expressed as Tailwind classes
+          rather than a single plain inline transform, since only this
+          piece needs to vary by breakpoint. */}
+      <div className={`absolute left-1/2 bottom-0 translate-x-[calc(-50%+110px)] min-[1020px]:translate-x-[calc(-50%+160px)] ${collapsed ? 'z-30' : 'z-20'}`}>
         <button
           onClick={handleToggleCollapse}
           aria-label={collapsed ? 'Show music player' : 'Hide music player'}
