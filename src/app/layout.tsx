@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue } from 'next/font/google'
 import localFont from 'next/font/local'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
+import { CustomCursor } from '@/components/custom-cursor'
 import './globals.css'
 
 const notoSansKR = Noto_Sans_KR({
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         {children}
         <SoundPlayer />
+        <CustomCursor />
       </body>
     </html>
   )

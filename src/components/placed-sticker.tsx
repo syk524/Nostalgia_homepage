@@ -133,6 +133,11 @@ export function PlacedSticker({ sticker, panX, panY, selected, justPlaced, onSel
             <X size={12} />
           </button>
 
+          {/* Hit box grown to w-8/h-8 (32px), well past the visible 20px
+              dot — reported directly: both handles were hard to land on
+              precisely. The dot itself stays its original size in a
+              nested inner div so the visual design doesn't change, only
+              what's actually clickable/touchable around it. */}
           <div
             onPointerDown={beginHandle('rotate')}
             onPointerMove={onPointerMove}
@@ -140,11 +145,17 @@ export function PlacedSticker({ sticker, panX, panY, selected, justPlaced, onSel
             onPointerCancel={endGesture}
             aria-label="Tilt sticker"
             style={{ transform: `translateX(-50%) scale(${1 / scale})` }}
-            className="pointer-events-auto absolute -top-7 left-1/2 w-5 h-5 rounded-full bg-scroll-50 border border-ink-500/50 flex items-center justify-center cursor-alias touch-none"
+            className="pointer-events-auto absolute -top-8 left-1/2 w-8 h-8 flex items-center justify-center cursor-alias touch-none"
           >
-            <RotateCw size={10} className="text-ink-500" />
+            <div className="w-5 h-5 rounded-full bg-scroll-50 border border-ink-500/50 flex items-center justify-center">
+              <RotateCw size={10} className="text-ink-500" />
+            </div>
           </div>
 
+          {/* Same hit-box-only growth as the tilt handle above — w-7/h-7
+              (28px), centered on the sticker's own corner so it stays
+              anchored in the same spot, with the original 14px dot
+              nested inside. */}
           <div
             onPointerDown={beginHandle('resize')}
             onPointerMove={onPointerMove}
@@ -152,8 +163,10 @@ export function PlacedSticker({ sticker, panX, panY, selected, justPlaced, onSel
             onPointerCancel={endGesture}
             aria-label="Resize sticker"
             style={{ transform: `scale(${1 / scale})` }}
-            className="pointer-events-auto absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-scroll-50 border border-ink-500/50 cursor-nwse-resize touch-none"
-          />
+            className="pointer-events-auto absolute -bottom-3.5 -right-3.5 w-7 h-7 flex items-center justify-center cursor-nwse-resize touch-none"
+          >
+            <div className="w-3.5 h-3.5 rounded-full bg-scroll-50 border border-ink-500/50" />
+          </div>
         </div>
       )}
     </div>

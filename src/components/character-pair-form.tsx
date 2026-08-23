@@ -510,7 +510,7 @@ function ProfileFieldset({
           <label className="label">HTML file</label>
           <div className="flex items-center gap-3">
             <span className="text-sm text-ink-500">{profile.customHtmlFileName || 'No file chosen'}</span>
-            <label className="btn-ghost text-xs cursor-pointer">
+            <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingCustomHtml}>
               {profile.uploadingCustomHtml ? 'Uploading…' : 'Choose file'}
               <input type="file" accept=".html,text/html" onChange={handleCustomHtmlChange} className="sr-only" disabled={profile.uploadingCustomHtml} />
             </label>
@@ -528,7 +528,7 @@ function ProfileFieldset({
                   : <span className="text-2xl text-scroll-400">◯</span>
                 }
               </div>
-              <label className="btn-ghost text-xs cursor-pointer">
+              <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingPairImage}>
                 {profile.uploadingPairImage ? 'Uploading…' : 'Choose image'}
                 <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
               </label>
@@ -569,7 +569,7 @@ function ProfileFieldset({
                   : <span className="text-2xl text-scroll-400">◯</span>
                 }
               </div>
-              <label className="btn-ghost text-xs cursor-pointer">
+              <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingBackground}>
                 {profile.uploadingBackground ? 'Uploading…' : 'Choose image'}
                 <input type="file" accept="image/*" onChange={handleBackgroundChange} className="sr-only" disabled={profile.uploadingBackground} />
               </label>
@@ -674,7 +674,7 @@ function CharacterFieldset({
               : <span className="text-xl text-scroll-400">◯</span>
             }
           </div>
-          <label className="btn-ghost text-xs cursor-pointer">
+          <label className="btn-ghost text-xs cursor-pointer" aria-busy={state.uploadingProfileImage}>
             {state.uploadingProfileImage ? 'Uploading…' : 'Choose image'}
             <input type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" disabled={state.uploadingProfileImage} />
           </label>

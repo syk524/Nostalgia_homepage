@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 
 // Adapted from beui.dev's Loader component's "dot-matrix" variant
@@ -14,6 +15,19 @@ export function DotMatrixLoader({ size = 32, speed = 1, color = '#5C574D' }: {
   color?: string
 }) {
   const reduce = useReducedMotion() ?? false
+
+  // Every call site in this app (loading.tsx's route boundary, and each
+  // form's own closing/loading state) is a full-page replacement — there
+  // is no smaller inline use of this component anywhere — so mounting it
+  // really does mean "the whole page is busy" for as long as it's on
+  // screen. custom-cursor.tsx reads this flag to override whatever's
+  // under the pointer with its own "busy" state, matching the Windows
+  // "Busy" cursor's own page-wide (not per-element) semantics.
+  useEffect(() => {
+    document.body.dataset.cursorBusy = 'true'
+    return () => { delete document.body.dataset.cursorBusy }
+  }, [])
+
   const n = 3
   const gap = size * 0.14
   const dot = (size - gap * (n - 1)) / n

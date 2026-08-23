@@ -149,6 +149,7 @@ export function AddTrackForm({
           <button
             onClick={() => fileRef.current?.click()}
             disabled={busy || !title.trim() || !artist.trim()}
+            aria-busy={busy}
             className="w-full justify-center flex items-center gap-2 py-2 rounded-full text-scroll-100 text-sm font-medium border border-scroll-100/20 hover:border-scroll-100/40 hover:bg-scroll-100/5 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {busy ? 'Uploading…' : 'Choose MP3 file'}

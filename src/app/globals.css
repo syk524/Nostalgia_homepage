@@ -743,3 +743,26 @@ input[type="color"]::-moz-color-swatch {
 .pair-desc-content em {
   @apply italic;
 }
+
+/* custom-cursor.tsx — toggled on <html> only while the canvas overlay is
+   actually drawing something at the pointer (fine-pointer devices, a
+   mapped state, mouse inside the viewport). Left off for anything the
+   overlay doesn't handle (resize handles, `alias`, touch devices, …) so
+   the real OS cursor shows through there instead of nothing at all. `*`
+   is needed because plenty of elements set their own `cursor` value
+   (cursor-pointer, cursor-grab, …) that would otherwise out-specificity
+   a plain `html { cursor: none }`. */
+.custom-cursor-active,
+.custom-cursor-active * {
+  cursor: none !important;
+}
+/* The handful of "Uploading…" buttons/labels across the app (background
+   upload, custom HTML upload, avatar upload, MP3 upload, …) — marked
+   aria-busy for its own correct semantic reason (this element is
+   updating asynchronously), which custom-cursor.tsx's
+   stateForComputedCursor then picks up the same way it reads every other
+   cursor-pointer/cursor-grab/etc. utility already in the app, rather
+   than needing its own special-cased DOM check. */
+[aria-busy="true"] {
+  cursor: progress;
+}

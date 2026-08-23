@@ -52,7 +52,7 @@ export function ProfileForm({ profile, onSaved }: { profile: Profile; onSaved?: 
               : <span className="text-2xl text-scroll-400">◯</span>
             }
           </div>
-          <label className="btn-ghost text-xs cursor-pointer">
+          <label className="btn-ghost text-xs cursor-pointer" aria-busy={uploading}>
             {uploading ? 'Uploading…' : 'Choose image'}
             <input type="file" accept="image/*" onChange={handleIconUpload}
               className="sr-only" disabled={uploading} />
