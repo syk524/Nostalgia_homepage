@@ -126,11 +126,11 @@
   .pill {
     @apply inline-flex items-center gap-1 px-3 py-1 rounded
            text-xs font-mono uppercase tracking-wide
-           border border-scroll-300 text-ink-500 bg-[#D7D3CB]
-           hover:border-ink-300 hover:text-ink transition-colors duration-150;
+           border border-scroll-300 text-ink bg-[#C9C9C8]
+           hover:border-ink-300 hover:text-scroll-100 hover:bg-ink transition-colors duration-150;
   }
   .pill-active {
-    @apply bg-ink text-white border-ink hover:border-ink hover:text-white;
+    @apply bg-ink text-scroll-100 border-ink hover:border-ink hover:text-scroll-100;
   }
   .pill-dashed {
     @apply border-dashed text-scroll-500 hover:text-ink-500 hover:border-scroll-400;
