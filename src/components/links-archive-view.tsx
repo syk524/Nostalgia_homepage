@@ -55,19 +55,22 @@ function SortableLinkRow({
           open-in-new-tab button (rounded, text-ink-400 default,
           hover:bg-[#C9C9C8]) instead of that one's circular black-chip
           look — that styling belongs to a photo-thumbnail overlay, a
-          different context from a plain list row. */}
+          different context from a plain list row. Always visible (not
+          opacity-0 group-hover like the arrow/delete buttons) — reported
+          directly, so the handle itself is discoverable without first
+          having to hover the row to notice reordering is possible. */}
       <button
         {...attributes}
         {...listeners}
         aria-label={`Drag to reorder ${link.title}`}
-        className="shrink-0 w-6 h-6 ml-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-[#C9C9C8] transition-all cursor-grab active:cursor-grabbing touch-none"
+        className="shrink-0 w-6 h-6 ml-1 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-all cursor-grab active:cursor-grabbing touch-none"
       >
         <GripVertical size={13} />
       </button>
       <button
         type="button"
         onClick={onSelect}
-        className="flex-1 min-w-0 text-left px-2 py-2"
+        className="flex-1 min-w-0 text-left px-1 py-1"
       >
         <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
       </button>
@@ -214,12 +217,12 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
         }`}
       >
         {sidebarOpen ? (
-          <div className="w-full min-[1020px]:w-[250px] p-6 flex flex-col gap-4">
+          <div className="w-full min-[1020px]:w-[250px] px-3 py-6 flex flex-col gap-4">
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
               aria-label="Hide link list"
-              className="self-end -mr-1 -mt-1 w-7 h-7 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-colors"
+              className="self-end -mr-1 -mt-1 w-7 h-7 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] transition-colors"
             >
               <PanelLeftClose size={15} />
             </button>
@@ -315,7 +318,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 type="button"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Show link list"
-                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-colors"
+                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] transition-colors"
               >
                 <PanelLeftOpen size={16} />
               </button>
