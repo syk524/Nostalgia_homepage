@@ -25,8 +25,14 @@ const BACKGROUND_HEIGHT = 140
 // therefore the amount of the pair image's bottom edge that gets cropped)
 // now grows along with the column width instead of staying pinned, up to
 // MAX_THUMBNAIL_HEIGHT, past which it stops growing so very wide columns
-// don't blow the crop area out indefinitely.
-const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/2] max-h-[320px]'
+// don't blow the crop area out indefinitely. Below 1020px the grid is a
+// single full-width column (this file's own GRID_CLASSES), so aspect-[5/2]
+// there made the box — and with it the background photo, which already
+// fills the whole box below the desktop breakpoint since BACKGROUND_HEIGHT
+// (140px) exceeds a mobile-width box's own height — noticeably tall;
+// aspect-[5/1] (half the height, same width) is what was asked for,
+// reported directly. min-[1020px]:aspect-[5/2] keeps desktop unchanged.
+const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/1] min-[1020px]:aspect-[5/2] max-h-[320px]'
 
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   const primaryProfile = pair.pair_profiles[0]
