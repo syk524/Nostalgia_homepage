@@ -545,6 +545,57 @@
   .thought-tt { transition: none !important; }
 }
 
+/* Right-of-trigger variant — same --tt-* tokens/timing, colors, shadow
+   and size as .thought-tt above, just positioned to the side instead of
+   above. For links-archive-view.tsx's collapsed sidebar rail, where
+   icons stack vertically and "above" (the default variant's own
+   position) would overlap the icon above it instead of floating clear.
+   A full separate ruleset rather than a second class layered onto
+   .thought-tt itself — that would lose the specificity fight against
+   .thought-tt-wrap:hover .thought-tt's own transform, since both
+   target the same .thought-tt class at higher specificity than a
+   second class could override. Reuses .thought-tt-wrap as-is (its own
+   rule is just position:relative — already side-agnostic). 12px gap
+   (not .thought-tt's own 8px) — reported directly, more breathing room
+   between a link's icon and its name here specifically. */
+.thought-tt-side {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translate(0, -50%) scale(var(--tt-scale));
+  transform-origin: 0% 50%;
+  z-index: 20;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #faf9f7;
+  color: #2f2f2e;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 6px 0 rgba(0, 0, 0, 0.05),
+    0 4px 42px 0 rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    transform var(--tt-out-dur) var(--tt-out-ease);
+}
+.thought-tt-wrap:hover .thought-tt-side,
+.thought-tt-trigger:focus-visible + .thought-tt-side {
+  opacity: 1;
+  transform: translate(0, -50%) scale(1);
+  transition-duration: var(--tt-in-dur);
+  transition-timing-function: var(--tt-in-ease);
+  transition-delay: var(--tt-delay);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thought-tt-side { transition: none !important; }
+}
+
 /* Adapted from Transitions.dev's "Menu dropdown" recipe, renamed to this
    app's own class prefix — for character-pair-hero.tsx's mobile-only
    catchphrase popout (below sm:, a character's catchphrase/name/quote/

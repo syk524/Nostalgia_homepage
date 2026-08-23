@@ -229,35 +229,35 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           </div>
         ) : (
           <div className="hidden min-[1020px]:flex w-14 h-full flex-col items-center gap-3 py-6">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Show link list"
-              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
-            >
-              <PanelLeftOpen size={16} />
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+            {/* Tooltip is .thought-tt-side (globals.css), the same
+                scale+fade transition/style as the "SETTINGS" desk-icon
+                tooltip on the landing page (desk-app-icon.tsx's own
+                .thought-tt), just repositioned to the side instead of
+                above — see that CSS rule's own comment for why it's a
+                separate class rather than a modifier on .thought-tt. */}
+            <div className="thought-tt-wrap">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Show link list"
+                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
               >
-                Show link list
-              </span>
-            </button>
+                <PanelLeftOpen size={16} />
+              </button>
+              <span aria-hidden="true" className="thought-tt-side">Show link list</span>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => { setSidebarOpen(true); setAdding(true) }}
-              aria-label="Add a link"
-              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#2F2F2E]/20 transition-colors"
-            >
-              <Plus size={16} />
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+            <div className="thought-tt-wrap">
+              <button
+                type="button"
+                onClick={() => { setSidebarOpen(true); setAdding(true) }}
+                aria-label="Add a link"
+                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#2F2F2E]/20 transition-colors"
               >
-                Add a link
-              </span>
-            </button>
+                <Plus size={16} />
+              </button>
+              <span aria-hidden="true" className="thought-tt-side">Add a link</span>
+            </div>
 
             {/* Each link collapses to its initial in a small circle — there's
                 no per-link icon/favicon to fall back to instead — with the
@@ -273,23 +273,19 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 it; revisit if that turns out to matter in practice. */}
             <div className="flex w-full flex-col items-center gap-2">
               {links.map(link => (
-                <button
-                  key={link.id}
-                  type="button"
-                  onClick={() => setSelectedId(link.id)}
-                  aria-label={link.title}
-                  className={`group relative w-8 h-8 shrink-0 rounded flex items-center justify-center text-xs font-medium transition-colors ${
-                    selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-scroll-200/60'
-                  }`}
-                >
-                  {(link.title.trim().charAt(0) || '?').toUpperCase()}
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+                <div key={link.id} className="thought-tt-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(link.id)}
+                    aria-label={link.title}
+                    className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-xs font-medium transition-colors ${
+                      selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-scroll-200/60'
+                    }`}
                   >
-                    {link.title}
-                  </span>
-                </button>
+                    {(link.title.trim().charAt(0) || '?').toUpperCase()}
+                  </button>
+                  <span aria-hidden="true" className="thought-tt-side">{link.title}</span>
+                </div>
               ))}
             </div>
           </div>
