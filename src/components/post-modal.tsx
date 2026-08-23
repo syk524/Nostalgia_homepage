@@ -185,7 +185,11 @@ export function PostModal({
           overrides shrink-0 back on at that breakpoint, restoring the
           original bounded/clipped desktop pane. */}
       {images.length > 0 && (
-        <div className="relative overflow-hidden shrink-0 min-[1020px]:flex-1 min-[1020px]:min-h-0 bg-scroll-200">
+        <div className="relative overflow-hidden shrink-0 min-[1020px]:flex-1 min-[1020px]:min-h-0">
+          {/* Transparent, not bg-scroll-200 — reported directly. Whatever
+              shows through (the blurred backdrop img still covers most of
+              it at 70% opacity once loaded; before that, or wherever it
+              doesn't reach, this is just the page behind the modal now). */}
           {backdrop && (
             <img
               src={backdrop}
