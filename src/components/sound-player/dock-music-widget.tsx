@@ -169,10 +169,7 @@ export function DockMusicWidget({
     // modal's z-50 overlay — same fixed-chrome precedent, so the player
     // stays visible and usable even while a post is open, not covered
     // by the modal's full-screen bg-scroll-100 background.
-    // right-[44px] (mobile only, 20px further left than the desktop
-    // right-6/24px) — reported directly. min-[1020px]:right-6 keeps
-    // desktop exactly as it was.
-    <div className="fixed bottom-0 right-[44px] min-[1020px]:right-6 z-[60]">
+    <div className="fixed bottom-0 right-6 z-[60]">
       {/* Only this inner wrapper carries the pill's own slide+fade —
           see .animate-pill-collapse/-expand in globals.css. Expanded
           rests at translateY(-42px): the tag's own height (32px) plus
@@ -389,7 +386,14 @@ export function DockMusicWidget({
           them the instant they'd be visible would pop; swapping them
           off-screen instead doesn't. No React `key` here either — same
           reasoning as the pill. */}
-      <div className={`absolute left-1/2 bottom-0 ${collapsed ? 'z-30' : 'z-20'}`} style={{ transform: 'translateX(calc(-50% + 160px))' }}>
+      {/* translate-x-[calc(-50%+120px)] (mobile only) — 40px further left
+          than desktop's own +160px offset, reported directly: only the
+          tag itself, not the pill/outer wrapper, which stays at its
+          original right-6 position (a previous pass moved the whole
+          wrapper instead, which wasn't what was asked). Expressed as
+          Tailwind classes now instead of a single plain inline transform,
+          since only this piece needs to vary by breakpoint. */}
+      <div className={`absolute left-1/2 bottom-0 translate-x-[calc(-50%+120px)] min-[1020px]:translate-x-[calc(-50%+160px)] ${collapsed ? 'z-30' : 'z-20'}`}>
         <button
           onClick={handleToggleCollapse}
           aria-label={collapsed ? 'Show music player' : 'Hide music player'}
