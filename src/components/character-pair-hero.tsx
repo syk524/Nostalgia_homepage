@@ -43,20 +43,30 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
     // each other (same class of bug as animate-fade-up's own translateY
     // elsewhere in this app).
     <div className={`relative max-w-[650px] ${align === 'right' ? 'text-right' : 'text-left'}`} style={{ transform: `translateY(${character.caption_offset_y}px)` }}>
+      {/* Stays fully visible/clickable whether open or closed — reported
+          directly, so tapping the same dot again is what closes the info
+          (aria-label/aria-expanded already reflect whichever action that
+          tap will now perform). Only the shimmer animation itself pauses
+          while open, via caption-dot-open below, so an already-open dot
+          reads as "on" rather than still pulsing "tap me". */}
       <button
         type="button"
         onClick={onToggle}
         aria-label={isOpen ? `Hide ${character.name}’s info` : `Show ${character.name}’s info`}
         aria-expanded={isOpen}
-        className={`caption-dot min-[1020px]:hidden absolute top-0 w-4 h-4 rounded-full pointer-events-auto transition-opacity duration-150 ${align === 'right' ? 'right-0' : 'left-0'} ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`caption-dot min-[1020px]:hidden absolute top-0 w-4 h-4 rounded-full pointer-events-auto ${isOpen ? 'caption-dot-open' : ''} ${align === 'right' ? 'right-0' : 'left-0'}`}
         style={{ background: character.name_underline_color, boxShadow: `0 0 10px ${character.name_underline_color}` }}
       />
       {/* min-[1020px]:!-prefixed utilities beat .t-caption-popout's own
           (non-!important) opacity/transform/pointer-events at that
           breakpoint and up, regardless of is-open/is-closing — that's what
-          keeps desktop's always-visible behavior completely unchanged. */}
+          keeps desktop's always-visible behavior completely unchanged.
+          pt-7 (mobile only) reserves room for the dot above so the info
+          unfolds below it instead of overlapping it — desktop's dot is
+          hidden entirely (min-[1020px]:hidden above), so it gets no top
+          padding of its own. */}
       <div
-        className={`t-caption-popout min-[1020px]:!opacity-100 min-[1020px]:!scale-100 min-[1020px]:!pointer-events-auto ${isOpen ? 'is-open' : isClosing ? 'is-closing' : ''}`}
+        className={`t-caption-popout pt-7 min-[1020px]:pt-0 min-[1020px]:!opacity-100 min-[1020px]:!scale-100 min-[1020px]:!pointer-events-auto ${isOpen ? 'is-open' : isClosing ? 'is-closing' : ''}`}
         data-origin={align === 'right' ? 'top-right' : 'top-left'}
       >
         {character.catchphrase && (

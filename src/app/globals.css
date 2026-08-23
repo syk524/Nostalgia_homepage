@@ -571,6 +571,13 @@
 .caption-dot {
   animation: caption-dot-shimmer 1.8s ease-in-out infinite;
 }
+/* While its info is open, the dot itself is the "close" control — a
+   steady full-opacity dot reads as "currently on" rather than still
+   inviting a tap the way the idle shimmer does. */
+.caption-dot.caption-dot-open {
+  animation: none;
+  opacity: 1;
+}
 @media (prefers-reduced-motion: reduce) {
   .caption-dot { animation: none; opacity: 0.85; }
 }
