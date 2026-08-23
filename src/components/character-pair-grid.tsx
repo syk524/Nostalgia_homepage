@@ -72,17 +72,20 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // picked for the detail page — the thumbnail is a fixed,
             // consistent design element, not a per-profile customization
             // surface. Noto Sans KR's light (300) weight, loaded in
-            // layout.tsx specifically for this. Was anchored off the box's
-            // own bottom (bottom: BACKGROUND_HEIGHT + 6, sitting just
-            // above the background band's own top edge) back when the
-            // band only covered part of a taller box — now that the band
-            // fills the whole box at both this aspect ratio and the
-            // mobile one below it, that same math places the credit
-            // above the box's own top edge entirely (invisible), reported
-            // directly. Anchored from the top instead — top-right of the
-            // image, plainly, regardless of box height. */}
+            // layout.tsx specifically for this. Anchored off the box's own
+            // bottom, sitting a fixed 6px above the background band's own
+            // top edge — bottom-[46px] on mobile (the band's own h-10 + 6)
+            // and bottom-[146px] on desktop (the band's own 140px + 6).
+            // Was briefly anchored from the top instead, back when the
+            // band filled the whole box on mobile and this same
+            // above-the-band math would've landed above the box's own top
+            // edge entirely (invisible) — now that the band leaves
+            // headroom again on both breakpoints (see that div's own
+            // comment), this sits directly above the background image
+            // itself again, not just floating near the top of the whole
+            // (now much taller) container, reported directly. */}
             <span
-              className="absolute right-1.5 top-1.5 z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              className="absolute right-1.5 bottom-[46px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
               style={{ fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
             >
               ©{primaryProfile.illustration_source}
