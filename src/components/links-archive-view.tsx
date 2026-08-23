@@ -1,8 +1,25 @@
 'use client'
 import { useState, type FormEvent } from 'react'
-import { PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
+import { ExternalLink, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
 import { createLink, deleteLink } from '@/lib/actions/archive-links'
 import type { ArchiveLink } from '@/types/database'
+
+// Google's own edit/view URLs (docs.google.com/{type}/d/{id}/edit) send
+// X-Frame-Options and refuse to render in anyone else's iframe — the
+// /preview (or /embed for Slides) path is the one Google built FOR
+// embedding, and unlike the edit URL it still renders inside a frame
+// for a signed-out or unauthorized viewer: it shows Google's own
+// sign-in / request-access screen inline instead of just going blank.
+// Links to anything other than Docs/Sheets/Slides/Forms pass through
+// unchanged — some of those may still refuse to frame, which is what
+// the "Open in new tab" fallback below is for.
+function getEmbedUrl(url: string): string {
+  const match = url.match(/^https:\/\/docs\.google\.com\/(document|spreadsheets|presentation|forms)\/d\/([a-zA-Z0-9_-]+)/)
+  if (!match) return url
+  const [, type, id] = match
+  if (type === 'forms') return `https://docs.google.com/forms/d/${id}/viewform?embedded=true`
+  return `https://docs.google.com/${type}/d/${id}/${type === 'presentation' ? 'embed' : 'preview'}`
+}
 
 // Mirrors post-modal.tsx's own sidebar + large-content-pane layout
 // (fixed inset-0, bg-scroll-50 sidebar, min-[1020px]:pl clearing
@@ -159,10 +176,12 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           post-modal.tsx shows one: what's being previewed here is
           whichever link the sidebar has selected, which is arbitrary
           external content rather than something this app hosts itself.
-          Some sites refuse to be framed (X-Frame-Options/CSP) and will
-          just render blank inside the iframe — an inherent limitation of
-          previewing arbitrary third-party URLs this way, not something
-          fixable from this side. */}
+          Google Docs/Sheets/Slides/Forms links get rewritten to their
+          embeddable URL (see getEmbedUrl above); anything else that still
+          refuses to be framed (X-Frame-Options/CSP) just renders blank —
+          the "Open in new tab" button is the fallback for that case,
+          always visible rather than only appearing after a failed load,
+          since a blocked frame can't be detected from this side. */}
       <div className="relative flex-1 min-h-0 bg-scroll-200 flex items-center justify-center">
         {/* Always mounted so it fades in/out in step with the sidebar's own
             collapse instead of popping in the instant the list finishes
@@ -178,10 +197,21 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
         >
           <PanelLeftOpen size={16} />
         </button>
+        {selected && (
+          <a
+            href={selected.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-colors"
+          >
+            Open in new tab
+            <ExternalLink size={13} />
+          </a>
+        )}
         {selected ? (
           <iframe
             key={selected.id}
-            src={selected.url}
+            src={getEmbedUrl(selected.url)}
             title={selected.title}
             className="w-full h-full min-h-[50vh] min-[1020px]:min-h-0 border-0"
           />
