@@ -1,6 +1,6 @@
 'use client'
 import { useState, type FormEvent } from 'react'
-import { Plus, X } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
 import { createLink, deleteLink } from '@/lib/actions/archive-links'
 import type { ArchiveLink } from '@/types/database'
 
@@ -19,6 +19,11 @@ import type { ArchiveLink } from '@/types/database'
 export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[] }) {
   const [links, setLinks] = useState(initialLinks)
   const [selectedId, setSelectedId] = useState<string | null>(initialLinks[0]?.id ?? null)
+  // Closing the list just hides that pane and lets the preview take the
+  // full width instead — reported directly, referencing a clean sidebar
+  // reference's own show/hide toggle for the general idea (a small icon
+  // button, not any of that reference's own specific styling/markup).
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -56,7 +61,17 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
 
   return (
     <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
+      {sidebarOpen && (
       <div className="w-full min-[1020px]:w-96 shrink-0 min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Hide link list"
+          className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
+        >
+          <PanelLeftClose size={15} />
+        </button>
+
         <div className="flex flex-col gap-1">
           {links.length === 0 && !adding && (
             <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
@@ -129,6 +144,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           </button>
         )}
       </div>
+      )}
 
       {/* Selected-link preview — an iframe, not a fixed image the way
           post-modal.tsx shows one: what's being previewed here is
@@ -139,6 +155,19 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           previewing arbitrary third-party URLs this way, not something
           fixable from this side. */}
       <div className="relative flex-1 min-h-0 bg-scroll-200 flex items-center justify-center">
+        {/* Only rendered while the list is hidden — otherwise the same
+            control living in the sidebar (above) is the one place to
+            toggle it, not two. */}
+        {!sidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Show link list"
+            className="absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-colors"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
         {selected ? (
           <iframe
             key={selected.id}
