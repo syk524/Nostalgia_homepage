@@ -128,8 +128,13 @@ export default async function TrpgListPage() {
             the editor via the star button on any non-avatar image, see
             TrpgImageView in trpg-session-editor.tsx) stands in for a book's
             own jacket art, with the session's title as the caption below
-            it in place of a book's "Chapter" label. */}
-        <div className="grid grid-cols-2 min-[1020px]:grid-cols-4 gap-x-8 gap-y-12">
+            it in place of a book's "Chapter" label. gap-x-4 gap-y-6
+            (mobile) — smaller than the desktop gap-x-8/gap-y-12, reported
+            directly: with only 2 columns instead of 4, the same wide gaps
+            read as excessive whitespace between adjacent covers on a
+            phone screen. min-[1020px]:gap-x-8/gap-y-12 keeps desktop
+            unchanged. */}
+        <div className="grid grid-cols-2 min-[1020px]:grid-cols-4 gap-x-4 gap-y-6 min-[1020px]:gap-x-8 min-[1020px]:gap-y-12">
           {(sessions as ListedSession[] ?? []).map(session => (
             <SessionCard key={session.id} session={session} clickable={canEdit} />
           ))}
