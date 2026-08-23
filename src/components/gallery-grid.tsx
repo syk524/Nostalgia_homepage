@@ -89,7 +89,7 @@ function SortablePostCard({ post }: { post: GalleryPost }) {
             {...attributes}
             {...listeners}
             aria-label="Drag to reorder"
-            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white/80 hover:text-white flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+            className="absolute top-2 right-2 w-6 h-6 rounded bg-black/50 text-white/80 hover:text-white flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
           >
             <GripVertical size={13} />
           </button>
