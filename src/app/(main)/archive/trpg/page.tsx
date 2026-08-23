@@ -23,6 +23,55 @@ function AddSessionCard() {
   )
 }
 
+// A session's own post is editor/admin-only (see [slug]/page.tsx) — for
+// anyone else, the card renders as a plain non-interactive div instead of
+// a Link, reported directly: clicking through to a 404 read as broken,
+// where an inert card reads as "there's nothing more to see here."
+function SessionCard({ session, clickable }: { session: ListedSession; clickable: boolean }) {
+  const inner = (
+    <>
+      <div className={`w-full aspect-[3/4] transition-all duration-200 overflow-hidden rounded bg-scroll-100 ${clickable ? 'group-hover:-translate-y-1' : ''}`}>
+        {session.cover_url ? (
+          <img src={session.cover_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-scroll-300 text-scroll-400 text-3xl">◯</div>
+        )}
+      </div>
+      <p
+        className="mt-3 text-center text-[15px] tracking-[0.02em] text-ink truncate w-full"
+        style={{ fontFamily: 'var(--font-chosun-nm), Georgia, serif' }}
+      >
+        {session.title}
+      </p>
+      {/* Both freeform plain text (see EditSessionForm's own comment on
+          why) — smaller and muted, sitting under the title rather than
+          competing with it for the reader's eye, same relationship
+          formatDate's own small mono caption had on the old list-row
+          layout this grid replaced. */}
+      {session.date_range && (
+        <p className="mt-0.5 text-center text-[11px] font-mono text-ink-400 truncate w-full">
+          {session.date_range}
+        </p>
+      )}
+      {session.description && (
+        <p className="mt-1 text-center text-xs text-ink-400 line-clamp-2 w-full">
+          {session.description}
+        </p>
+      )}
+    </>
+  )
+
+  if (clickable) {
+    return (
+      <Link href={`/archive/trpg/${session.slug}`} className="group flex flex-col items-center">
+        {inner}
+      </Link>
+    )
+  }
+
+  return <div className="flex flex-col items-center cursor-default">{inner}</div>
+}
+
 // Viewing is public (see archive/layout.tsx) — canEdit gates just the
 // AddSessionCard tile below, same pattern as gallery-grid.tsx's own
 // canEdit-gated AddPostTile.
@@ -61,36 +110,7 @@ export default async function TrpgListPage() {
             it in place of a book's "Chapter" label. */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12">
           {(sessions as ListedSession[] ?? []).map(session => (
-            <Link key={session.id} href={`/archive/trpg/${session.slug}`} className="group flex flex-col items-center">
-              <div className="w-full aspect-[3/4] group-hover:-translate-y-1 transition-all duration-200 overflow-hidden rounded bg-scroll-100">
-                {session.cover_url ? (
-                  <img src={session.cover_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-scroll-300 text-scroll-400 text-3xl">◯</div>
-                )}
-              </div>
-              <p
-                className="mt-3 text-center text-[15px] tracking-[0.02em] text-ink truncate w-full"
-                style={{ fontFamily: 'var(--font-chosun-nm), Georgia, serif' }}
-              >
-                {session.title}
-              </p>
-              {/* Both freeform plain text (see EditSessionForm's own
-                  comment on why) — smaller and muted, sitting under the
-                  title rather than competing with it for the reader's eye,
-                  same relationship formatDate's own small mono caption had
-                  on the old list-row layout this grid replaced. */}
-              {session.date_range && (
-                <p className="mt-0.5 text-center text-[11px] font-mono text-ink-400 truncate w-full">
-                  {session.date_range}
-                </p>
-              )}
-              {session.description && (
-                <p className="mt-1 text-center text-xs text-ink-400 line-clamp-2 w-full">
-                  {session.description}
-                </p>
-              )}
-            </Link>
+            <SessionCard key={session.id} session={session} clickable={canEdit} />
           ))}
           {canEdit && <AddSessionCard />}
         </div>
