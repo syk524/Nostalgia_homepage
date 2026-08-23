@@ -51,7 +51,16 @@ function CategoryLink({ href, hardNav, className, children }: {
 // unchanged, even when a post is open; the category links below are just
 // conditionally shown extra content on the same persistent component,
 // not a separate nav.
-export function Nav({ profile, categories }: { profile: Profile | null; categories: Category[] }) {
+export function Nav({ profile, categories, categoryPostCounts, totalPostCount }: {
+  profile: Profile | null
+  categories: Category[]
+  // Post counts per category (desktop-only rail below — the mobile
+  // inline pills in gallery/page.tsx deliberately don't get these,
+  // reported directly). Keyed by category id, not name — matches the
+  // id postCategoryIds groups by in layout.tsx.
+  categoryPostCounts: Record<string, number>
+  totalPostCount: number
+}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const onGallery = pathname === '/gallery' || pathname.startsWith('/gallery/')
@@ -187,7 +196,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
               hardNav only kicks in on a post-detail path — see
               CategoryLink's own comment for why. */}
           <CategoryLink href="/gallery" hardNav={onPostDetail} className={`flex items-center gap-2 ${!activeCategory ? 'text-ink font-medium' : 'text-ink-400'}`}>
-            <ScrambleText text="All" />
+            <span><ScrambleText text="All" /> ({totalPostCount})</span>
             {!activeCategory && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
           </CategoryLink>
           {categories.map(cat => (
@@ -197,7 +206,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
               hardNav={onPostDetail}
               className={`flex items-center gap-2 ${activeCategory === cat.name ? 'text-ink font-medium' : 'text-ink-400'}`}
             >
-              <ScrambleText text={cat.name} />
+              <span><ScrambleText text={cat.name} /> ({categoryPostCounts[cat.id] ?? 0})</span>
               {activeCategory === cat.name && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
             </CategoryLink>
           ))}

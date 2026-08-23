@@ -49,7 +49,11 @@ export default async function HomePage() {
       />
 
       <Suspense fallback={null}>
-        <Nav profile={profile} categories={[]} />
+        {/* categoryPostCounts/totalPostCount only matter for the gallery
+            category rail, which never renders here (onGallery is false
+            on the homepage) — empty/0 placeholders, same as the already-
+            empty categories array above. */}
+        <Nav profile={profile} categories={[]} categoryPostCounts={{}} totalPostCount={0} />
       </Suspense>
     </div>
   )
