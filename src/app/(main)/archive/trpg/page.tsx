@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { ArchiveSectionTabs } from '@/components/archive-side-nav'
 import type { TrpgSession } from '@/types/database'
 
 type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 'description' | 'cover_url'>
@@ -85,20 +86,32 @@ export default async function TrpgListPage() {
     ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
+  // Matches archive/layout.tsx's own isAdmin gate on ArchiveSideNav — the
+  // TRPG/Links rail (and its mobile ArchiveSectionTabs counterpart below)
+  // stays admin-only, reported directly, even though the list itself and
+  // canEdit are broader.
+  const isAdmin = profile?.role === 'admin'
 
   return (
     // Same breakout as profile/page.tsx: escapes the shared <main>'s
     // centered max-w-5xl so this list fills the rest of the screen width
-    // instead of stopping at 1024px, with sm:pl clearing the same
-    // side-nav gutter (ArchiveSideNav's own left-[2.6%]) so rows never
-    // sit under it. animate-fade-up has to stay off this outer div and
-    // live on the inner one instead — its keyframe sets `transform:
-    // translateY(...)`, which as a plain CSS animation would replace the
-    // whole `transform` property and cancel out this div's own
-    // -translate-x-1/2 (see profile/page.tsx and character-pair-detail.tsx
-    // for the same fix).
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 sm:pl-[calc(2.6vw+159px)]">
+    // instead of stopping at 1024px, with min-[1020px]:pl clearing the
+    // same side-nav gutter (ArchiveSideNav's own left-[2.6%]) so rows
+    // never sit under it — 1020px, this site's own mobile/desktop
+    // breakpoint, not Tailwind's default sm: (640px). animate-fade-up has
+    // to stay off this outer div and live on the inner one instead — its
+    // keyframe sets `transform: translateY(...)`, which as a plain CSS
+    // animation would replace the whole `transform` property and cancel
+    // out this div's own -translate-x-1/2 (see profile/page.tsx and
+    // character-pair-detail.tsx for the same fix).
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
       <div className="animate-fade-up space-y-8">
+        {/* Mobile counterpart to ArchiveSideNav's fixed rail (hidden below
+            1020px there) — same "pills at the top of the list" placement
+            gallery/page.tsx uses for its own category filters. Admin-gated
+            to match the rail it stands in for. */}
+        {isAdmin && <ArchiveSectionTabs />}
+
         {!sessions?.length && (
           <p className="text-ink-500">No sessions logged yet — back up the first one.</p>
         )}
@@ -108,7 +121,7 @@ export default async function TrpgListPage() {
             TrpgImageView in trpg-session-editor.tsx) stands in for a book's
             own jacket art, with the session's title as the caption below
             it in place of a book's "Chapter" label. */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12">
+        <div className="grid grid-cols-2 min-[1020px]:grid-cols-4 gap-x-8 gap-y-12">
           {(sessions as ListedSession[] ?? []).map(session => (
             <SessionCard key={session.id} session={session} clickable={canEdit} />
           ))}
