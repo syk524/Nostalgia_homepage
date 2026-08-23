@@ -97,7 +97,7 @@ export function CharacterPairTimeline({ profile, char1, char2 }: { profile: Pair
                 </p>
               )}
               {entry.title && (
-                <h4 className="text-xl font-semibold mt-1" style={{ fontFamily: pairFontFamily(profile.timeline_title_font), color: entry.title_color }}>
+                <h4 className="text-lg min-[1020px]:text-xl font-semibold mt-1" style={{ fontFamily: pairFontFamily(profile.timeline_title_font), color: entry.title_color }}>
                   {entry.title}
                 </h4>
               )}

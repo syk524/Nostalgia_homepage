@@ -85,7 +85,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
         className={`description-section-cell rounded pr-6 pt-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
         style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
       >
-        <h3 className="text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
+        <h3 className="text-xl min-[1020px]:text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
         <CharacterStatsLine character={character} />
       </div>
       {sections.map((section, sectionIdx) => (
@@ -94,7 +94,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           className={`description-section-cell rounded pr-6 pt-6 pb-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
           style={{ '--section-row': sectionIdx + 2, '--section-col': charIdx + 1 } as CSSProperties}
         >
-          {section.title && <h3 className="text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
+          {section.title && <h3 className="text-xl min-[1020px]:text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
           <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
         </div>
       ))}

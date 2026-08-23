@@ -102,7 +102,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
             }}
           >{character.catchphrase}</p>
         )}
-        <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
+        <h3 className="text-xl min-[1020px]:text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
         {/* Per-character color, not the catchphrase divider's old fixed
             bg-white/60 — always shown (not gated on catchphrase like that
             one was), since this reads as the name's own underline now,
@@ -114,7 +114,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
           // edge flush with the wider name/catchphrase when right-aligned,
           // instead of the shrunk box just sitting left-anchored inside the
           // wider container.
-          <p className={`text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
+          <p className={`text-xl min-[1020px]:text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
         )}
         {(character.keyword_1 || character.keyword_2 || character.keyword_3) && (
           // One shared font/color for all three keywords (not per-keyword),
@@ -252,7 +252,18 @@ export function CharacterPairHero({
           below, letting PairLink's own margin set the title-to-link gap
           precisely. */}
       <div>
-        <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: titleSize }}>{title}</h1>
+        {/* titleSize is a flat px value the user picks with no screen size
+            in mind — fine on a wide desktop viewport, but on a narrow
+            phone a title long enough to matter at 60-80px would wrap onto
+            a second line, reported directly. clamp()'s middle (preferred)
+            branch scales continuously with viewport width instead of
+            switching at one fixed breakpoint, so it shrinks smoothly as
+            the screen narrows; the 28px floor keeps very small screens
+            legible, and the ${titleSize}px ceiling is what keeps this a
+            no-op at desktop widths — once 9vw grows past the user's own
+            size, clamp caps back to exactly what they set, unchanged from
+            before this fix. */}
+        <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: `clamp(28px, 9vw, ${titleSize}px)` }}>{title}</h1>
         <PairLink text={linkText} url={linkUrl} font={linkFont} color={linkColor} hasMusic={hasMusic} centered />
       </div>
 
