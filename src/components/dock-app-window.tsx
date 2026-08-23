@@ -9,12 +9,13 @@ import type { DockApp } from '@/lib/dock-apps'
 // where it was left. Content is a placeholder until each app gets real
 // functionality; the dock/window shell itself doesn't change when that
 // happens.
-export function DockAppWindow({ app, cascade, zIndex, onFocus, onClose }: {
+export function DockAppWindow({ app, cascade, zIndex, onFocus, onClose, children }: {
   app: DockApp
   cascade: number
   zIndex: number
   onFocus: () => void
   onClose: () => void
+  children?: React.ReactNode
 }) {
   const drag = usePersistentDraggable(`dock-window:${app.id}`, { x: cascade * 24, y: cascade * 24 })
   const Icon = app.icon
@@ -46,7 +47,7 @@ export function DockAppWindow({ app, cascade, zIndex, onFocus, onClose }: {
       </div>
 
       <div className="p-4 min-h-[120px] flex items-center justify-center">
-        <p className="font-mono text-[11px] text-ink-400">Coming soon.</p>
+        {children ?? <p className="font-mono text-[11px] text-ink-400">Coming soon.</p>}
       </div>
     </div>
   )

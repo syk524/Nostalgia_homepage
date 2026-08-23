@@ -9,25 +9,25 @@ export default function RegisterPage() {
 
   return (
     <AuthShell tagline="Start your gallery">
-      <h2 className="text-xl text-ink mb-6">Sign Up</h2>
+      <h2 className="text-xl mb-6" style={{ color: 'var(--theme-accent)' }}>Sign Up</h2>
 
       <form action={action} className="space-y-4">
         <div>
-          <label className="label" htmlFor="username">Username</label>
+          <label className="label" htmlFor="username" style={{ color: 'color-mix(in srgb, var(--theme-accent) 50%, transparent)' }}>Username</label>
           <input id="username" name="username" type="text" required minLength={3}
-            className="input" placeholder="username" autoComplete="username" />
+            className="input" style={{ color: 'var(--theme-accent)' }} placeholder="username" autoComplete="username" />
         </div>
 
         <div>
-          <label className="label" htmlFor="display_name">Nickname</label>
+          <label className="label" htmlFor="display_name" style={{ color: 'color-mix(in srgb, var(--theme-accent) 50%, transparent)' }}>Nickname</label>
           <input id="display_name" name="display_name" type="text"
-            className="input" placeholder="Optional — shown to others" />
+            className="input" style={{ color: 'var(--theme-accent)' }} placeholder="Optional — shown to others" />
         </div>
 
         <div>
-          <label className="label" htmlFor="password">Password</label>
+          <label className="label" htmlFor="password" style={{ color: 'color-mix(in srgb, var(--theme-accent) 50%, transparent)' }}>Password</label>
           <input id="password" name="password" type="password" required
-            className="input" placeholder="Enter a password" autoComplete="new-password" />
+            className="input" style={{ color: 'var(--theme-accent)' }} placeholder="Enter a password" autoComplete="new-password" />
         </div>
 
         {state?.error && (

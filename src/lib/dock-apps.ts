@@ -5,8 +5,8 @@ import { Settings, type LucideIcon } from 'lucide-react'
 // day-counter-desk-widget.tsx), morphing between icon and full panel in
 // place, rather than opening a separate DockAppWindow like this
 // placeholder still does.
-export type DockApp = { id: string; label: string; icon: LucideIcon; adminOnly?: boolean }
+export type DockApp = { id: string; label: string; icon: LucideIcon; requiresAuth?: boolean }
 
 export const DOCK_APPS: DockApp[] = [
-  { id: 'settings', label: 'Settings', icon: Settings, adminOnly: true },
+  { id: 'settings', label: 'Settings', icon: Settings, requiresAuth: true },
 ]

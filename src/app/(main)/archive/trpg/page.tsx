@@ -39,8 +39,8 @@ function SessionCard({ session, clickable }: { session: ListedSession; clickable
         )}
       </div>
       <p
-        className="mt-3 text-center text-[15px] tracking-[0.02em] text-ink truncate w-full"
-        style={{ fontFamily: 'var(--font-chosun-nm), Georgia, serif' }}
+        className="mt-3 text-center text-[15px] tracking-[0.02em] truncate w-full"
+        style={{ fontFamily: 'var(--font-chosun-nm), Georgia, serif', color: 'var(--theme-accent)' }}
       >
         {session.title}
       </p>

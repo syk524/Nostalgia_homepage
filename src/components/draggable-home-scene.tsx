@@ -8,7 +8,9 @@ import { DeskAppIcon } from '@/components/desk-app-icon'
 import { DockAppWindow } from '@/components/dock-app-window'
 import { CalendarDeskWidget } from '@/components/calendar-desk-widget'
 import { DayCounterDeskWidget } from '@/components/day-counter-desk-widget'
+import { SettingsPanel } from '@/components/settings-panel'
 import { DOCK_APPS } from '@/lib/dock-apps'
+import { THEMES, type ThemeKey } from '@/lib/themes'
 import { savePlacement, removePlacement } from '@/lib/actions/stickers'
 import type { StickerGalleryImage, UserBackgroundSticker, CalendarEvent, DayCounter } from '@/types/database'
 
@@ -43,6 +45,48 @@ function writeGuestPlacements(list: UserBackgroundSticker[]) {
   }
 }
 
+// No real placement id ever equals this, so passing it as `topId` to
+// renormalizePlacements below just sorts everyone into a clean 0..N-1
+// range in their existing relative order, with no one singled out for
+// the very top — used for a first-load fix-up rather than a specific
+// edit.
+const NO_TOP_ID = '__none__'
+
+// Placed stickers used to climb z forever (every drag/edit bumped the
+// whole set's max by one, with no ceiling) — PlacedSticker turns that
+// into a raw zIndex of 10 + z, which after enough interactions in a
+// session could climb past fixed chrome sharing the same stacking
+// context (Nav, the music player, the Settings icon/window all sit
+// around z-[50] to z-[70], see nav.tsx/sound-player/dock-app-window.tsx),
+// burying them under a sticker. This renormalizes the WHOLE set back to
+// a clean, small 0..N-1 range on every commit — `topId` lands at the
+// very top (n-1), everyone else keeps their relative order but shifts
+// down to close the gap — so the ceiling stays pinned to how many
+// stickers are actually placed instead of how many edits ever happened,
+// and self-heals any placement still carrying a stale, oversized z from
+// before this existed.
+function renormalizePlacements(list: UserBackgroundSticker[], topId: string): UserBackgroundSticker[] {
+  const sorted = [...list].sort((a, b) => a.z - b.z)
+  const sequenced = [...sorted.filter(p => p.id !== topId), ...sorted.filter(p => p.id === topId)]
+  const zById = new Map(sequenced.map((p, i) => [p.id, i]))
+  return list.map(p => ({ ...p, z: zById.get(p.id)! }))
+}
+
+// Saves just the placements whose z actually changed as a result of
+// renormalizing — savePlacement always writes the full row, so this
+// resends each one's own (unchanged) position/scale/rotation alongside
+// its new z. `skipId` excludes whichever sticker the caller is already
+// saving separately with a guaranteed-fresh patch, so it isn't written
+// twice. Editor/admin only — guests never call this, see
+// writeGuestPlacements, which just re-serializes the whole array.
+function persistZChanges(prevList: UserBackgroundSticker[], nextList: UserBackgroundSticker[], skipId: string) {
+  const prevZById = new Map(prevList.map(p => [p.id, p.z]))
+  for (const p of nextList) {
+    if (p.id === skipId || prevZById.get(p.id) === p.z) continue
+    savePlacement({ id: p.id, galleryId: p.gallery_id, x: p.pos_x, y: p.pos_y, scale: p.scale, rotation: p.rotation, z: p.z })
+  }
+}
+
 // Default scattered positions for the desk app icons — spread across
 // the lower half so they don't stack on top of each other or the
 // sticker (right-[8%]) before a visitor drags them anywhere else.
@@ -53,6 +97,17 @@ const APP_ICON_POSITION: Record<string, string> = {
   settings: 'left-[46%] bottom-[9%]',
 }
 
+// On a non-default theme, Calendar and DayCounter are pinned open at a
+// fixed top-right stack instead of their normal (persisted, draggable)
+// position — see the `pinned` prop on each widget for why this is a
+// separate fixed offset rather than reusing/overwriting their drag
+// offset. DayCounter's open panel is the shorter of the two (120px vs.
+// Calendar's 400px), so it sits on top with Calendar stacked below it.
+const PIN_GAP = 16
+const DAY_COUNTER_PIN = { top: PIN_GAP, right: PIN_GAP }
+const DAY_COUNTER_PANEL_HEIGHT = 120
+const CALENDAR_PIN = { top: PIN_GAP + DAY_COUNTER_PANEL_HEIGHT + PIN_GAP, right: PIN_GAP }
+
 // The home page's decorative grid + wordmark + sticker + app icons all
 // live on one draggable "desk": dragging empty background pans the
 // whole scene (the grid's background-position shifts to match, reading
@@ -60,9 +115,13 @@ const APP_ICON_POSITION: Record<string, string> = {
 // directly moves just that element instead (each stops the pan gesture
 // from also firing — see useDraggable). The wordmark has no drag of its
 // own — it's fixed to the canvas, so it only ever moves by panning
-// along with everything else. The pan/sticker/icon arrangement itself
-// is never persisted — every reload resets to the default layout, that
-// part stays a playful in-session interaction. Placed stickers from the
+// along with everything else. All of that (grid, wordmark, pan gesture
+// itself) is Default-theme only — a non-default theme (see lib/themes.ts)
+// drops them for a calmer, static backdrop; Settings/Calendar/DayCounter
+// still render and stay individually draggable regardless of theme. The
+// pan/sticker/icon arrangement itself is never persisted — every reload
+// resets to the default layout, that part stays a playful in-session
+// interaction. Placed stickers from the
 // gallery are the one thing that IS persisted — for an editor/admin, to
 // Supabase (per-account, see page.tsx); for anyone else (a guest, or a
 // logged-in viewer), to this browser's own localStorage instead, since
@@ -71,7 +130,7 @@ const APP_ICON_POSITION: Record<string, string> = {
 // reload, just not synced anywhere for a guest. Nav stays genuinely
 // position:fixed throughout, since none of this pan/drag machinery
 // lives on an ancestor of Nav.
-export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryImages, initialPlacements, initialEvents, initialDayCounter }: {
+export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryImages, initialPlacements, initialEvents, initialDayCounter, initialTheme }: {
   canEdit: boolean
   isAdmin: boolean
   userId: string | null
@@ -79,14 +138,32 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   initialPlacements: UserBackgroundSticker[]
   initialEvents: CalendarEvent[]
   initialDayCounter: DayCounter | null
+  initialTheme: ThemeKey
 }) {
   const canvas = useDraggable()
   const sceneRef = useRef<HTMLDivElement>(null)
 
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [galleryImages, setGalleryImages] = useState(initialGalleryImages)
-  const [placements, setPlacements] = useState(initialPlacements)
+  // Renormalized up front, not just on the next edit — an editor/admin's
+  // initialPlacements can still carry z values from before this bounding
+  // existed (some placed long ago, never re-dragged since), and those
+  // would otherwise keep covering fixed chrome indefinitely since
+  // nothing else would ever touch them. See renormalizePlacements below.
+  const [placements, setPlacements] = useState(() => renormalizePlacements(initialPlacements, NO_TOP_ID))
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [theme, setTheme] = useState<ThemeKey>(initialTheme)
+
+  // Instant, no-reload recolor when the Settings dropdown changes theme —
+  // same imperative-DOM pattern as nav-icon-color-setter.tsx, since these
+  // vars are read by CSS across the whole document (nav, this page's own
+  // background), not just this component's own React tree.
+  function handleThemeChange(next: ThemeKey) {
+    setTheme(next)
+    const t = THEMES[next]
+    document.documentElement.style.setProperty('--theme-accent', t.pointColor)
+    document.documentElement.style.setProperty('--theme-bg', t.background)
+  }
 
   const [openApps, setOpenApps] = useState<string[]>([])
   const [zOrder, setZOrder] = useState<string[]>([])
@@ -116,7 +193,23 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
         return gallery ? { ...p, user_id: 'guest', created_at: '', updated_at: '', gallery } : null
       })
       .filter((p): p is UserBackgroundSticker => p !== null)
-    setPlacements(restored)
+    // Same first-load fix-up as the editor path above — localStorage can
+    // carry the same kind of stale, oversized z from before this existed.
+    const normalized = renormalizePlacements(restored, NO_TOP_ID)
+    setPlacements(normalized)
+    writeGuestPlacements(normalized)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persists the editor-path fix-up from the lazy useState initializer
+  // above — placements is already renormalized in the very first render,
+  // this just makes sure any values that fix-up actually changed get
+  // written back to Supabase once, rather than silently drifting from
+  // what's in the DB until the next real edit touches them.
+  useEffect(() => {
+    if (!canEdit || !userId || !initialPlacements.length) return
+    const normalized = renormalizePlacements(initialPlacements, NO_TOP_ID)
+    persistZChanges(initialPlacements, normalized, NO_TOP_ID)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -149,27 +242,31 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
     const gallery = galleryImages.find(g => g.id === galleryId)
     if (!gallery) return
 
-    const topZ = placements.reduce((max, p) => Math.max(max, p.z), -1) + 1
+    // Provisional — renormalizePlacements below immediately rewrites
+    // every z (including this one) to a clean 0..N-1 range, so the exact
+    // starting value here only matters in that it goes on top for now.
+    const provisionalZ = placements.length
 
     let placed: UserBackgroundSticker
     if (canEdit && userId) {
-      const { placement, error } = await savePlacement({ galleryId, x, y, scale: 1, rotation: 0, z: topZ })
+      const { placement, error } = await savePlacement({ galleryId, x, y, scale: 1, rotation: 0, z: provisionalZ })
       if (!placement || error) return
       placed = { ...placement, gallery }
-      setPlacements(prev => [...prev, placed])
+      const baseList = [...placements, placed]
+      const next = renormalizePlacements(baseList, placed.id)
+      setPlacements(next)
+      persistZChanges(baseList, next, placed.id)
     } else {
       // Guest (or a logged-in non-editor): same shape, kept local —
       // never sent to Supabase, see GUEST_PLACEMENTS_KEY above.
       placed = {
         id: crypto.randomUUID(), user_id: 'guest', gallery_id: galleryId,
-        pos_x: x, pos_y: y, scale: 1, rotation: 0, z: topZ,
+        pos_x: x, pos_y: y, scale: 1, rotation: 0, z: provisionalZ,
         created_at: '', updated_at: '', gallery,
       }
-      setPlacements(prev => {
-        const next = [...prev, placed]
-        writeGuestPlacements(next)
-        return next
-      })
+      const next = renormalizePlacements([...placements, placed], placed.id)
+      setPlacements(next)
+      writeGuestPlacements(next)
     }
 
     setJustPlacedIds(prev => new Set(prev).add(placed.id))
@@ -193,18 +290,19 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   }
 
   // Editing (move/resize/rotate) always brings the sticker to the top
-  // of the stack, not just placement — z is recomputed as one past the
-  // current highest z every time a gesture commits, same "one past the
-  // end" rule handleDrop uses for a brand-new sticker.
+  // of the stack, not just placement — see renormalizePlacements above
+  // for why this reassigns everyone's z instead of just growing this
+  // one's forever.
   function handleCommitSticker(id: string, patch: { x: number; y: number; scale: number; rotation: number }) {
-    const topZ = placements.reduce((max, p) => Math.max(max, p.z), -1) + 1
-    setPlacements(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, pos_x: patch.x, pos_y: patch.y, scale: patch.scale, rotation: patch.rotation, z: topZ } : p)
-      if (!canEdit) writeGuestPlacements(next)
-      return next
-    })
+    const updated = placements.map(p => p.id === id ? { ...p, pos_x: patch.x, pos_y: patch.y, scale: patch.scale, rotation: patch.rotation } : p)
+    const next = renormalizePlacements(updated, id)
+    setPlacements(next)
     if (canEdit) {
-      savePlacement({ id, galleryId: placements.find(p => p.id === id)!.gallery_id, ...patch, z: topZ })
+      persistZChanges(updated, next, id)
+      const edited = next.find(p => p.id === id)!
+      savePlacement({ id, galleryId: edited.gallery_id, x: edited.pos_x, y: edited.pos_y, scale: edited.scale, rotation: edited.rotation, z: edited.z })
+    } else {
+      writeGuestPlacements(next)
     }
   }
 
@@ -212,28 +310,34 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
     <>
       <div
         ref={sceneRef}
-        {...canvas.handlers}
-        onPointerDown={e => { setSelectedId(null); canvas.handlers.onPointerDown(e) }}
+        {...(theme === 'default' ? canvas.handlers : {})}
+        onPointerDown={theme === 'default' ? e => { setSelectedId(null); canvas.handlers.onPointerDown(e) } : undefined}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className={`absolute inset-0 touch-none ${canvas.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`absolute inset-0 touch-none ${theme === 'default' ? (canvas.dragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"
-          style={{ backgroundPosition: `${canvas.offset.x}px ${canvas.offset.y}px` }}
-        />
+        {theme === 'default' && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[length:28px_28px] bg-[linear-gradient(to_right,#222_1px,transparent_1px),linear-gradient(to_bottom,#222_1px,transparent_1px)]"
+            style={{ backgroundPosition: `${canvas.offset.x}px ${canvas.offset.y}px` }}
+          />
+        )}
 
-        <div
-          className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] pointer-events-none"
-          style={{ transform: `translate(${canvas.offset.x}px, ${canvas.offset.y}px) translate(-50%, -50%)` }}
-        >
-          <img src="/images/nostalgio-wordmark.webp" alt="Nustalgio" className="w-full select-none" draggable={false} />
-        </div>
+        {theme === 'default' && (
+          <div
+            className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] pointer-events-none"
+            style={{ transform: `translate(${canvas.offset.x}px, ${canvas.offset.y}px) translate(-50%, -50%)` }}
+          >
+            <img src="/images/nostalgio-wordmark.webp" alt="Nustalgio" className="w-full select-none" draggable={false} />
+          </div>
+        )}
 
-        <Stickers panX={canvas.offset.x} panY={canvas.offset.y} onOpenGallery={() => setGalleryOpen(true)} />
+        {theme === 'default' && (
+          <Stickers panX={canvas.offset.x} panY={canvas.offset.y} onOpenGallery={() => setGalleryOpen(true)} />
+        )}
 
-        {placements.map(p => (
+        {theme === 'default' && placements.map(p => (
           <PlacedSticker
             key={p.id}
             sticker={p}
@@ -247,7 +351,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           />
         ))}
 
-        {DOCK_APPS.filter(app => !app.adminOnly || isAdmin).map(app => (
+        {DOCK_APPS.filter(app => !app.requiresAuth || userId).map(app => (
           <DeskAppIcon
             key={app.id}
             app={app}
@@ -264,6 +368,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           events={events}
           canEdit={canEdit}
           onEventsChange={setEvents}
+          pinned={theme === 'default' ? undefined : CALENDAR_PIN}
         />
 
         {dayCounter && (
@@ -273,6 +378,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             dayCounter={dayCounter}
             canEdit={canEdit}
             onDayCounterChange={setDayCounter}
+            pinned={theme === 'default' ? undefined : DAY_COUNTER_PIN}
           />
         )}
       </div>
@@ -294,7 +400,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
 
       {openApps.map((id, i) => {
         const app = DOCK_APPS.find(a => a.id === id)
-        if (!app || (app.adminOnly && !isAdmin)) return null
+        if (!app || (app.requiresAuth && !userId)) return null
         return (
           <DockAppWindow
             key={id}
@@ -303,7 +409,9 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             zIndex={50 + zOrder.indexOf(id)}
             onFocus={() => focusApp(id)}
             onClose={() => closeApp(id)}
-          />
+          >
+            {app.id === 'settings' && <SettingsPanel theme={theme} onThemeChange={handleThemeChange} />}
+          </DockAppWindow>
         )
       })}
     </>

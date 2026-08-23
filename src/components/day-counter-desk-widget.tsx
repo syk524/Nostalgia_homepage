@@ -37,12 +37,18 @@ function readStoredOpen(): boolean {
 // rather than trying to cram a form into the display card's own 120px —
 // the 360×120 footprint is a display-mode spec, not a hard cap on every
 // state this widget can be in.
-export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCounterChange }: {
+export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCounterChange, pinned }: {
   panX: number
   panY: number
   dayCounter: DayCounter
   canEdit: boolean
   onDayCounterChange: (d: DayCounter) => void
+  // Set on a non-default theme (see draggable-home-scene.tsx) to force
+  // the panel open at a fixed top-right offset instead of its normal
+  // drag-offset position — deliberately NOT read from/written to
+  // usePersistentDraggable, so pinning here never touches the position
+  // the user set up for the default theme.
+  pinned?: { top: number; right: number }
 }) {
   // Offset well clear of the calendar widget's own default (420, -140)
   // so the two don't land stacked on first load.
@@ -134,18 +140,26 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
   if (!hydrated) return null
 
   const n = dayCount()
+  const effectiveOpen = pinned ? true : open
   const panelHeight = editing ? EDIT_HEIGHT : PANEL_HEIGHT
 
   return (
     <div
-      className="absolute left-0 bottom-0 touch-none"
-      style={{ transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
+      className={pinned ? 'absolute touch-none' : 'absolute left-0 bottom-0 touch-none'}
+      style={pinned
+        // .desk-widget-box below is itself absolutely positioned, so it
+        // never contributes to this wrapper's shrink-to-fit width — an
+        // explicit width here is required, or `right` ends up anchoring
+        // a zero-width box (left-aligned in practice) instead of the
+        // panel's actual right edge.
+        ? { top: pinned.top, right: pinned.right, width: PANEL_WIDTH }
+        : { transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
     >
       <div
-        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${open ? 'is-open' : ''}`}
+        className={`desk-widget-box absolute left-0 top-0 rounded-xl bg-scroll-50 overflow-hidden ${effectiveOpen ? 'is-open' : 'border border-scroll-300'}`}
         style={{
-          width: open ? PANEL_WIDTH : ICON_SIZE,
-          height: open ? panelHeight : ICON_SIZE,
+          width: effectiveOpen ? PANEL_WIDTH : ICON_SIZE,
+          height: effectiveOpen ? panelHeight : ICON_SIZE,
         }}
       >
         {/* Both faces stay mounted at all times and cross-fade via CSS
@@ -153,11 +167,11 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
             of one hard-swapping for the other — see that rule's own
             comment for why. */}
         <div
-          onPointerDown={handleIconPointerDown}
-          onPointerMove={drag.handlers.onPointerMove}
-          onPointerUp={handleIconPointerUp}
-          onPointerCancel={drag.handlers.onPointerCancel}
-          className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
+          onPointerDown={pinned ? undefined : handleIconPointerDown}
+          onPointerMove={pinned ? undefined : drag.handlers.onPointerMove}
+          onPointerUp={pinned ? undefined : handleIconPointerUp}
+          onPointerCancel={pinned ? undefined : drag.handlers.onPointerCancel}
+          className={`desk-widget-icon-face absolute inset-0 touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-pointer'}`}
         >
           <DayCounterDockIcon
             size={ICON_SIZE}
@@ -177,8 +191,8 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
           {editing ? (
             <div className="flex flex-col h-full">
               <div
-                {...drag.handlers}
-                className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${drag.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                {...(pinned ? {} : drag.handlers)}
+                className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
               >
                 <div className="flex items-center gap-1.5">
                   <Hourglass size={13} className="text-[#5B574E]" />
@@ -249,8 +263,8 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
             </div>
           ) : (
             <div
-              {...drag.handlers}
-              className={`relative w-full h-full touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              {...(pinned ? {} : drag.handlers)}
+              className={`relative w-full h-full touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
               style={{ background: '#282625' }}
             >
               {dayCounter.photo_url && (
@@ -280,15 +294,20 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
                         <Pencil size={13} />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setOpen(false)}
-                      onPointerDown={e => e.stopPropagation()}
-                      aria-label="Close"
-                      className="text-scroll-100/70 hover:text-scroll-100"
-                    >
-                      <X size={15} />
-                    </button>
+                    {/* No close affordance while pinned — the whole
+                        point of pinning is that this theme always
+                        shows it open. */}
+                    {!pinned && (
+                      <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        onPointerDown={e => e.stopPropagation()}
+                        aria-label="Close"
+                        className="text-scroll-100/70 hover:text-scroll-100"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

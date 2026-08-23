@@ -5,6 +5,7 @@ import { Nav } from '@/components/nav'
 import { fetchStickerGallery, fetchUserPlacements } from '@/lib/sticker-queries'
 import { fetchCalendarEvents } from '@/lib/calendar-queries'
 import { fetchDayCounter } from '@/lib/day-counter-queries'
+import { isThemeKey, type ThemeKey } from '@/lib/themes'
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -16,6 +17,7 @@ export default async function HomePage() {
 
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
   const isAdmin = profile?.role === 'admin'
+  const initialTheme: ThemeKey = isThemeKey(profile?.theme ?? '') ? (profile!.theme as ThemeKey) : 'default'
 
   // The gallery itself (which stickers exist to place) is shared/global,
   // not per-owner — RLS allows anonymous SELECT, so every visitor sees
@@ -37,7 +39,7 @@ export default async function HomePage() {
   const dayCounter = await fetchDayCounter(supabase)
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-scroll-100">
+    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--theme-bg)' }}>
       <DraggableHomeScene
         canEdit={canEdit}
         isAdmin={isAdmin}
@@ -46,6 +48,7 @@ export default async function HomePage() {
         initialPlacements={placements}
         initialEvents={calendarEvents}
         initialDayCounter={dayCounter}
+        initialTheme={initialTheme}
       />
 
       <Suspense fallback={null}>

@@ -3,6 +3,8 @@ import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue } from 'next/font/google'
 import localFont from 'next/font/local'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
 import { CustomCursor } from '@/components/custom-cursor'
+import { createClient } from '@/lib/supabase/server'
+import { THEMES, isThemeKey } from '@/lib/themes'
 import './globals.css'
 
 const notoSansKR = Noto_Sans_KR({
@@ -99,9 +101,29 @@ export const metadata: Metadata = {
   description: 'A place to keep and share what matters',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// Reads the signed-in user's theme so nav, the auth forms, and list-view
+// titles render with the right --theme-accent from first paint — a guest
+// (or a user whose profile fetch fails) always gets 'default', same as
+// the migration's own column default.
+async function getUserTheme() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return THEMES.default
+
+  const { data: profile } = await supabase.from('profiles').select('theme').eq('id', user.id).single()
+  const theme = profile?.theme
+  return isThemeKey(theme ?? '') ? THEMES[theme as keyof typeof THEMES] : THEMES.default
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await getUserTheme()
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
+    >
       <body
         className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
         suppressHydrationWarning

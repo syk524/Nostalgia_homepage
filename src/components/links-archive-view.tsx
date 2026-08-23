@@ -103,7 +103,10 @@ function SortableLinkRow({
           onClick={onSelect}
           className="hidden min-[1020px]:block flex-1 min-w-0 text-left px-1 py-1"
         >
-          <p className={`text-sm truncate ${selected ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+          <p
+            className={`text-sm truncate ${selected ? 'font-medium' : 'text-ink-400'}`}
+            style={selected ? { color: 'var(--theme-accent)' } : undefined}
+          >{link.title}</p>
         </button>
         {/* Mobile only — there's no preview pane to select into there, so
             tapping the title opens the link directly instead, reported
@@ -484,8 +487,9 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                       onClick={() => setSelectedId(link.id)}
                       aria-label={link.title}
                       className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-sm font-medium transition-colors ${
-                        selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-[#EFEFEF]'
+                        selectedId === link.id ? 'bg-[#EFEFEF]' : 'text-ink-400 hover:bg-[#EFEFEF]'
                       }`}
+                      style={selectedId === link.id ? { color: 'var(--theme-accent)' } : undefined}
                     >
                       {(link.title.trim().charAt(0) || '?').toUpperCase()}
                     </button>

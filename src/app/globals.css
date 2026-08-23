@@ -12,6 +12,17 @@
     --ember:    #b23b2c;
     --sage:     #5c7364;
 
+    /* The signed-in user's chosen landing-page theme (see lib/themes.ts) —
+       set on <html> server-side in layout.tsx from profiles.theme, and
+       overridden live (no reload) by the Settings dropdown via
+       document.documentElement.style.setProperty, same pattern as
+       --nav-icon-color below. --theme-bg only matters on the landing page
+       itself; --theme-accent feeds nav, the login/register form, and
+       list-view titles, so it defaults to --ink rather than a literal, to
+       stay correct for anyone whose theme hasn't loaded yet (guests). */
+    --theme-bg: var(--bg);
+    --theme-accent: var(--ink);
+
     /* Per-page override target for the Nav's icon/text color — set/cleared
        imperatively on document.documentElement by nav-icon-color-setter.tsx,
        not through React state/props. That component lives in an unrelated
@@ -23,8 +34,11 @@
        self-heal for a value that keeps changing after the mismatch, and left
        Nav intermittently stuck showing the default color. A CSS variable the
        browser resolves at paint time sidesteps React's reconciliation for
-       this value entirely. */
-    --nav-icon-color: var(--ink);
+       this value entirely. Defaults to the theme accent (not --ink
+       directly) so Nav follows the user's chosen theme unless a page
+       overrides it with its own accent (e.g. a character pair's icon
+       color). */
+    --nav-icon-color: var(--theme-accent);
 
     --font-geist-pixel-square: "GeistPixelSquare", "Geist Mono", ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Monaco, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
   }

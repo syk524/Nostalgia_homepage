@@ -7,6 +7,7 @@ export type Profile = {
   user_icon_url: string | null
   bio: string | null
   role: Role
+  theme: string
   created_at: string
   updated_at: string
 }

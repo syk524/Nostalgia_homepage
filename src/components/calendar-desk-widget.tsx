@@ -68,12 +68,18 @@ function readStoredOpen(): boolean {
 // open/closed state persist per browser (localStorage) — if you leave
 // it open, it reopens open next time; if you close it, it reopens as
 // just the icon.
-export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange }: {
+export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange, pinned }: {
   panX: number
   panY: number
   events: CalendarEvent[]
   canEdit: boolean
   onEventsChange: (events: CalendarEvent[]) => void
+  // Set on a non-default theme (see draggable-home-scene.tsx) to force
+  // the panel open at a fixed top-right offset instead of its normal
+  // drag-offset position — deliberately NOT read from/written to
+  // usePersistentDraggable, so pinning here never touches the position
+  // the user set up for the default theme.
+  pinned?: { top: number; right: number }
 }) {
   // Anchored from the desk's own bottom-left corner (see the wrapper's
   // left-0 bottom-0 below), so the default offset has to shift it well
@@ -178,16 +184,25 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
 
   if (!hydrated) return null
 
+  const effectiveOpen = pinned ? true : open
+
   return (
     <div
-      className="absolute left-0 bottom-0 touch-none"
-      style={{ transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
+      className={pinned ? 'absolute touch-none' : 'absolute left-0 bottom-0 touch-none'}
+      style={pinned
+        // .desk-widget-box below is itself absolutely positioned, so it
+        // never contributes to this wrapper's shrink-to-fit width — an
+        // explicit width here is required, or `right` ends up anchoring
+        // a zero-width box (left-aligned in practice) instead of the
+        // panel's actual right edge.
+        ? { top: pinned.top, right: pinned.right, width: PANEL_WIDTH }
+        : { transform: `translate(${panX + drag.offset.x}px, ${panY + drag.offset.y}px)` }}
     >
       <div
-        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${open ? 'is-open' : ''}`}
+        className={`desk-widget-box absolute left-0 top-0 rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden ${effectiveOpen ? 'is-open' : ''}`}
         style={{
-          width: open ? PANEL_WIDTH : ICON_SIZE,
-          height: open ? PANEL_HEIGHT : ICON_SIZE,
+          width: effectiveOpen ? PANEL_WIDTH : ICON_SIZE,
+          height: effectiveOpen ? PANEL_HEIGHT : ICON_SIZE,
         }}
       >
         {/* Both faces stay mounted at all times and cross-fade via CSS
@@ -195,11 +210,11 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
             of one hard-swapping for the other — see that rule's own
             comment for why. */}
         <div
-          onPointerDown={handleIconPointerDown}
-          onPointerMove={drag.handlers.onPointerMove}
-          onPointerUp={handleIconPointerUp}
-          onPointerCancel={drag.handlers.onPointerCancel}
-          className={`desk-widget-icon-face absolute inset-0 touch-none ${drag.dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
+          onPointerDown={pinned ? undefined : handleIconPointerDown}
+          onPointerMove={pinned ? undefined : drag.handlers.onPointerMove}
+          onPointerUp={pinned ? undefined : handleIconPointerUp}
+          onPointerCancel={pinned ? undefined : drag.handlers.onPointerCancel}
+          className={`desk-widget-icon-face absolute inset-0 touch-none ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-pointer'}`}
         >
           <CalendarDockIcon size={ICON_SIZE} />
         </div>
@@ -217,22 +232,26 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
           onPointerDown={e => e.stopPropagation()}
         >
           <div
-            {...drag.handlers}
-            className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${drag.dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            {...(pinned ? {} : drag.handlers)}
+            className={`flex items-center justify-between gap-2 px-4 py-2.5 shrink-0 touch-none border-b border-scroll-300 bg-scroll-200 ${!pinned && drag.dragging ? 'cursor-grabbing' : pinned ? '' : 'cursor-grab'}`}
           >
             <div className="flex items-center gap-1.5">
               <CalendarDays size={13} className="text-[#5B574E]" />
               <h2 className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#5B574E]">Calendar</h2>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              onPointerDown={e => e.stopPropagation()}
-              aria-label="Close"
-              className="text-ink-400 hover:text-ink-600"
-            >
-              <X size={16} />
-            </button>
+            {/* No close affordance while pinned — the whole point of
+                pinning is that this theme always shows it open. */}
+            {!pinned && (
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                onPointerDown={e => e.stopPropagation()}
+                aria-label="Close"
+                className="text-ink-400 hover:text-ink-600"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-1 min-h-0">
