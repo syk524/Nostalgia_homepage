@@ -292,14 +292,14 @@ export function CharacterPairDetail({
                     // as the color only ever reaching real strength in a
                     // thin band hugging the very bottom, reported
                     // directly. FF (full 100%, not CC) now holds flat
-                    // from 0% up through 45% — near enough to the vertical
-                    // center that it visibly covers "much higher" than a
-                    // bottom-hugging sliver — before fading out over the
-                    // same remaining stretch up to 90%, still leaving the
+                    // from 0% up through 85% (raised again from an
+                    // initial 45%, both reported directly) — full color
+                    // for nearly the entire height, fading out only over
+                    // the last narrow stretch up to 90%, still leaving the
                     // top 10% clear.
                     background: [char1, char2]
                       .filter(c => (c.description_sections?.length ?? 0) > 0)
-                      .map(c => `linear-gradient(to top, ${c.description_color}FF 0%, ${c.description_color}FF 45%, ${c.description_color}00 90%)`)
+                      .map(c => `linear-gradient(to top, ${c.description_color}FF 0%, ${c.description_color}FF 85%, ${c.description_color}00 90%)`)
                       .join(', ') || undefined,
                   }}
                 >

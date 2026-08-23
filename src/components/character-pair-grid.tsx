@@ -48,21 +48,19 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
         // sitting higher up the artwork.
         <div className={`relative w-full overflow-hidden rounded ${THUMBNAIL_ASPECT_CLASSES}`}>
           {primaryProfile.background_url && (
-            // h-10 (40px) up to 370px, min-[371px]:h-[135px] from 371px up
-            // to (not including) 1020px, min-[1020px]:h-140 (unchanged)
-            // from there. The 371-1020px tier has climbed in successive
-            // 1.5x steps across several follow-up requests to go further
-            // still (40 → 60 → 90 → 135), each reported directly —
-            // layered on top of the earlier "grow the container without
-            // touching this band" request (see that comment's own
-            // history a few commits back) rather than replacing it
-            // outright. Note this tier (135px) now exceeds the desktop
-            // value (140px) by only 5px — if asked to grow again, the
-            // next 1.5x step would need to either cap at 140px or push
-            // past the desktop tier's own value, worth flagging rather
-            // than assuming which is wanted.
+            // Four tiers now: h-10 (40px) up to 370px; min-[371px]:h-[95px]
+            // from 371px up to (not including) 520px — a dedicated
+            // narrow-phone tier, 40px less than the 135px tier beside it,
+            // reported directly; min-[520px]:h-[135px] from 520px up to
+            // (not including) 1020px, unchanged from before (this tier
+            // itself climbed in successive 1.5x steps across several
+            // earlier requests: 40 → 60 → 90 → 135); min-[1020px]:h-140
+            // (unchanged, desktop) from there. Layered on top of the
+            // earlier "grow the container without touching this band"
+            // request (see that comment's own history a few commits back)
+            // rather than replacing it outright.
             <div
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[371px]:h-[135px] min-[1020px]:h-[140px]"
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[371px]:h-[95px] min-[520px]:h-[135px] min-[1020px]:h-[140px]"
             >
               <img src={primaryProfile.background_url} alt="" className="w-full h-full object-cover" />
             </div>
@@ -79,9 +77,10 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // surface. Noto Sans KR's light (300) weight, loaded in
             // layout.tsx specifically for this. Anchored off the box's own
             // bottom, sitting a fixed 6px above the background band's own
-            // top edge, mirroring that div's own three-tier height:
-            // bottom-[46px] up to 370px (band's h-10 + 6), bottom-[141px]
-            // from 371px up to 1020px (band's 135px + 6), bottom-[146px]
+            // top edge, mirroring that div's own four-tier height:
+            // bottom-[46px] up to 370px (band's h-10 + 6), bottom-[101px]
+            // from 371px up to 520px (band's 95px + 6), bottom-[141px]
+            // from 520px up to 1020px (band's 135px + 6), bottom-[146px]
             // from 1020px up (band's 140px + 6). Was briefly anchored from
             // the top instead, back when the band filled the whole box on
             // mobile and this same above-the-band math would've landed
@@ -91,7 +90,7 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // just floating near the top of the whole (now much taller)
             // container, reported directly. */}
             <span
-              className="absolute right-1.5 bottom-[46px] min-[371px]:bottom-[141px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              className="absolute right-1.5 bottom-[46px] min-[371px]:bottom-[101px] min-[520px]:bottom-[141px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
               style={{ fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
             >
               ©{primaryProfile.illustration_source}
