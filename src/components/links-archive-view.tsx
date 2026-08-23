@@ -100,115 +100,192 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   return (
     <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
       {/* Always mounted (not conditionally rendered) so width/max-height can
-          transition instead of popping in/out — the inner panel keeps a
-          fixed size and the wrapper just clips it as it collapses. */}
+          transition instead of popping in/out. On desktop, collapsing no
+          longer hides the sidebar entirely — it narrows to a persistent
+          56px icon rail (referencing the general shape of a collapsed chat
+          sidebar: a reopen icon up top, compact icons below with a
+          hover-revealed name tooltip, not any of that reference's specific
+          icon set or markup) instead of disappearing, so there's always a
+          way back in without hunting for a floating button. Mobile keeps
+          the old full-collapse behavior (a side RAIL doesn't make sense
+          for a pane that's stacked above the preview, not beside it), via
+          the floating "Show link list" button in the preview pane below.
+          overflow is only hidden while expanded/expanding — the collapsed
+          rail's own content is already exactly 56px wide, so nothing
+          spills, and leaving it visible there is what lets the rail's
+          hover tooltips extend out past the rail's edge. Both x and y
+          must flip together per state, not just x: per the CSS overflow
+          spec, an axis left at "visible" while the other axis is anything
+          non-visible silently computes as "auto" instead — so a stray
+          always-on overflow-y-auto here was clipping the tooltips even
+          though overflow-x was "visible". */}
       <div
-        className={`shrink-0 overflow-hidden border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r ${
+        className={`shrink-0 border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full border-b min-[1020px]:border-b-0 min-[1020px]:border-r ${
           sidebarOpen
-            ? 'w-full min-[1020px]:w-[250px] max-h-[80vh] min-[1020px]:max-h-full opacity-100'
-            : 'w-full min-[1020px]:w-0 max-h-0 min-[1020px]:max-h-full opacity-0'
+            ? 'w-full min-[1020px]:w-[250px] max-h-[80vh] min-[1020px]:max-h-full opacity-100 overflow-hidden min-[1020px]:overflow-y-auto'
+            : 'w-full min-[1020px]:w-14 max-h-0 min-[1020px]:max-h-full opacity-0 min-[1020px]:opacity-100 overflow-visible'
         }`}
       >
-        <div className="w-full min-[1020px]:w-[250px] p-6 flex flex-col gap-4">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Hide link list"
-            className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
-          >
-            <PanelLeftClose size={15} />
-          </button>
-
-          {/* Same quiet-icon-then-tinted-hover treatment as the profile
-              grid's own "add new" tile (character-pair-grid.tsx's
-              AddPairCard: text-ink-400 → hover:text-ink-600 with a
-              hover:bg-[#5C574D]/20 tint) — referenced rather than reused
-              directly since that one is a full grid tile sized to match a
-              pair card, which doesn't fit a compact sidebar list. Moved to
-              the top of the list (not the old bottom placement) so opening
-              the form doesn't feel disconnected from the button that
-              opened it. */}
-          {adding ? (
-            <form onSubmit={handleAdd} className="flex flex-col gap-2 pb-2 border-b border-scroll-300">
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Title"
-                autoFocus
-                className="input"
-              />
-              <input
-                type="url"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="https://…"
-                className="input"
-              />
-              {error && <p className="field-error text-xs">{error}</p>}
-              <div className="flex gap-2">
-                <button type="submit" disabled={submitting} className="btn-primary flex-1">
-                  {submitting ? 'Adding…' : 'Add'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAdding(false); setError('') }}
-                  className="btn-ghost"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
+        {sidebarOpen ? (
+          <div className="w-full min-[1020px]:w-[250px] p-6 flex flex-col gap-4">
             <button
               type="button"
-              onClick={() => setAdding(true)}
-              aria-label="Add a link"
-              title="Add a link"
-              className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Hide link list"
+              className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
             >
-              <Plus size={18} />
+              <PanelLeftClose size={15} />
             </button>
-          )}
 
-          <div className="flex flex-col gap-1">
-            {links.length === 0 && !adding && (
-              <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
-            )}
-            {links.map(link => (
-              <div
-                key={link.id}
-                className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-scroll-200/60'}`}
+            {/* Same quiet-icon-then-tinted-hover treatment as the profile
+                grid's own "add new" tile (character-pair-grid.tsx's
+                AddPairCard: text-ink-400 → hover:text-ink-600 with a
+                hover:bg-[#5C574D]/20 tint) — referenced rather than reused
+                directly since that one is a full grid tile sized to match a
+                pair card, which doesn't fit a compact sidebar list. Moved to
+                the top of the list (not the old bottom placement) so opening
+                the form doesn't feel disconnected from the button that
+                opened it. */}
+            {adding ? (
+              <form onSubmit={handleAdd} className="flex flex-col gap-2 pb-2 border-b border-scroll-300">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Title"
+                  autoFocus
+                  className="input"
+                />
+                <input
+                  type="url"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="input"
+                />
+                {error && <p className="field-error text-xs">{error}</p>}
+                <div className="flex gap-2">
+                  <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                    {submitting ? 'Adding…' : 'Add'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAdding(false); setError('') }}
+                    className="btn-ghost"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                aria-label="Add a link"
+                title="Add a link"
+                className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
               >
+                <Plus size={18} />
+              </button>
+            )}
+
+            <div className="flex flex-col gap-1">
+              {links.length === 0 && !adding && (
+                <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
+              )}
+              {links.map(link => (
+                <div
+                  key={link.id}
+                  className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-scroll-200/60'}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(link.id)}
+                    className="flex-1 min-w-0 text-left px-2 py-2"
+                  >
+                    <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+                  </button>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open ${link.title} in a new tab`}
+                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
+                  >
+                    <ArrowUpRight size={13} />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(link)}
+                    disabled={deletingId === link.id}
+                    aria-label={`Delete ${link.title}`}
+                    className="shrink-0 w-6 h-6 mr-1 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="hidden min-[1020px]:flex w-14 h-full flex-col items-center gap-3 py-6">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Show link list"
+              className="group relative w-8 h-8 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
+            >
+              <PanelLeftOpen size={16} />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                Show link list
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setSidebarOpen(true); setAdding(true) }}
+              aria-label="Add a link"
+              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
+            >
+              <Plus size={16} />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                Add a link
+              </span>
+            </button>
+
+            {/* Each link collapses to its initial in a small circle — there's
+                no per-link icon/favicon to fall back to instead — with the
+                full title as a hover tooltip, mirroring how the expanded
+                list's own title text works but compressed to fit the rail. */}
+            <div className="flex w-full flex-col items-center gap-2 overflow-y-auto">
+              {links.map(link => (
                 <button
+                  key={link.id}
                   type="button"
                   onClick={() => setSelectedId(link.id)}
-                  className="flex-1 min-w-0 text-left px-2 py-2"
+                  aria-label={link.title}
+                  className={`group relative w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                    selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-scroll-200/60'
+                  }`}
                 >
-                  <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+                  {(link.title.trim().charAt(0) || '?').toUpperCase()}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-full top-1/2 z-20 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-ink-900 px-2 py-1 text-xs text-scroll-100 opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    {link.title}
+                  </span>
                 </button>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Open ${link.title} in a new tab`}
-                  className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
-                >
-                  <ArrowUpRight size={13} />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(link)}
-                  disabled={deletingId === link.id}
-                  aria-label={`Delete ${link.title}`}
-                  className="shrink-0 w-6 h-6 mr-1 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Selected-link preview — an iframe, not a fixed image the way
@@ -222,15 +299,20 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           always visible rather than only appearing after a failed load,
           since a blocked frame can't be detected from this side. */}
       <div className="relative flex-1 min-h-0 bg-scroll-200 flex items-center justify-center">
-        {/* Always mounted so it fades in/out in step with the sidebar's own
-            collapse instead of popping in the instant the list finishes
-            hiding; pointer-events-none keeps it from intercepting clicks
-            while the sidebar is open and it's invisible. */}
+        {/* Mobile-only fallback: the sidebar collapses to a full-width
+            0-height pane there instead of a persistent rail (see the
+            wrapper's own comment above), so this is the only way back in
+            on that layout. Desktop's reopen icon lives inside the rail
+            itself instead. Always mounted so it fades in/out in step with
+            the sidebar's own collapse instead of popping in the instant
+            the list finishes hiding; pointer-events-none keeps it from
+            intercepting clicks while the sidebar is open and it's
+            invisible. */}
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
           aria-label="Show link list"
-          className={`absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-opacity duration-300 ease-in-out ${
+          className={`absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-opacity duration-300 ease-in-out min-[1020px]:hidden ${
             sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
         >
