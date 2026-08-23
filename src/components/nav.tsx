@@ -85,7 +85,7 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
       </nav>
 
       {onGallery && (
-        <div className="hidden sm:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">
+        <div className="hidden min-[1020px]:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">
           {/* Selected = full-strength text + a trailing filled circle;
               unselected = muted text, no marker at all — no square dot,
               no underline. Text scrambles into place on hover (see

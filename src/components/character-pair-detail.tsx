@@ -7,11 +7,17 @@ import { CharacterPairTimeline } from '@/components/character-pair-timeline'
 import { CustomHtmlProfileView } from '@/components/custom-html-profile-view'
 import { PairDescriptionView } from '@/components/pair-description-editor'
 import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
-import { PairLink } from '@/components/pair-link'
 import { PairProfileSideNav } from '@/components/pair-profile-side-nav'
 import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
 import { pairFontFamily } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
+
+// Same wordmark asset the homepage itself uses (draggable-home-scene.tsx)
+// — stands in for a pair's own image when one hasn't been set, reported
+// directly, so every profile always has *some* hero image to anchor the
+// photo-overlay layout and caption placement to instead of the old
+// separate plain-text/no-image branch.
+const PAIR_IMAGE_PLACEHOLDER = '/images/nostalgio-wordmark.webp'
 
 // age/height/weight/job, in that order, "•"-separated with 8px (px-2) of
 // horizontal breathing room around each bullet — reported directly.
@@ -60,11 +66,14 @@ function CharacterStatsLine({ character }: { character: ProfileCharacter }) {
 // the glow wrapper in CharacterPairDetail below for why.
 function CharacterDescriptionSections({ character, charIdx }: { character: ProfileCharacter; charIdx: number }) {
   const sections = character.description_sections ?? []
-  const alignClass = charIdx === 0 ? 'sm:justify-self-start' : 'sm:justify-self-end'
+  // 1020px, not Tailwind's default sm: (640px) — this page's own
+  // breakpoint (reported directly), matching the hero's caption dots and
+  // the side-nav's own min-[1020px]:flex above it.
+  const alignClass = charIdx === 0 ? 'min-[1020px]:justify-self-start' : 'min-[1020px]:justify-self-end'
   return (
     <>
       {/* No left padding — reported directly: this whole column sits
-          inside the same px-6 sm:pl-[...] wrapper the hero's own
+          inside the same px-6 min-[1020px]:pl-[...] wrapper the hero's own
           catchphrase/name/quote use above it with no padding of their
           own, so this cell's own p-6/px-6 was adding a second, redundant
           24px indent on top of that, throwing this column out of
@@ -73,7 +82,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           enough separation under a single line of stats, reported
           separately. */}
       <div
-        className={`description-section-cell rounded pr-6 pt-6 sm:w-4/5 sm:max-w-[650px] ${alignClass}`}
+        className={`description-section-cell rounded pr-6 pt-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
         style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
       >
         <h3 className="text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
@@ -82,7 +91,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
       {sections.map((section, sectionIdx) => (
         <div
           key={section.id}
-          className={`description-section-cell rounded pr-6 pt-6 pb-6 sm:w-4/5 sm:max-w-[650px] ${alignClass}`}
+          className={`description-section-cell rounded pr-6 pt-6 pb-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
           style={{ '--section-row': sectionIdx + 2, '--section-col': charIdx + 1 } as CSSProperties}
         >
           {section.title && <h3 className="text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
@@ -90,45 +99,6 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
         </div>
       ))}
     </>
-  )
-}
-
-// Fallback for pairs with no pair image to overlay onto — same
-// catchphrase → name → quote → description order, in the app's normal
-// ink-on-card colors instead of white-on-photo. Sections stay simple
-// here: stacked in order inside one shared local glow, no cross-character
-// row alignment (that's specifically a full-bleed, side-by-side-photo
-// layout concern — this fallback's two cards aren't meant to read as a
-// synchronized pair the way the photo-overlay layout is).
-function CharacterCard({ character }: { character: ProfileCharacter }) {
-  const sections = character.description_sections ?? []
-  return (
-    <div className="card p-6 space-y-2">
-      {character.catchphrase && (
-        <span className="tag inline-block" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</span>
-      )}
-      <h2 className="text-2xl" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color }}>{character.name}</h2>
-      <CharacterStatsLine character={character} />
-      {/* Per-character color, not the old fixed bg-scroll-300 — same
-          field as the photo-overlay hero's own name underline (see
-          character-pair-hero.tsx), always shown now rather than gated
-          on catchphrase. */}
-      <div className="h-px my-2" style={{ background: character.name_underline_color }} />
-      {character.quote && <p className="italic" style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color }}>“{character.quote}”</p>}
-      {sections.length > 0 && (
-        <div
-          className="-mx-6 -mb-6 px-6 pb-6 pt-2 mt-2 border-t border-scroll-300 rounded-b space-y-4"
-          style={{ background: `radial-gradient(ellipse 90% 70% at 50% 100%, ${character.description_color}66 0%, ${character.description_color}00 75%)` }}
-        >
-          {sections.map(section => (
-            <div key={section.id}>
-              {section.title && <h3 className="text-lg mb-1" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
-              <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -145,6 +115,7 @@ export function CharacterPairDetail({
   canEdit: boolean
 }) {
   const [char1, char2] = [...activeProfile.profile_characters].sort((a, b) => a.slot - b.slot)
+  const pairImageUrl = activeProfile.pair_image_url || PAIR_IMAGE_PLACEHOLDER
 
   return (
     <div className="relative">
@@ -233,60 +204,63 @@ export function CharacterPairDetail({
               -translate-x-1/2. */}
           <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 -mb-16 flex flex-col min-h-screen">
             <div className="animate-fade-up flex flex-col flex-1">
-              <div className="px-6 sm:pl-[calc(2.6vw+159px)] pt-4 space-y-8">
-                {activeProfile.pair_image_url ? (
-                  <CharacterPairHero
-                    imageUrl={activeProfile.pair_image_url}
-                    illustrationSource={activeProfile.illustration_source}
-                    illustrationSourceFont={activeProfile.illustration_source_font}
-                    illustrationSourceColor={activeProfile.illustration_source_color}
-                    title={activeProfile.title}
-                    titleFont={activeProfile.title_font}
-                    titleColor={activeProfile.title_color}
-                    titleSize={activeProfile.title_size}
-                    linkText={activeProfile.link_text}
-                    linkUrl={activeProfile.link_url}
-                    linkFont={activeProfile.link_font}
-                    linkColor={activeProfile.link_color}
-                    hasMusic={activeProfile.has_music}
-                    char1={char1}
-                    char2={char2}
-                  />
-                ) : (
-                  <div>
-                    <h1 style={{ fontFamily: pairFontFamily(activeProfile.title_font), color: activeProfile.title_color, fontSize: activeProfile.title_size }}>{activeProfile.title}</h1>
-                    <PairLink text={activeProfile.link_text} url={activeProfile.link_url} font={activeProfile.link_font} color={activeProfile.link_color} hasMusic={activeProfile.has_music} />
-                  </div>
-                )}
+              <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-4 space-y-8">
+                <CharacterPairHero
+                  imageUrl={pairImageUrl}
+                  // Only credit a real illustrator for a real uploaded
+                  // image — showing "©[someone]" under the placeholder
+                  // wordmark would be attributing art that isn't theirs.
+                  illustrationSource={activeProfile.pair_image_url ? activeProfile.illustration_source : null}
+                  illustrationSourceFont={activeProfile.illustration_source_font}
+                  illustrationSourceColor={activeProfile.illustration_source_color}
+                  title={activeProfile.title}
+                  titleFont={activeProfile.title_font}
+                  titleColor={activeProfile.title_color}
+                  titleSize={activeProfile.title_size}
+                  linkText={activeProfile.link_text}
+                  linkUrl={activeProfile.link_url}
+                  linkFont={activeProfile.link_font}
+                  linkColor={activeProfile.link_color}
+                  hasMusic={activeProfile.has_music}
+                  // Only overlaid on a real pair photo — reported directly:
+                  // the caption-pinning below is built around a tall
+                  // portrait image, and the placeholder wordmark is short/
+                  // wide, so captions would float disconnected above it
+                  // rather than sit naturally over it.
+                  char1={activeProfile.pair_image_url ? char1 : undefined}
+                  char2={activeProfile.pair_image_url ? char2 : undefined}
+                />
               </div>
 
-              {activeProfile.pair_image_url ? (
-                // The old approach measured the description's on-screen
-                // position with JS (a portal into <body> sized via
-                // getBoundingClientRect) and re-derived its height on mount,
-                // resize, and page-settle timers — but any layout change this
-                // didn't anticipate (a section added, a font swap, a slow
-                // image load racing the measurement) could leave it undersized,
-                // showing bare unblurred backdrop below the text. This wrapper
-                // instead lets the browser's own layout engine do the sizing,
-                // continuously, for free: flex-1 (grow, but flex-basis:auto —
-                // Tailwind's plain `grow`, not `flex-1`, which would zero the
-                // basis) makes it at least as tall as its own content (the
-                // section grid below), and ALSO grow to fill any remaining
-                // space down to min-h-screen's floor on the outer flex column
-                // above — i.e. exactly max(content height, viewport bottom),
-                // the same rule the JS version was computing by hand, now just
-                // native flex layout that recalculates on every reflow. The two
-                // characters' gradients are painted directly as THIS element's
-                // own `background` (stacked as comma-separated layers) rather
-                // than as separate `position:absolute; inset:0` children —
-                // deliberately avoiding "an absolutely positioned box sized by
-                // a flex-grow ancestor," which some engines have been known to
-                // get wrong (the abs-positioned child's size not always tracking
-                // the flex item's grown height on every reflow). A `background`
-                // has no separate box to get out of sync with — it's painted
-                // into this element's own already-correct border box, full stop.
-                <div
+              {/* The old approach measured the description's on-screen
+                  position with JS (a portal into <body> sized via
+                  getBoundingClientRect) and re-derived its height on mount,
+                  resize, and page-settle timers — but any layout change this
+                  didn't anticipate (a section added, a font swap, a slow
+                  image load racing the measurement) could leave it undersized,
+                  showing bare unblurred backdrop below the text. This wrapper
+                  instead lets the browser's own layout engine do the sizing,
+                  continuously, for free: flex-1 (grow, but flex-basis:auto —
+                  Tailwind's plain `grow`, not `flex-1`, which would zero the
+                  basis) makes it at least as tall as its own content (the
+                  section grid below), and ALSO grow to fill any remaining
+                  space down to min-h-screen's floor on the outer flex column
+                  above — i.e. exactly max(content height, viewport bottom),
+                  the same rule the JS version was computing by hand, now just
+                  native flex layout that recalculates on every reflow. The two
+                  characters' gradients are painted directly as THIS element's
+                  own `background` (stacked as comma-separated layers) rather
+                  than as separate `position:absolute; inset:0` children —
+                  deliberately avoiding "an absolutely positioned box sized by
+                  a flex-grow ancestor," which some engines have been known to
+                  get wrong (the abs-positioned child's size not always tracking
+                  the flex item's grown height on every reflow). A `background`
+                  has no separate box to get out of sync with — it's painted
+                  into this element's own already-correct border box, full
+                  stop. Unconditional now — every profile always has *some*
+                  pair image (real or the placeholder wordmark), so there's
+                  no separate no-image layout to branch to any more. */}
+              <div
                   className="grow"
                   style={{
                     background: [char1, char2]
@@ -295,11 +269,11 @@ export function CharacterPairDetail({
                       .join(', ') || undefined,
                   }}
                 >
-                  <div className="px-6 sm:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
+                  <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
                     {/* Each section is sized to 80% of its own grid column
                         (not 80% of the whole row), capped at 650px so it
                         doesn't balloon on very wide columns. */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:items-start">
+                    <div className="grid grid-cols-1 min-[1020px]:grid-cols-2 gap-6 min-[1020px]:items-start">
                       {[char1, char2].map((character, i) => (
                         <CharacterDescriptionSections key={character.id} character={character} charIdx={i} />
                       ))}
@@ -321,32 +295,6 @@ export function CharacterPairDetail({
                     )}
                   </div>
                 </div>
-              ) : (
-                <div className="px-6 sm:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
-                  {/* Each card is sized to 80% of its own grid column (not 80%
-                      of the whole row), capped at 650px so it doesn't balloon
-                      on very wide columns, and pinned to that column's outer
-                      edge via justify-self — column 1 hugs the container's
-                      left end, column 2 hugs its right end, leaving the middle
-                      open rather than the two cards meeting in the center. */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {[char1, char2].map((character, i) => (
-                      <div key={character.id} className={`sm:w-4/5 sm:max-w-[650px] ${i === 0 ? 'sm:justify-self-start' : 'sm:justify-self-end'}`}>
-                        <CharacterCard character={character} />
-                      </div>
-                    ))}
-                  </div>
-
-                  <CharacterPairTimeline profile={activeProfile} char1={char1} char2={char2} />
-
-                  {canEdit && (
-                    <div className="flex gap-2 pt-4 border-t border-scroll-300">
-                      <Link href={`/profile/${pair.slug}/edit`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
-                      <DeleteCharacterPairButton pairId={pair.id} />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </>

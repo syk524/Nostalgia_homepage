@@ -11,8 +11,13 @@ type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_im
 }
 type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSummary[] }
 
-// 2-up at rest, dropping to 1 column on narrow screens.
-const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-5'
+// 1 column below 1020px (mobile view, matching the pair detail page's own
+// mobile/desktop split), 2 pairs per row from 1020px up — the "list view"
+// look this grid had before. min-[1020px] instead of Tailwind's own lg:
+// (1024px) to hit the exact value asked for rather than the 4px-off
+// default, and used as the single breakpoint here (no separate sm:) so
+// there's no in-between range with its own column count.
+const GRID_CLASSES = 'grid grid-cols-1 min-[1020px]:grid-cols-2 gap-x-3 gap-y-5'
 
 const BACKGROUND_HEIGHT = 140
 

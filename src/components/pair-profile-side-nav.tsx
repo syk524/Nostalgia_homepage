@@ -19,7 +19,7 @@ export function PairProfileSideNav({
 
   return (
     <div
-      className="hidden sm:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight"
+      className="hidden min-[1020px]:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight"
       style={{ color: 'var(--nav-icon-color)' }}
     >
       {profiles.map(profile => {

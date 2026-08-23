@@ -444,10 +444,14 @@
    top-align. --section-row/--section-col are set per-item via inline
    style since the values are dynamic (per section index) — Tailwind's
    arbitrary-value classes can't be built from a runtime-interpolated
-   string. Scoped to the sm+ breakpoint only: below it the grid collapses
-   to a single column, and forcing an explicit column there would place
-   items into a nonexistent second track instead of just stacking them. */
-@media (min-width: 640px) {
+   string. Scoped to 1020px and up (this page's own breakpoint — reported
+   directly, not Tailwind's default sm:/lg: — matching
+   min-[1020px]:grid-cols-2 on this same grid in character-pair-detail.tsx
+   and every other min-[1020px]: on this page): below it the grid
+   collapses to a single column, and forcing an explicit column there
+   would place items into a nonexistent second track instead of just
+   stacking them. */
+@media (min-width: 1020px) {
   .description-section-cell {
     grid-row: var(--section-row);
     grid-column: var(--section-col);
@@ -511,6 +515,64 @@
 
 @media (prefers-reduced-motion: reduce) {
   .thought-tt { transition: none !important; }
+}
+
+/* Adapted from Transitions.dev's "Menu dropdown" recipe, renamed to this
+   app's own class prefix — for character-pair-hero.tsx's mobile-only
+   catchphrase popout (below sm:, a character's catchphrase/name/quote/
+   keywords are collapsed behind a shimmering dot instead of always shown,
+   reported directly; sm: and up are untouched, always fully visible).
+   is-open/is-closing driven from CharacterPairHero's own openChar/
+   closingChar state, same 3-state dance as .t-popout elsewhere in this
+   file: is-open removed and is-closing added on close, then is-closing
+   itself removed after --caption-popout-close-dur (character-pair-
+   hero.tsx's own setTimeout) so the faster close transition actually
+   gets to run instead of falling back to the (slower) base/open duration. */
+:root {
+  --caption-popout-open-dur: 250ms;
+  --caption-popout-close-dur: 150ms;
+  --caption-popout-pre-scale: 0.97;
+  --caption-popout-closing-scale: 0.99;
+  --caption-popout-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.t-caption-popout {
+  transform-origin: top left;
+  transform: scale(var(--caption-popout-pre-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--caption-popout-open-dur) var(--caption-popout-ease), opacity var(--caption-popout-open-dur) var(--caption-popout-ease);
+}
+.t-caption-popout[data-origin="top-right"] { transform-origin: top right; }
+.t-caption-popout.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-caption-popout.is-closing {
+  transform: scale(var(--caption-popout-closing-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--caption-popout-close-dur) var(--caption-popout-ease), opacity var(--caption-popout-close-dur) var(--caption-popout-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-caption-popout { transition: none !important; }
+}
+
+/* The dot itself — "shimmering" is a slow opacity/scale pulse, the same
+   pair of properties (and similar range) DotMatrixLoader's own dots
+   already animate, just via plain CSS here rather than framer-motion
+   since there's only ever one dot animating at a time, not a synchronized
+   grid. Color is set inline per character (name_underline_color) since
+   it varies per pair/character, not fixed here. */
+@keyframes caption-dot-shimmer {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.caption-dot {
+  animation: caption-dot-shimmer 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .caption-dot { animation: none; opacity: 0.85; }
 }
 
 /* rounded-full on <input type="color"> only rounds the input's own

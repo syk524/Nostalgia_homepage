@@ -6,7 +6,20 @@ import type { ProfileCharacter } from '@/types/database'
 
 // Catchphrase as plain text (no pill), then name, then the quote — each with
 // its own independently selectable font and color.
-function CharacterCaption({ character, align }: { character: ProfileCharacter; align: 'left' | 'right' }) {
+function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
+  character: ProfileCharacter
+  align: 'left' | 'right'
+  // Mobile-only (below 1020px, this page's own breakpoint — reported
+  // directly, not Tailwind's default sm:/lg:) — full captions overlaid an
+  // image barely 60vw of a narrow screen read as cramped, so below 1020px
+  // they collapse behind a shimmering dot (this character's own
+  // name_underline_color) until tapped open. 1020px and up ignore all
+  // three of these and stay exactly as they always have — see the
+  // min-[1020px]:! overrides on .t-caption-popout below.
+  isOpen: boolean
+  isClosing: boolean
+  onToggle: () => void
+}) {
   // A zero-offset, blurred text-shadow reads as a soft halo/border around
   // the letterforms rather than a directional drop shadow — user-set
   // color and strength (blur radius, in px), one shared value for all
@@ -24,51 +37,72 @@ function CharacterCaption({ character, align }: { character: ProfileCharacter; a
     // the two captions shifted the row's centering itself and produced
     // less separation than the margin values implied. A transform is a
     // pure paint-time offset, invisible to that layout math, so it's an
-    // exact 1:1 pixel shift.
-    <div className={`max-w-[650px] ${align === 'right' ? 'text-right' : 'text-left'}`} style={{ transform: `translateY(${character.caption_offset_y}px)` }}>
-      {character.catchphrase && (
-        // letter-spacing doesn't accept percentages in CSS — 140% is
-        // expressed as 1.4em, i.e. 140% of the font size, the standard
-        // reading of a percentage tracking value.
-        <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
-      )}
-      <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
-      {/* Per-character color, not the catchphrase divider's old fixed
-          bg-white/60 — always shown (not gated on catchphrase like that
-          one was), since this reads as the name's own underline now,
-          not a catchphrase/name separator. */}
-      <div className={`h-px max-w-[200px] my-2 ${align === 'right' ? 'ml-auto' : ''}`} style={{ background: character.name_underline_color }} />
-      {character.quote && (
-        // Narrower than the 650px caption block above it, so it wraps
-        // sooner — ml-auto (mirroring the divider line) keeps its right
-        // edge flush with the wider name/catchphrase when right-aligned,
-        // instead of the shrunk box just sitting left-anchored inside the
-        // wider container.
-        <p className={`text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
-      )}
-      {(character.keyword_1 || character.keyword_2 || character.keyword_3) && (
-        // One shared font/color for all three keywords (not per-keyword),
-        // same text-shadow as the rest of the caption. Each non-empty
-        // keyword gets a # prefix; empty slots are just skipped, not
-        // rendered as a stray "#". Rendered as separate flex items with a
-        // gap instead of one string joined by plain spaces — a fixed gap
-        // is a more reliable, adjustable way to widen the spacing between
-        // keywords than relying on however wide a literal space character
-        // renders at this font. justify-end mirrors the ml-auto/text-right
-        // treatment the rest of this block uses when right-aligned.
-        // text-sm matches the description body's own text size exactly
-        // (character-pair-detail.tsx's section paragraphs use the same
-        // class) rather than a separately-set px value that only
-        // coincidentally lined up.
-        <div
-          className={`drop-shadow mt-1 flex flex-wrap gap-3 text-sm ${align === 'right' ? 'justify-end' : ''}`}
-          style={{ fontFamily: pairFontFamily(character.keyword_font), color: character.keyword_color, textShadow }}
-        >
-          {[character.keyword_1, character.keyword_2, character.keyword_3].filter(Boolean).map((k, i) => (
-            <span key={i}>#{k}</span>
-          ))}
-        </div>
-      )}
+    // exact 1:1 pixel shift. The mobile open/close scale transition lives
+    // on the INNER .t-caption-popout div instead of sharing this one —
+    // two different `transform`s on the same element would just clobber
+    // each other (same class of bug as animate-fade-up's own translateY
+    // elsewhere in this app).
+    <div className={`relative max-w-[650px] ${align === 'right' ? 'text-right' : 'text-left'}`} style={{ transform: `translateY(${character.caption_offset_y}px)` }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={isOpen ? `Hide ${character.name}’s info` : `Show ${character.name}’s info`}
+        aria-expanded={isOpen}
+        className={`caption-dot min-[1020px]:hidden absolute top-0 w-4 h-4 rounded-full pointer-events-auto transition-opacity duration-150 ${align === 'right' ? 'right-0' : 'left-0'} ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ background: character.name_underline_color, boxShadow: `0 0 10px ${character.name_underline_color}` }}
+      />
+      {/* min-[1020px]:!-prefixed utilities beat .t-caption-popout's own
+          (non-!important) opacity/transform/pointer-events at that
+          breakpoint and up, regardless of is-open/is-closing — that's what
+          keeps desktop's always-visible behavior completely unchanged. */}
+      <div
+        className={`t-caption-popout min-[1020px]:!opacity-100 min-[1020px]:!scale-100 min-[1020px]:!pointer-events-auto ${isOpen ? 'is-open' : isClosing ? 'is-closing' : ''}`}
+        data-origin={align === 'right' ? 'top-right' : 'top-left'}
+      >
+        {character.catchphrase && (
+          // letter-spacing doesn't accept percentages in CSS — 140% is
+          // expressed as 1.4em, i.e. 140% of the font size, the standard
+          // reading of a percentage tracking value.
+          <p className="drop-shadow" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color, fontSize: 11, letterSpacing: '1.4em', textShadow }}>{character.catchphrase}</p>
+        )}
+        <h3 className="text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
+        {/* Per-character color, not the catchphrase divider's old fixed
+            bg-white/60 — always shown (not gated on catchphrase like that
+            one was), since this reads as the name's own underline now,
+            not a catchphrase/name separator. */}
+        <div className={`h-px max-w-[200px] my-2 ${align === 'right' ? 'ml-auto' : ''}`} style={{ background: character.name_underline_color }} />
+        {character.quote && (
+          // Narrower than the 650px caption block above it, so it wraps
+          // sooner — ml-auto (mirroring the divider line) keeps its right
+          // edge flush with the wider name/catchphrase when right-aligned,
+          // instead of the shrunk box just sitting left-anchored inside the
+          // wider container.
+          <p className={`text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
+        )}
+        {(character.keyword_1 || character.keyword_2 || character.keyword_3) && (
+          // One shared font/color for all three keywords (not per-keyword),
+          // same text-shadow as the rest of the caption. Each non-empty
+          // keyword gets a # prefix; empty slots are just skipped, not
+          // rendered as a stray "#". Rendered as separate flex items with a
+          // gap instead of one string joined by plain spaces — a fixed gap
+          // is a more reliable, adjustable way to widen the spacing between
+          // keywords than relying on however wide a literal space character
+          // renders at this font. justify-end mirrors the ml-auto/text-right
+          // treatment the rest of this block uses when right-aligned.
+          // text-sm matches the description body's own text size exactly
+          // (character-pair-detail.tsx's section paragraphs use the same
+          // class) rather than a separately-set px value that only
+          // coincidentally lined up.
+          <div
+            className={`drop-shadow mt-1 flex flex-wrap gap-3 text-sm ${align === 'right' ? 'justify-end' : ''}`}
+            style={{ fontFamily: pairFontFamily(character.keyword_font), color: character.keyword_color, textShadow }}
+          >
+            {[character.keyword_1, character.keyword_2, character.keyword_3].filter(Boolean).map((k, i) => (
+              <span key={i}>#{k}</span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -102,6 +136,27 @@ export function CharacterPairHero({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [captionTop, setCaptionTop] = useState<number | null>(null)
+  // Mobile-only caption popout state — which character (if any) is open,
+  // and which (if any) is mid-close. Independent per character, not one
+  // boolean, since either dot can be tapped open on its own. closingChar
+  // only exists for the is-open→is-closing→(removed) transition dance
+  // .t-caption-popout expects (see its own comment in globals.css) — the
+  // timeout below has to match --caption-popout-close-dur there.
+  const [openChar, setOpenChar] = useState<'char1' | 'char2' | null>(null)
+  const [closingChar, setClosingChar] = useState<'char1' | 'char2' | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function toggleCaption(which: 'char1' | 'char2') {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    if (openChar === which) {
+      setOpenChar(null)
+      setClosingChar(which)
+      closeTimerRef.current = setTimeout(() => setClosingChar(null), 150)
+    } else {
+      setClosingChar(null)
+      setOpenChar(which)
+    }
+  }
 
   // Pins the caption row to the screen's vertical center while the (often
   // very tall) pair image scrolls past, then lets it scroll along with the
@@ -185,8 +240,24 @@ export function CharacterPairHero({
           className="absolute left-0 right-[calc(2.6vw-1.5rem)] flex items-center justify-between gap-6 pointer-events-none"
           style={{ top: captionTop !== null ? `${captionTop}px` : '50%', transform: 'translateY(-50%)' }}
         >
-          {char1 && <CharacterCaption character={char1} align="left" />}
-          {char2 && <CharacterCaption character={char2} align="right" />}
+          {char1 && (
+            <CharacterCaption
+              character={char1}
+              align="left"
+              isOpen={openChar === 'char1'}
+              isClosing={closingChar === 'char1'}
+              onToggle={() => toggleCaption('char1')}
+            />
+          )}
+          {char2 && (
+            <CharacterCaption
+              character={char2}
+              align="right"
+              isOpen={openChar === 'char2'}
+              isClosing={closingChar === 'char2'}
+              onToggle={() => toggleCaption('char2')}
+            />
+          )}
         </div>
       </div>
     </div>
