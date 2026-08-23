@@ -19,19 +19,15 @@ type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSum
 // there's no in-between range with its own column count.
 const GRID_CLASSES = 'grid grid-cols-1 min-[1020px]:grid-cols-2 gap-x-3 gap-y-5'
 
-const BACKGROUND_HEIGHT = 140
-
 // aspect-[5/2] + a max-height cap, not a flat pixel height — the box (and
 // therefore the amount of the pair image's bottom edge that gets cropped)
 // now grows along with the column width instead of staying pinned, up to
 // MAX_THUMBNAIL_HEIGHT, past which it stops growing so very wide columns
 // don't blow the crop area out indefinitely. Below 1020px the grid is a
 // single full-width column (this file's own GRID_CLASSES), so aspect-[5/2]
-// there made the box — and with it the background photo, which already
-// fills the whole box below the desktop breakpoint since BACKGROUND_HEIGHT
-// (140px) exceeds a mobile-width box's own height — noticeably tall;
-// aspect-[5/1] (half the height, same width) is what was asked for,
-// reported directly. min-[1020px]:aspect-[5/2] keeps desktop unchanged.
+// there made the box noticeably tall; aspect-[5/1] (half the height, same
+// width) is what was asked for, reported directly. min-[1020px]:aspect-[5/2]
+// keeps desktop unchanged.
 const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/1] min-[1020px]:aspect-[5/2] max-h-[320px]'
 
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
@@ -51,25 +47,26 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
         // sitting higher up the artwork.
         <div className={`relative w-full overflow-hidden rounded ${THUMBNAIL_ASPECT_CLASSES}`}>
           {primaryProfile.background_url && (
+            // h-10 (40px) below 1020px, not the desktop BACKGROUND_HEIGHT
+            // (140px) — that fixed value comfortably fit inside the taller
+            // desktop box with headroom to spare above it (where the
+            // character's own head/torso "pops out" of the band into open
+            // space instead of sitting on top of it), but on the roughly-
+            // half-height mobile box it exceeded the box's own height
+            // outright, so the band ended up filling the entire card with
+            // no headroom left and the pop-out effect disappeared,
+            // reported directly. 40px leaves a proportionally similar gap
+            // on the shorter mobile box instead.
             <div
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t"
-              style={{ height: BACKGROUND_HEIGHT }}
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[1020px]:h-[140px]"
             >
               <img src={primaryProfile.background_url} alt="" className="w-full h-full object-cover" />
             </div>
           )}
-          {/* top-[15px] was calibrated against the desktop-height box
-              (aspect-[5/2]) — on the much shorter mobile box
-              (aspect-[5/1]) that same offset only ever showed the top
-              ~15% of the artwork (hair/headroom), not the characters'
-              faces, reported directly. min-[1020px]:top-[15px] keeps
-              desktop exactly as it was; the mobile-only top-[-64px]
-              pushes the image up so the visible window falls lower into
-              the artwork instead, roughly where faces tend to sit. */}
           <img
             src={primaryProfile.pair_image_url}
             alt=""
-            className="absolute left-1/2 top-[-64px] min-[1020px]:top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
+            className="absolute left-1/2 top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
           />
           {primaryProfile.illustration_source && (
             // Always this exact font/color/size regardless of what's
