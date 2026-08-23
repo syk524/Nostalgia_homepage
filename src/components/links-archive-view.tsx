@@ -240,14 +240,27 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
         }`}
       >
         {sidebarOpen ? (
-          <div className="w-full min-[1020px]:w-[250px] px-3 py-6 flex flex-col gap-4">
+          <div className="w-full min-[1020px]:w-[250px] px-3 py-6 flex flex-col gap-2">
+            {/* gap-2 (not gap-4) — matched to the collapsed rail's own
+                header rhythm below (Show → gap-2 → Add → gap-2 → list) so
+                the list's own first item lands at the same y position in
+                both states instead of drifting a few px between them. w-8
+                h-8 here too (was w-7 h-7, with a now-removed -mt-1 that
+                compensated for it) — that leftover -mt-1 pulled this
+                button 4px above the padding box while the collapsed
+                rail's own Show button (no such margin) sat right at it,
+                which was the actual few-px drift being reported; -mr-1
+                stays since it's just tucking the icon horizontally into
+                this panel's own corner, unrelated to the collapsed
+                rail's differently-aligned (centered, not right-aligned)
+                header. */}
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
               aria-label="Hide link list"
-              className="self-end -mr-1 -mt-1 w-7 h-7 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] transition-colors"
+              className="self-end -mr-1 w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#EFEFEF] transition-colors"
             >
-              <PanelLeftClose size={15} />
+              <PanelLeftClose size={16} />
             </button>
 
             {/* Originally referenced the profile grid's own "add new" tile
@@ -335,8 +348,11 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             </div>
           </div>
         ) : (
-          <div className="hidden min-[1020px]:flex w-14 h-full flex-col items-center gap-3 py-6">
-            {/* Tooltip is .thought-tt-side (globals.css), the same
+          <div className="hidden min-[1020px]:flex w-14 h-full flex-col items-center gap-2 py-6">
+            {/* gap-2 (not gap-3) — matches the expanded panel's own header
+                rhythm (see that branch's own comment), so the list's
+                first item lands at the same y position in both states.
+                Tooltip is .thought-tt-side (globals.css), the same
                 scale+fade transition/style as the "SETTINGS" desk-icon
                 tooltip on the landing page (desk-app-icon.tsx's own
                 .thought-tt), just repositioned to the side instead of
