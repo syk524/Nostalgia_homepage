@@ -39,8 +39,13 @@ export default async function CharacterArchivePage() {
     // full viewport width at any screen size; only each card's own pair
     // image keeps its own max-w-[600px] cap (character-pair-grid.tsx), so
     // the background/grid scales freely while the artwork itself doesn't
-    // blow up past a sane size.
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
+    // blow up past a sane size. -mt-8 (mobile only) pulls the grid up
+    // against the shared layout's own pt-24 (main's top padding, sized
+    // for desktop's own nav row) — reported directly, same fix as
+    // character-pair-detail.tsx's own hero wrapper, for the same reason:
+    // that fixed 96px left a lot of empty space above the first row on a
+    // narrow phone screen. min-[1020px]:mt-0 keeps desktop unchanged.
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
       <div className="animate-fade-up space-y-6">
         {!pairs?.length && !canEdit && (
           <p className="text-ink-500">No pairs registered yet.</p>
