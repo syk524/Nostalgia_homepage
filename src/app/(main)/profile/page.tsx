@@ -24,19 +24,23 @@ export default async function CharacterArchivePage() {
   return (
     // Breaks out of the shared <main>'s centered max-w-5xl — without this,
     // the grid was capped at 1024px and stopped growing on wider screens,
-    // which read as "not responsive." sm:pl clears the same side-nav gutter
-    // gallery/page.tsx reserves (see that file for why vw, not %), so cards
-    // never sit under Nav's floating category rail. animate-fade-up has to
-    // stay off this outer div and live on the inner one instead — its
-    // keyframe sets `transform: translateY(...)`, which as a plain CSS
-    // animation would replace the whole `transform` property and cancel out
-    // this div's own -translate-x-1/2 (see character-pair-detail.tsx for
-    // the same fix). No max-width on the inner div either — it now fills
-    // the full viewport width at any screen size; only each card's own
-    // pair image keeps its own max-w-[600px] cap (character-pair-grid.tsx),
-    // so the background/grid scales freely while the artwork itself doesn't
+    // which read as "not responsive." min-[1020px]:pl clears the same
+    // side-nav gutter gallery/page.tsx reserves (see that file for why vw,
+    // not %), so cards never sit under Nav's floating category rail —
+    // 1020px, this site's own mobile/desktop breakpoint, not Tailwind's
+    // default sm: (640px); below it there's no gutter at all any more,
+    // reported directly, since nothing actually occupies that space on
+    // this page below the breakpoint either. animate-fade-up has to stay
+    // off this outer div and live on the inner one instead — its keyframe
+    // sets `transform: translateY(...)`, which as a plain CSS animation
+    // would replace the whole `transform` property and cancel out this
+    // div's own -translate-x-1/2 (see character-pair-detail.tsx for the
+    // same fix). No max-width on the inner div either — it now fills the
+    // full viewport width at any screen size; only each card's own pair
+    // image keeps its own max-w-[600px] cap (character-pair-grid.tsx), so
+    // the background/grid scales freely while the artwork itself doesn't
     // blow up past a sane size.
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 sm:pl-[calc(2.6vw+159px)]">
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
       <div className="animate-fade-up space-y-6">
         {!pairs?.length && !canEdit && (
           <p className="text-ink-500">No pairs registered yet.</p>
