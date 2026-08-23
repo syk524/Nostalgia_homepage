@@ -169,7 +169,10 @@ export function DockMusicWidget({
     // modal's z-50 overlay — same fixed-chrome precedent, so the player
     // stays visible and usable even while a post is open, not covered
     // by the modal's full-screen bg-scroll-100 background.
-    <div className="fixed bottom-0 right-6 z-[60]">
+    // right-[44px] (mobile only, 20px further left than the desktop
+    // right-6/24px) — reported directly. min-[1020px]:right-6 keeps
+    // desktop exactly as it was.
+    <div className="fixed bottom-0 right-[44px] min-[1020px]:right-6 z-[60]">
       {/* Only this inner wrapper carries the pill's own slide+fade —
           see .animate-pill-collapse/-expand in globals.css. Expanded
           rests at translateY(-42px): the tag's own height (32px) plus
@@ -272,7 +275,11 @@ export function DockMusicWidget({
       )}
 
       <div ref={pillRef} className="flex items-center gap-3 pl-4 pr-4 py-2.5 rounded-xl bg-[#2F2F2E]">
-        <div className="min-w-0 w-36 font-mono">
+        {/* w-24 (mobile only) — reported directly, narrower than the
+            desktop w-36 to help the pill fit better against the mobile-
+            only right-[44px] shift above. truncate on the title/artist
+            below already handles the tighter fit. */}
+        <div className="min-w-0 w-24 min-[1020px]:w-36 font-mono">
           <p className="text-sm text-scroll-100 truncate font-medium">{current?.title ?? 'Nothing playing'}</p>
           {playError ? (
             <p className="text-xs text-red-400 truncate">{playError}</p>
