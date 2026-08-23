@@ -76,6 +76,12 @@ const kunstlerScript = localFont({
   display: 'swap',
 })
 
+const hotra = localFont({
+  src: './fonts/Hotra-Demo.otf',
+  variable: '--font-hotra',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nustalgio',
   description: 'A place to keep and share what matters',
@@ -85,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}

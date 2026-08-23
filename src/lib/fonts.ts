@@ -14,6 +14,7 @@ export const PAIR_FONTS = {
   ogRenaissance: { label: 'OG 르네상스 비밀 (KR)', family: 'var(--font-og-renaissance), serif' },
   antroVectraBold: { label: 'Antro Vectra Bold (Eng)', family: 'var(--font-antro-vectra-bold), sans-serif' },
   kunstlerScript: { label: 'Kunstler Script (Eng)', family: 'var(--font-kunstler-script), cursive' },
+  hotra: { label: 'Hotra (Eng)', family: 'var(--font-hotra), sans-serif' },
 } as const
 
 export type PairFontKey = keyof typeof PAIR_FONTS
