@@ -48,16 +48,16 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
         // sitting higher up the artwork.
         <div className={`relative w-full overflow-hidden rounded ${THUMBNAIL_ASPECT_CLASSES}`}>
           {primaryProfile.background_url && (
-            // h-10 (40px) below 1020px, not the desktop 140px — kept as
-            // its own separate, smaller value on a deliberate request to
-            // grow the container back up without touching this band, so
-            // it now leaves noticeably MORE headroom above it on mobile
-            // than it originally did on desktop (where the character's
-            // own head/torso "pops out" of the band into that open space
-            // instead of sitting on top of it) — a wider gap here, not a
-            // narrower one, is the intended result of that request.
+            // h-10 (40px) up to 370px, min-[371px]:h-15 (60px, 1.5x that)
+            // from 371px up to (not including) 1020px, min-[1020px]:h-140
+            // (unchanged) from there — the 371-1020px tier was a
+            // deliberate request for a taller band specifically in that
+            // range, reported directly, layered on top of the earlier
+            // "grow the container without touching this band" request
+            // (see that comment's own history two commits back) rather
+            // than replacing it outright.
             <div
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[1020px]:h-[140px]"
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[371px]:h-[60px] min-[1020px]:h-[140px]"
             >
               <img src={primaryProfile.background_url} alt="" className="w-full h-full object-cover" />
             </div>
@@ -74,18 +74,19 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // surface. Noto Sans KR's light (300) weight, loaded in
             // layout.tsx specifically for this. Anchored off the box's own
             // bottom, sitting a fixed 6px above the background band's own
-            // top edge — bottom-[46px] on mobile (the band's own h-10 + 6)
-            // and bottom-[146px] on desktop (the band's own 140px + 6).
-            // Was briefly anchored from the top instead, back when the
-            // band filled the whole box on mobile and this same
-            // above-the-band math would've landed above the box's own top
-            // edge entirely (invisible) — now that the band leaves
-            // headroom again on both breakpoints (see that div's own
-            // comment), this sits directly above the background image
-            // itself again, not just floating near the top of the whole
-            // (now much taller) container, reported directly. */}
+            // top edge, mirroring that div's own three-tier height:
+            // bottom-[46px] up to 370px (band's h-10 + 6), bottom-[66px]
+            // from 371px up to 1020px (band's 60px + 6), bottom-[146px]
+            // from 1020px up (band's 140px + 6). Was briefly anchored from
+            // the top instead, back when the band filled the whole box on
+            // mobile and this same above-the-band math would've landed
+            // above the box's own top edge entirely (invisible) — now
+            // that the band leaves headroom again at every width, this
+            // sits directly above the background image itself again, not
+            // just floating near the top of the whole (now much taller)
+            // container, reported directly. */}
             <span
-              className="absolute right-1.5 bottom-[46px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              className="absolute right-1.5 bottom-[46px] min-[371px]:bottom-[66px] min-[1020px]:bottom-[146px] z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
               style={{ fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
             >
               ©{primaryProfile.illustration_source}

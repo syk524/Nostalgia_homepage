@@ -103,18 +103,16 @@ export default async function TrpgListPage() {
     // keyframe sets `transform: translateY(...)`, which as a plain CSS
     // animation would replace the whole `transform` property and cancel
     // out this div's own -translate-x-1/2 (see profile/page.tsx and
-    // character-pair-detail.tsx for the same fix). -mt-8 (mobile only)
-    // pulls this up against the shared layout's own pt-24 (main's top
-    // padding, sized for desktop's own nav row) — reported directly,
-    // same fix as profile/page.tsx and character-pair-detail.tsx's hero
-    // wrapper, for the same reason: that fixed 96px left a lot of empty
-    // space above the first row on a narrow phone screen.
-    // min-[1020px]:mt-0 keeps desktop unchanged. px-4 (mobile)/
+    // character-pair-detail.tsx for the same fix). px-4 (mobile)/
     // min-[1020px]:pr-6 (desktop right edge, unchanged) — written as two
     // separate side-specific classes rather than px-6 plus an overriding
     // pl, so the desktop-only pl-[calc(2.6vw+159px)] below is never
-    // fighting another same-breakpoint class over the same property.
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
+    // fighting another same-breakpoint class over the same property. A
+    // mobile -mt-8 top-padding reduction (matching profile/page.tsx and
+    // character-pair-detail.tsx's own hero wrapper) was tried here too
+    // but reverted on request — this page keeps the shared layout's own
+    // pt-24 untouched.
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
       <div className="animate-fade-up space-y-8">
         {/* Mobile counterpart to ArchiveSideNav's fixed rail (hidden below
             1020px there) — same "pills at the top of the list" placement
