@@ -178,7 +178,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             {links.map(link => (
               <div
                 key={link.id}
-                className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-scroll-200' : 'hover:bg-scroll-200/60'}`}
+                className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-[#EFEFEF]' : 'hover:bg-scroll-200/60'}`}
               >
                 <button
                   type="button"
@@ -253,7 +253,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 is already mounted and loading underneath by the time the
                 loader fades out — no extra round trip after onLoad fires. */}
             {iframeLoading && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-scroll-200 px-8 text-center">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#F1F1F1] px-8 text-center">
                 <DotMatrixLoader size={28} busyCursor={false} />
                 {showSlowNotice && (
                   <p className="max-w-[240px] text-xs text-ink-400">
