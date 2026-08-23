@@ -250,12 +250,12 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               <PanelLeftClose size={15} />
             </button>
 
-            {/* Same quiet-icon-then-tinted-hover treatment as the profile
-                grid's own "add new" tile (character-pair-grid.tsx's
-                AddPairCard: text-ink-400 → hover:text-ink-600 with a
-                hover:bg-[#2F2F2E]/20 tint) — referenced rather than reused
-                directly since that one is a full grid tile sized to match a
-                pair card, which doesn't fit a compact sidebar list. Moved to
+            {/* Originally referenced the profile grid's own "add new" tile
+                (character-pair-grid.tsx's AddPairCard: text-ink-400 →
+                hover:text-ink-600, still bg-[#2F2F2E]/20 there today) for
+                this same quiet-icon-then-tinted-hover shape, though the
+                hover color itself has since diverged to #EFEFEF to match
+                this list's own selected/hover color elsewhere. Moved to
                 the top of the list (not the old bottom placement) so opening
                 the form doesn't feel disconnected from the button that
                 opened it. Wrapped together with the list below in their
@@ -359,7 +359,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 type="button"
                 onClick={() => { setSidebarOpen(true); setAdding(true) }}
                 aria-label="Add a link"
-                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#2F2F2E]/20 transition-colors"
+                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] transition-colors"
               >
                 <Plus size={16} />
               </button>
@@ -385,7 +385,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                     type="button"
                     onClick={() => setSelectedId(link.id)}
                     aria-label={link.title}
-                    className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-xs font-medium transition-colors ${
+                    className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-sm font-medium transition-colors ${
                       selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-[#EFEFEF]'
                     }`}
                   >
