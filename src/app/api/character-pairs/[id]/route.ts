@@ -22,6 +22,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { data: oldChars } = oldProfileIds.length
     ? await supabase.from('profile_characters').select('profile_image_url').in('profile_id', oldProfileIds)
     : { data: [] as { profile_image_url: string | null }[] }
+  const { data: oldEntries } = oldProfileIds.length
+    ? await supabase.from('timeline_entries').select('image_url').in('profile_id', oldProfileIds)
+    : { data: [] as { image_url: string | null }[] }
 
   const { data: deleted, error } = await supabase.from('character_pairs').delete().eq('id', id).select('id')
 
@@ -33,6 +36,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     [
       ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
       ...(oldChars ?? []).map(c => c.profile_image_url),
+      ...(oldEntries ?? []).map(e => e.image_url),
     ],
     [],
   )

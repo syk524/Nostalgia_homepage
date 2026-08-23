@@ -111,6 +111,17 @@ export function CharacterPairTimeline({ profile, char1, char2 }: { profile: Pair
                   {entry.description}
                 </p>
               )}
+              {/* No object-cover/max-height cap — reported directly: shown
+                  at its own natural aspect ratio, never cropped, so height
+                  is whatever the image's own ratio works out to once
+                  width is capped to the entry's own text width. */}
+              {entry.image_url && (
+                <img
+                  src={entry.image_url}
+                  alt=""
+                  className="w-full max-w-[calc(650px-3rem)] rounded mt-3"
+                />
+              )}
               {(entry.char1_thought || entry.char2_thought) && (
                 <div className="flex items-center gap-2 mt-3">
                   {char1 && entry.char1_thought && <ThoughtAvatar character={char1} thought={entry.char1_thought} />}

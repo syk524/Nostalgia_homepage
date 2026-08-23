@@ -8,7 +8,6 @@ import { useEffect, useRef } from 'react'
 export const PARTICLE_EFFECTS = [
   { value: 'rain', label: 'Rain' },
   { value: 'stars', label: 'Stars' },
-  { value: 'gravity', label: 'Gravity' },
 ] as const
 
 type EffectValue = typeof PARTICLE_EFFECTS[number]['value']
@@ -46,53 +45,12 @@ function randomStar(width: number, height: number): Star {
   }
 }
 
-// Each particle rests at its own (homeX, homeY), nudged by a slow ambient
-// wobble (wobbleSpeed/wobbleOffset, applied only at draw time — never
-// touches the physics state) so the at-rest look reads as gently
-// floating rather than frozen. Pulled toward the pointer within
-// GRAVITY_RADIUS, then eased back to home by a spring once it's out of
-// range or the pointer leaves — that "settling back down" is the
-// "gravity" in the name. baseOpacity sits well above rain/stars'
-// own — reported directly: the reference site's own resting particles
-// read as too faint, and this state (no pointer nearby) is what most
-// visitors actually see most of the time.
-type GravityParticle = {
-  x: number; y: number
-  homeX: number; homeY: number
-  vx: number; vy: number
-  radius: number
-  baseOpacity: number
-  wobbleSpeed: number
-  wobbleOffset: number
-}
-
-const GRAVITY_RADIUS = 170
-const GRAVITY_PULL = 0.045
-const GRAVITY_SPRING = 0.02
-const GRAVITY_DAMPING = 0.9
-
-function randomGravityParticle(width: number, height: number): GravityParticle {
-  const x = Math.random() * width
-  const y = Math.random() * height
-  return {
-    x, y, homeX: x, homeY: y,
-    vx: 0, vy: 0,
-    radius: 1.5 + Math.random() * 2.5,
-    baseOpacity: 0.55 + Math.random() * 0.4,
-    wobbleSpeed: 0.3 + Math.random() * 0.5,
-    wobbleOffset: Math.random() * Math.PI * 2,
-  }
-}
-
 // Layered between the session's fixed background image (z-0) and its log
 // card ([slug]/page.tsx gives that card's wrapper an explicit z-10 so it
 // always stacks above this regardless of DOM order) — a full-viewport
-// canvas, pointer-events-none so it never blocks the log underneath (the
-// canvas itself never receives pointer events — gravity's own pointer
-// tracking listens on window instead, same technique as
-// custom-cursor.tsx). Particle counts scale with viewport area rather
-// than a fixed number so density reads the same on a phone as on an
-// ultrawide monitor.
+// canvas, pointer-events-none so it never blocks the log underneath.
+// Particle counts scale with viewport area rather than a fixed number so
+// density reads the same on a phone as on an ultrawide monitor.
 export function ParticleEffect({ effect }: { effect: string | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -107,35 +65,18 @@ export function ParticleEffect({ effect }: { effect: string | null }) {
     let height = 0
     let drops: Drop[] = []
     let stars: Star[] = []
-    let gravityParticles: GravityParticle[] = []
 
     function resize() {
       width = canvas!.width = window.innerWidth
       height = canvas!.height = window.innerHeight
       if (effect === 'rain') {
         drops = Array.from({ length: Math.round((width * height) / 9000) }, () => randomDrop(width, height, true))
-      } else if (effect === 'stars') {
-        stars = Array.from({ length: Math.round((width * height) / 6000) }, () => randomStar(width, height))
       } else {
-        gravityParticles = Array.from({ length: Math.round((width * height) / 8000) }, () => randomGravityParticle(width, height))
+        stars = Array.from({ length: Math.round((width * height) / 6000) }, () => randomStar(width, height))
       }
     }
     resize()
     window.addEventListener('resize', resize)
-
-    let pointerX = -9999
-    let pointerY = -9999
-    let pointerActive = false
-    function handlePointerMove(e: PointerEvent) {
-      pointerX = e.clientX
-      pointerY = e.clientY
-      pointerActive = true
-    }
-    function handlePointerLeave() { pointerActive = false }
-    if (effect === 'gravity') {
-      window.addEventListener('pointermove', handlePointerMove)
-      document.addEventListener('pointerleave', handlePointerLeave)
-    }
 
     function drawRain() {
       ctx!.strokeStyle = '#ffffff'
@@ -162,44 +103,15 @@ export function ParticleEffect({ effect }: { effect: string | null }) {
       ctx!.globalAlpha = 1
     }
 
-    function drawGravity(time: number) {
-      for (const p of gravityParticles) {
-        const wobble = Math.sin(time * 0.001 * p.wobbleSpeed + p.wobbleOffset) * 2
-        const drawX = p.x + wobble
-        const drawY = p.y
-
-        // Brighter and slightly larger the closer it is to the pointer's
-        // pull radius — a visual cue that it's actively being drawn in,
-        // not just a static opacity bump.
-        const dist = Math.hypot(pointerX - p.x, pointerY - p.y)
-        const proximity = pointerActive && dist < GRAVITY_RADIUS ? 1 - dist / GRAVITY_RADIUS : 0
-        const opacity = Math.min(1, p.baseOpacity + proximity * 0.45)
-        const radius = p.radius * (1 + proximity * 0.6)
-
-        const gradient = ctx!.createRadialGradient(drawX, drawY, 0, drawX, drawY, radius * 3)
-        gradient.addColorStop(0, `rgba(255,255,255,${opacity})`)
-        gradient.addColorStop(1, 'rgba(255,255,255,0)')
-        ctx!.fillStyle = gradient
-        ctx!.beginPath()
-        ctx!.arc(drawX, drawY, radius * 3, 0, Math.PI * 2)
-        ctx!.fill()
-      }
-    }
-
     function draw(time: number) {
       ctx!.clearRect(0, 0, width, height)
       if (effect === 'rain') drawRain()
-      else if (effect === 'stars') drawStars(time)
-      else drawGravity(time)
+      else drawStars(time)
     }
 
     if (reduceMotion) {
       draw(0)
-      return () => {
-        window.removeEventListener('resize', resize)
-        window.removeEventListener('pointermove', handlePointerMove)
-        document.removeEventListener('pointerleave', handlePointerLeave)
-      }
+      return () => window.removeEventListener('resize', resize)
     }
 
     let frame = requestAnimationFrame(step)
@@ -209,24 +121,6 @@ export function ParticleEffect({ effect }: { effect: string | null }) {
           drop.y += drop.speed
           if (drop.y - drop.length > height) Object.assign(drop, randomDrop(width, height, false))
         }
-      } else if (effect === 'gravity') {
-        for (const p of gravityParticles) {
-          const dx = pointerX - p.x
-          const dy = pointerY - p.y
-          const dist = Math.hypot(dx, dy)
-          if (pointerActive && dist < GRAVITY_RADIUS && dist > 0.01) {
-            const force = (1 - dist / GRAVITY_RADIUS) * GRAVITY_PULL
-            p.vx += (dx / dist) * force
-            p.vy += (dy / dist) * force
-          } else {
-            p.vx += (p.homeX - p.x) * GRAVITY_SPRING
-            p.vy += (p.homeY - p.y) * GRAVITY_SPRING
-          }
-          p.vx *= GRAVITY_DAMPING
-          p.vy *= GRAVITY_DAMPING
-          p.x += p.vx
-          p.y += p.vy
-        }
       }
       draw(time)
       frame = requestAnimationFrame(step)
@@ -234,8 +128,6 @@ export function ParticleEffect({ effect }: { effect: string | null }) {
 
     return () => {
       window.removeEventListener('resize', resize)
-      window.removeEventListener('pointermove', handlePointerMove)
-      document.removeEventListener('pointerleave', handlePointerLeave)
       cancelAnimationFrame(frame)
     }
   }, [effect])

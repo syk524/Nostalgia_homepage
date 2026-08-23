@@ -13,29 +13,77 @@ import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
 import { pairFontFamily } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
-// One cell per description section — name/catchphrase/quote already live
-// in the overlay above the image, so a repeated name heading here would be
-// redundant. No border (this sits directly on the pair's own blurred
-// background image, where a boxed outline reads as clutter). Each section
-// is its own direct grid item (not nested inside a per-character wrapper)
-// so it can be explicitly placed via --section-row/--section-col — see the
-// ".description-section-cell" rule in globals.css. Placing both
-// characters' section N in the same grid row is what makes them
-// top-align, and it's what "reserves empty space" for free: if one
-// character has fewer sections, the shorter column's rows just have
-// nothing in them, they're never explicitly padded to match, but nothing
-// downstream needs that either since these sections are the last thing in
-// the row-aligned area. The background glow itself is NOT rendered here
-// any more — see the glow wrapper in CharacterPairDetail below for why.
+// age/height/weight/job, in that order, "•"-separated with 8px (px-2) of
+// horizontal breathing room around each bullet — reported directly.
+// Age/height/weight each get their unit ('세'/cm/kg) appended here at
+// render time rather than stored on the value, so the editor's own input
+// just holds the number.
+function characterStats(character: ProfileCharacter): string[] {
+  return [
+    character.age?.trim() ? `${character.age.trim()}세` : null,
+    character.height?.trim() ? `${character.height.trim()}cm` : null,
+    character.weight?.trim() ? `${character.weight.trim()}kg` : null,
+    character.job?.trim() || null,
+  ].filter((s): s is string => !!s)
+}
+
+function CharacterStatsLine({ character }: { character: ProfileCharacter }) {
+  const stats = characterStats(character)
+  if (!stats.length) return null
+  return (
+    <p className="text-sm" style={{ color: character.stats_color, fontFamily: pairFontFamily(character.stats_font) }}>
+      {stats.map((stat, i) => (
+        <span key={i}>
+          {i > 0 && <span className="px-2" aria-hidden="true">•</span>}
+          {stat}
+        </span>
+      ))}
+    </p>
+  )
+}
+
+// One cell per description section, plus one more (row 1) for the
+// character's own name + age/height/weight/job line — name/catchphrase/
+// quote already live in the overlay above the image, but the name gets
+// re-shown here anyway, reported directly, so the stats line has
+// something to sit under. No border (this sits directly on the pair's own
+// blurred background image, where a boxed outline reads as clutter). Each
+// cell is its own direct grid item (not nested inside a per-character
+// wrapper) so it can be explicitly placed via --section-row/--section-col
+// — see the ".description-section-cell" rule in globals.css. Placing both
+// characters' row N in the same grid row is what makes them top-align,
+// and it's what "reserves empty space" for free: if one character has
+// fewer sections, the shorter column's rows just have nothing in them,
+// they're never explicitly padded to match, but nothing downstream needs
+// that either since these sections are the last thing in the row-aligned
+// area. The background glow itself is NOT rendered here any more — see
+// the glow wrapper in CharacterPairDetail below for why.
 function CharacterDescriptionSections({ character, charIdx }: { character: ProfileCharacter; charIdx: number }) {
   const sections = character.description_sections ?? []
+  const alignClass = charIdx === 0 ? 'sm:justify-self-start' : 'sm:justify-self-end'
   return (
     <>
+      {/* No left padding — reported directly: this whole column sits
+          inside the same px-6 sm:pl-[...] wrapper the hero's own
+          catchphrase/name/quote use above it with no padding of their
+          own, so this cell's own p-6/px-6 was adding a second, redundant
+          24px indent on top of that, throwing this column out of
+          alignment with the hero content directly above it. No bottom
+          padding either — the grid's own gap-6 between rows is already
+          enough separation under a single line of stats, reported
+          separately. */}
+      <div
+        className={`description-section-cell rounded pr-6 pt-6 sm:w-4/5 sm:max-w-[650px] ${alignClass}`}
+        style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
+      >
+        <h3 className="text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
+        <CharacterStatsLine character={character} />
+      </div>
       {sections.map((section, sectionIdx) => (
         <div
           key={section.id}
-          className={`description-section-cell rounded p-6 sm:w-4/5 sm:max-w-[650px] ${charIdx === 0 ? 'sm:justify-self-start' : 'sm:justify-self-end'}`}
-          style={{ '--section-row': sectionIdx + 1, '--section-col': charIdx + 1 } as CSSProperties}
+          className={`description-section-cell rounded pr-6 pt-6 pb-6 sm:w-4/5 sm:max-w-[650px] ${alignClass}`}
+          style={{ '--section-row': sectionIdx + 2, '--section-col': charIdx + 1 } as CSSProperties}
         >
           {section.title && <h3 className="text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
           <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
@@ -60,6 +108,7 @@ function CharacterCard({ character }: { character: ProfileCharacter }) {
         <span className="tag inline-block" style={{ fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color }}>{character.catchphrase}</span>
       )}
       <h2 className="text-2xl" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color }}>{character.name}</h2>
+      <CharacterStatsLine character={character} />
       {/* Per-character color, not the old fixed bg-scroll-300 — same
           field as the photo-overlay hero's own name underline (see
           character-pair-hero.tsx), always shown now rather than gated

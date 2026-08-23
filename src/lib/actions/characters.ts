@@ -5,7 +5,7 @@ import { slugify } from '@/lib/slug'
 import { deleteOrphanedImages } from '@/lib/storage-cleanup'
 
 type SectionInput = { title: string; titleColor: string; titleFont: string; description: string; textColor: string }
-type TimelineEntryInput = { subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string }
+export type TimelineEntryInput = { subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string; imageUrl: string | null }
 // A character's full presentation within one profile — nothing about a
 // character is shared across a pair's profiles, so identity (name,
 // avatar) lives here alongside caption content.
@@ -16,6 +16,7 @@ type ProfileCharInput = {
   keyword1: string; keyword2: string; keyword3: string; keywordFont: string; keywordColor: string
   descriptionColor: string
   captionShadowColor: string; captionShadowStrength: number; captionOffsetY: number
+  age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
   sections: SectionInput[]
 }
 type ProfileInput = {
@@ -142,9 +143,13 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
   const { data: oldChars } = oldProfileIds.length
     ? await supabase.from('profile_characters').select('profile_image_url').in('profile_id', oldProfileIds)
     : { data: [] as { profile_image_url: string | null }[] }
+  const { data: oldEntries } = oldProfileIds.length
+    ? await supabase.from('timeline_entries').select('image_url').in('profile_id', oldProfileIds)
+    : { data: [] as { image_url: string | null }[] }
   const oldImageUrls = [
     ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
     ...(oldChars ?? []).map(c => c.profile_image_url),
+    ...(oldEntries ?? []).map(e => e.image_url),
   ]
 
   const profilesErr = await saveProfiles(supabase, pairId, input.profiles)
@@ -155,6 +160,7 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     p.backgroundUrl,
     p.characters[0].profileImageUrl,
     p.characters[1].profileImageUrl,
+    ...p.timelineEntries.map(e => e.imageUrl),
   ])
   await deleteOrphanedImages(supabase, oldImageUrls, newImageUrls)
 
@@ -207,6 +213,8 @@ async function saveProfiles(
       keyword_font: c.keywordFont, keyword_color: c.keywordColor,
       description_color: c.descriptionColor,
       caption_shadow_color: c.captionShadowColor, caption_shadow_strength: c.captionShadowStrength, caption_offset_y: c.captionOffsetY,
+      age: c.age.trim() || null, height: c.height.trim() || null, weight: c.weight.trim() || null, job: c.job.trim() || null,
+      stats_color: c.statsColor, stats_font: c.statsFont,
     }))
     const { data: insertedProfileChars, error: pcErr } = await supabase.from('profile_characters').insert(charRows).select('id, slot')
     if (pcErr) return pcErr.message
@@ -227,6 +235,7 @@ async function saveProfiles(
         profile_id: profileRow.id, position: pos, subtitle: e.subtitle.trim() || null, subtitle_color: e.subtitleColor,
         title: e.title.trim() || null, title_color: e.titleColor, description: e.description.trim() || null,
         char1_thought: e.char1Thought.trim() || null, char2_thought: e.char2Thought.trim() || null,
+        image_url: e.imageUrl,
       }))
       const { error } = await supabase.from('timeline_entries').insert(entryRows)
       if (error) return error.message

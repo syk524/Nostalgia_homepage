@@ -101,6 +101,12 @@ export type ProfileCharacter = {
   caption_shadow_color: string
   caption_shadow_strength: number
   caption_offset_y: number
+  age: string | null
+  height: string | null
+  weight: string | null
+  job: string | null
+  stats_color: string
+  stats_font: string
   created_at: string
   updated_at: string
   description_sections?: DescriptionSection[]
@@ -117,6 +123,7 @@ export type TimelineEntry = {
   description: string | null
   char1_thought: string | null
   char2_thought: string | null
+  image_url: string | null
   created_at: string
   updated_at: string
 }
@@ -293,7 +300,7 @@ export type Database = {
       profile_characters: {
         Row: Omit<ProfileCharacter, 'description_sections'>
         Insert: Omit<ProfileCharacter, 'id' | 'created_at' | 'updated_at' | 'description_sections'>
-        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y'>>
+        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y' | 'age' | 'height' | 'weight' | 'job' | 'stats_color' | 'stats_font'>>
         Relationships: []
       }
       description_sections: {
@@ -305,7 +312,7 @@ export type Database = {
       timeline_entries: {
         Row: TimelineEntry
         Insert: Omit<TimelineEntry, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Pick<TimelineEntry, 'position' | 'subtitle' | 'subtitle_color' | 'title' | 'title_color' | 'description' | 'char1_thought' | 'char2_thought'>>
+        Update: Partial<Pick<TimelineEntry, 'position' | 'subtitle' | 'subtitle_color' | 'title' | 'title_color' | 'description' | 'char1_thought' | 'char2_thought' | 'image_url'>>
         Relationships: []
       }
       sticker_gallery: {

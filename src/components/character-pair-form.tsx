@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { GripVertical, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage, uploadHtmlPage } from '@/lib/upload'
-import { createCharacterPair, updateCharacterPair } from '@/lib/actions/characters'
+import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } from '@/lib/actions/characters'
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
 import { ColorSwatch } from '@/components/color-swatch'
 import { PairDescriptionEditor } from '@/components/pair-description-editor'
@@ -25,10 +25,16 @@ function emptySection(): SectionState {
 // Same client-only `id` convention as SectionState — a stable React key
 // across add/remove/reorder, never sent to the server (timeline entries
 // are saved wholesale, delete + reinsert, same as sections).
-type TimelineEntryState = { id: string; subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string }
+type TimelineEntryState = {
+  id: string; subtitle: string; subtitleColor: string; title: string; titleColor: string; description: string; char1Thought: string; char2Thought: string
+  imageUrl: string | null; imageFile: File | null; imagePreview: string; uploadingImage: boolean
+}
 
 function emptyTimelineEntry(): TimelineEntryState {
-  return { id: crypto.randomUUID(), subtitle: '', subtitleColor: '#5c574d', title: '', titleColor: '#5c574d', description: '', char1Thought: '', char2Thought: '' }
+  return {
+    id: crypto.randomUUID(), subtitle: '', subtitleColor: '#5c574d', title: '', titleColor: '#5c574d', description: '', char1Thought: '', char2Thought: '',
+    imageUrl: null, imageFile: null, imagePreview: '', uploadingImage: false,
+  }
 }
 
 // A character's full presentation within one profile — nothing about a
@@ -43,6 +49,7 @@ type ProfileCharState = {
   descriptionColor: string
   captionShadowColor: string; captionShadowStrength: number
   captionOffsetY: number
+  age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
   sections: SectionState[]
 }
 
@@ -71,6 +78,12 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     captionShadowColor: existing?.caption_shadow_color ?? '#000000',
     captionShadowStrength: existing?.caption_shadow_strength ?? 2,
     captionOffsetY: existing?.caption_offset_y ?? 0,
+    age: existing?.age ?? '',
+    height: existing?.height ?? '',
+    weight: existing?.weight ?? '',
+    job: existing?.job ?? '',
+    statsColor: existing?.stats_color ?? '#5c574d',
+    statsFont: existing?.stats_font ?? 'default',
     sections: existing
       ? existing.description_sections?.map(s => ({
           id: s.id, title: s.title ?? '', titleColor: s.title_color, titleFont: s.title_font, description: s.description, textColor: s.text_color,
@@ -142,6 +155,7 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
       ? existing.timeline_entries?.map(e => ({
           id: e.id, subtitle: e.subtitle ?? '', subtitleColor: e.subtitle_color, title: e.title ?? '', titleColor: e.title_color,
           description: e.description ?? '', char1Thought: e.char1_thought ?? '', char2Thought: e.char2_thought ?? '',
+          imageUrl: e.image_url ?? null, imageFile: null, imagePreview: e.image_url ?? '', uploadingImage: false,
         })) ?? []
       : [emptyTimelineEntry()],
     characters: [emptyProfileChar(sorted?.[0]), emptyProfileChar(sorted?.[1])],
@@ -243,6 +257,21 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl))
       }
 
+      const resolvedTimelineEntries: (TimelineEntryInput)[] = []
+      for (const entry of p.timelineEntries) {
+        let finalEntryImageUrl = entry.imageUrl
+        if (entry.imageFile) {
+          const { url, error: err } = await uploadImage(entry.imageFile, user.id, 'gallery-images')
+          if (err) { setError(err); setSubmitting(false); return }
+          finalEntryImageUrl = url
+        }
+        resolvedTimelineEntries.push({
+          subtitle: entry.subtitle, subtitleColor: entry.subtitleColor, title: entry.title, titleColor: entry.titleColor,
+          description: entry.description, char1Thought: entry.char1Thought, char2Thought: entry.char2Thought,
+          imageUrl: finalEntryImageUrl,
+        })
+      }
+
       resolvedProfiles.push({
         title: p.title, profileTitle: p.profileTitle, titleFont: p.titleFont, titleColor: p.titleColor, titleSize: p.titleSize, iconColor: p.iconColor,
         linkText: p.linkText, linkUrl: p.linkUrl, linkFont: p.linkFont, linkColor: p.linkColor, hasMusic: p.hasMusic,
@@ -252,10 +281,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         timelineSubtitleFont: p.timelineSubtitleFont, timelineTitleFont: p.timelineTitleFont, timelineTextColor: p.timelineTextColor,
         timelineDotColor: p.timelineDotColor, timelineLineColor: p.timelineLineColor, timelineShadow: p.timelineShadow,
-        timelineEntries: p.timelineEntries.map(e => ({
-          subtitle: e.subtitle, subtitleColor: e.subtitleColor, title: e.title, titleColor: e.titleColor,
-          description: e.description, char1Thought: e.char1Thought, char2Thought: e.char2Thought,
-        })),
+        timelineEntries: resolvedTimelineEntries,
         characters: resolvedCharacters as [ReturnType<typeof toProfileCharInput>, ReturnType<typeof toProfileCharInput>],
       })
     }
@@ -331,6 +357,7 @@ function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null)
     keyword1: c.keyword1, keyword2: c.keyword2, keyword3: c.keyword3, keywordFont: c.keywordFont, keywordColor: c.keywordColor,
     descriptionColor: c.descriptionColor,
     captionShadowColor: c.captionShadowColor, captionShadowStrength: c.captionShadowStrength, captionOffsetY: c.captionOffsetY,
+    age: c.age, height: c.height, weight: c.weight, job: c.job, statsColor: c.statsColor, statsFont: c.statsFont,
     sections: c.sections.map(s => ({ title: s.title, titleColor: s.titleColor, titleFont: s.titleFont, description: s.description, textColor: s.textColor })),
   }
 }
@@ -698,6 +725,53 @@ function CharacterFieldset({
         <ColorSwatch value={state.nameUnderlineColor} onChange={v => onPatch({ nameUnderlineColor: v })} />
       </div>
 
+      {/* Shown on the detail page as one line under the character's
+          (re-shown) name, above their description sections — reported
+          directly. Age/height/weight are just the number here; "세"/"cm"/
+          "kg" are added automatically at render time
+          (character-pair-detail.tsx), not typed in. */}
+      <div>
+        <label className="label">Stats</label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <input
+            className="input"
+            value={state.age}
+            onChange={e => onPatch({ age: e.target.value })}
+            placeholder="Age"
+          />
+          <div className="relative">
+            <input
+              className="input pr-9"
+              value={state.height}
+              onChange={e => onPatch({ height: e.target.value })}
+              placeholder="Height"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">cm</span>
+          </div>
+          <div className="relative">
+            <input
+              className="input pr-9"
+              value={state.weight}
+              onChange={e => onPatch({ weight: e.target.value })}
+              placeholder="Weight"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">kg</span>
+          </div>
+          <input
+            className="input"
+            value={state.job}
+            onChange={e => onPatch({ job: e.target.value })}
+            placeholder="Job"
+          />
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <div className="w-36">
+            <FontSelect value={state.statsFont} onChange={v => onPatch({ statsFont: v })} />
+          </div>
+          <ColorSwatch value={state.statsColor} onChange={v => onPatch({ statsColor: v })} />
+        </div>
+      </div>
+
       <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Character Caption</p>
 
       <StyledTextRow
@@ -901,6 +975,11 @@ function TimelineEditor({
   function patch(index: number, p: Partial<TimelineEntryState>) {
     onChange(entries.map((e, i) => i === index ? { ...e, ...p } : e))
   }
+  function handleImageChange(index: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    patch(index, { imageFile: file, imagePreview: URL.createObjectURL(file) })
+  }
   function add() {
     onChange([...entries, emptyTimelineEntry()])
   }
@@ -980,6 +1059,22 @@ function TimelineEditor({
             onChange={e => patch(i, { description: e.target.value })}
             placeholder="Entry text"
           />
+          {/* Same preview-tile + file-input pattern as the pair/background
+              pickers above — optional, shown below the entry's own
+              description on the profile page (character-pair-timeline.tsx),
+              so the editor's field order matches. */}
+          <div className="flex items-center gap-4">
+            <div className="w-24 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+              {entry.imagePreview
+                ? <img src={entry.imagePreview} alt="" className="w-full h-full object-cover" />
+                : <span className="text-lg text-scroll-400">◯</span>
+              }
+            </div>
+            <label className="btn-ghost text-xs cursor-pointer" aria-busy={entry.uploadingImage}>
+              {entry.uploadingImage ? 'Uploading…' : 'Choose image'}
+              <input type="file" accept="image/*" onChange={e => handleImageChange(i, e)} className="sr-only" disabled={entry.uploadingImage} />
+            </label>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <textarea
               className="textarea"
