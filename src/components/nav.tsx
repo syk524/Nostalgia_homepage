@@ -153,9 +153,9 @@ export function Nav({ profile, categories }: { profile: Profile | null; categori
         // --popout-* timing/easing custom properties rather than a
         // second copy of the same numbers under new names.
         <div
-          className={`t-nav-menu min-[1020px]:hidden fixed inset-0 z-[65] bg-scroll-100 flex flex-col justify-center px-6 ${menuPhase === 'open' ? 'is-open' : 'is-closing'}`}
+          className={`t-nav-menu min-[1020px]:hidden fixed inset-0 z-[65] bg-scroll-100 flex flex-col justify-start pt-24 px-6 ${menuPhase === 'open' ? 'is-open' : 'is-closing'}`}
         >
-          <nav className="font-mono flex flex-col items-start gap-4 text-[16px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
+          <nav className="font-mono flex flex-col items-start gap-4 text-[14px] uppercase tracking-tight text-ink" style={NAV_COLOR_STYLE}>
             {links.map(link => (
               <Link
                 key={link.href}
