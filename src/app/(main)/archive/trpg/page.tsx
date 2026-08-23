@@ -109,8 +109,12 @@ export default async function TrpgListPage() {
     // same fix as profile/page.tsx and character-pair-detail.tsx's hero
     // wrapper, for the same reason: that fixed 96px left a lot of empty
     // space above the first row on a narrow phone screen.
-    // min-[1020px]:mt-0 keeps desktop unchanged.
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
+    // min-[1020px]:mt-0 keeps desktop unchanged. px-4 (mobile)/
+    // min-[1020px]:pr-6 (desktop right edge, unchanged) — written as two
+    // separate side-specific classes rather than px-6 plus an overriding
+    // pl, so the desktop-only pl-[calc(2.6vw+159px)] below is never
+    // fighting another same-breakpoint class over the same property.
+    <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
       <div className="animate-fade-up space-y-8">
         {/* Mobile counterpart to ArchiveSideNav's fixed rail (hidden below
             1020px there) — same "pills at the top of the list" placement

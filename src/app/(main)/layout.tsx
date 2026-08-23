@@ -25,7 +25,10 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         <Suspense fallback={null}>
           <Nav profile={profile} categories={categories ?? []} />
         </Suspense>
-        <main className="max-w-5xl mx-auto px-6 pt-24 pb-16">{children}</main>
+        {/* px-4 (mobile) / min-[1020px]:px-6 (desktop, unchanged) — 16px
+            side margins on a phone screen, reported directly, down from
+            the same 24px used at every width before. */}
+        <main className="max-w-5xl mx-auto px-4 min-[1020px]:px-6 pt-24 pb-16">{children}</main>
       </div>
     </div>
   )

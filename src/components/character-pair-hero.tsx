@@ -283,14 +283,16 @@ export function CharacterPairHero({
         </div>
 
         {/* right side matches Nav's own right-[2.6%] inset — the
-            container this is positioned against already carries a fixed
-            24px (1.5rem) right padding from the shared px-6 on the outer
-            content wrapper (only its left padding changes at sm+, per
-            character-pair-detail.tsx), so the offset here is the delta
-            from that 24px up to the vw-scaled 2.6% nav uses, same
-            calc() pattern as the back button fix in character-pair-detail.tsx. */}
+            container this is positioned against carries its own right
+            padding from the outer content wrapper (character-pair-
+            detail.tsx: px-4/1rem on mobile, min-[1020px]:pr-6/1.5rem on
+            desktop), so the offset here is the delta from THAT value up
+            to the vw-scaled 2.6% nav uses, same calc() pattern as the
+            back button fix in character-pair-detail.tsx — kept in sync
+            with that wrapper's own two values rather than the single
+            1.5rem this used before both were mobile/desktop-specific. */}
         <div
-          className="absolute left-0 right-[calc(2.6vw-1.5rem)] flex items-center justify-between gap-6 pointer-events-none"
+          className="absolute left-0 right-[calc(2.6vw-1rem)] min-[1020px]:right-[calc(2.6vw-1.5rem)] flex items-center justify-between gap-6 pointer-events-none"
           style={{ top: captionTop !== null ? `${captionTop}px` : '50%', transform: 'translateY(-50%)' }}
         >
           {char1 && (

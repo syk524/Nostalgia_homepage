@@ -89,7 +89,12 @@ export default async function GalleryPage({
           that same viewport-relative basis (plain % would resolve against
           this div's own containing block instead, which is narrower and
           throws the match off), clearing their edge with a steady 60px gap. */}
-      <div className="w-screen relative left-1/2 -translate-x-1/2 px-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
+      {/* px-4 (mobile)/min-[1020px]:pr-6 (desktop right edge, unchanged) —
+          written as two separate side-specific classes rather than px-6
+          plus an overriding pl, so the desktop-only
+          pl-[calc(2.6vw+159px)] below is never fighting another
+          same-breakpoint class over the same property. */}
+      <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
         <div className="max-w-[1800px] animate-fade-up space-y-8">
           {/* Category filters, inline at the top — only shown below 1020px
               (this page's own mobile/desktop breakpoint, matching nav.tsx's

@@ -211,8 +211,14 @@ export function CharacterPairDetail({
                   above the title on a narrow phone screen where the nav is
                   just the back arrow and a small MENU toggle, not the full
                   desktop link row that padding was calibrated against.
-                  min-[1020px]:mt-0 keeps desktop exactly as it was. */}
-              <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0 pt-4 space-y-8">
+                  min-[1020px]:mt-0 keeps desktop exactly as it was. px-4
+                  (mobile)/min-[1020px]:pr-6 (desktop right edge,
+                  unchanged) — written as two separate side-specific
+                  classes rather than px-6 plus an overriding pl, so the
+                  desktop-only pl-[calc(2.6vw+159px)] below is never
+                  fighting another same-breakpoint class over the same
+                  property. */}
+              <div className="px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0 pt-4 space-y-8">
                 <CharacterPairHero
                   imageUrl={pairImageUrl}
                   // Only credit a real illustrator for a real uploaded
@@ -277,7 +283,14 @@ export function CharacterPairDetail({
                       .join(', ') || undefined,
                   }}
                 >
-                  <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
+                  {/* px-4 (mobile)/min-[1020px]:pr-6 (desktop right edge,
+                      unchanged) — same reasoning as the hero wrapper
+                      above: two separate side-specific classes instead of
+                      px-6 plus an overriding pl, so the desktop-only
+                      pl-[calc(2.6vw+159px)] here is never fighting
+                      another same-breakpoint class over the same
+                      property. */}
+                  <div className="px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
                     {/* Each section is sized to 80% of its own grid column
                         (not 80% of the whole row), capped at 650px so it
                         doesn't balloon on very wide columns. */}
