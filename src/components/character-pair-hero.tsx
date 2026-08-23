@@ -268,7 +268,12 @@ export function CharacterPairHero({
       </div>
 
       <div ref={containerRef} className="relative w-full">
-        <div className="w-[60vw] mx-auto">
+        {/* Full width (just the page's own px-6) below 1020px instead of
+            the desktop 60vw column — reported directly, so the pair art
+            fills the narrower phone screen properly instead of sitting in
+            a comparatively small centered strip with dead space on either
+            side. min-[1020px]:w-[60vw] keeps desktop exactly as it was. */}
+        <div className="w-full min-[1020px]:w-[60vw] mx-auto">
           <img src={imageUrl} alt="" className="w-full h-auto block rounded" />
           {illustrationSource && (
             <p className="text-center text-sm mt-3" style={{ fontFamily: pairFontFamily(illustrationSourceFont), color: illustrationSourceColor }}>

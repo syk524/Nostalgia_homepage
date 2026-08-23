@@ -204,7 +204,15 @@ export function CharacterPairDetail({
               -translate-x-1/2. */}
           <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 -mb-16 flex flex-col min-h-screen">
             <div className="animate-fade-up flex flex-col flex-1">
-              <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-4 space-y-8">
+              {/* -mt-8 (mobile only) pulls the hero up against the shared
+                  layout's own pt-24 (main's top padding, sized for
+                  desktop's own nav row) — reported directly, that fixed
+                  96px plus this div's own pt-4 left a lot of empty space
+                  above the title on a narrow phone screen where the nav is
+                  just the back arrow and a small MENU toggle, not the full
+                  desktop link row that padding was calibrated against.
+                  min-[1020px]:mt-0 keeps desktop exactly as it was. */}
+              <div className="px-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0 pt-4 space-y-8">
                 <CharacterPairHero
                   imageUrl={pairImageUrl}
                   // Only credit a real illustrator for a real uploaded
