@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, type FormEvent } from 'react'
-import { ExternalLink, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
+import { ArrowUpRight, ExternalLink, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-react'
 import { createLink, deleteLink } from '@/lib/actions/archive-links'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { ArchiveLink } from '@/types/database'
@@ -135,6 +135,15 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 >
                   <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
                 </button>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open ${link.title} in a new tab`}
+                  className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
+                >
+                  <ArrowUpRight size={13} />
+                </a>
                 <button
                   type="button"
                   onClick={() => handleDelete(link)}
