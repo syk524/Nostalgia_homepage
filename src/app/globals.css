@@ -567,7 +567,10 @@
   z-index: 20;
   width: max-content;
   max-width: 220px;
-  padding: 8px 12px;
+  /* Left padding bumped from 12px to 16px — reported directly, more
+     breathing room before the text than .thought-tt's own uniform
+     8px/12px (right/top/bottom stay as-is). */
+  padding: 8px 12px 8px 16px;
   border-radius: 8px;
   background: #faf9f7;
   color: #2f2f2e;
