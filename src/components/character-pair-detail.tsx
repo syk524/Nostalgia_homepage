@@ -286,9 +286,20 @@ export function CharacterPairDetail({
               <div
                   className="grow"
                   style={{
+                    // `to top` — 0% is the box's own bottom edge, 100% is
+                    // its top. Was a straight two-stop fade (full CC/~80%
+                    // strength right at 0%, sheer 00 by 90%), which read
+                    // as the color only ever reaching real strength in a
+                    // thin band hugging the very bottom, reported
+                    // directly. FF (full 100%, not CC) now holds flat
+                    // from 0% up through 45% — near enough to the vertical
+                    // center that it visibly covers "much higher" than a
+                    // bottom-hugging sliver — before fading out over the
+                    // same remaining stretch up to 90%, still leaving the
+                    // top 10% clear.
                     background: [char1, char2]
                       .filter(c => (c.description_sections?.length ?? 0) > 0)
-                      .map(c => `linear-gradient(to top, ${c.description_color}CC 0%, ${c.description_color}00 90%)`)
+                      .map(c => `linear-gradient(to top, ${c.description_color}FF 0%, ${c.description_color}FF 45%, ${c.description_color}00 90%)`)
                       .join(', ') || undefined,
                   }}
                 >
