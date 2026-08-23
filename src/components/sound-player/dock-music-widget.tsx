@@ -281,11 +281,11 @@ export function DockMusicWidget({
           {playError ? (
             <p className="text-xs text-red-400 truncate">{playError}</p>
           ) : (
-            <p className="text-xs text-scroll-400 truncate">{current?.artist ?? '—'}</p>
+            <p className="text-xs text-[#CACACA] truncate">{current?.artist ?? '—'}</p>
           )}
         </div>
 
-        <div className="flex items-center gap-1 text-scroll-300">
+        <div className="flex items-center gap-1 text-scroll-100">
           <button
             onClick={onPrev}
             disabled={queue.length <= 1}
