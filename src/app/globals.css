@@ -139,10 +139,14 @@
   /* Informational category tag on a post's metadata section — squared like
      .pill, but a lighter fill and no hover/interactive states since it's
      just display, not a filter control. */
+  /* Matches .pill's own default (non-active) color — reported directly —
+     the mobile-only inline category filter chips (gallery/page.tsx,
+     ArchiveSectionTabs) that this tag doesn't otherwise share any styling
+     with, since this one is a passive label, not an interactive filter. */
   .tag {
     @apply inline-flex items-center gap-1 px-3 py-1 rounded
            text-xs font-mono uppercase tracking-wide;
-    background-color: #cfcac1;
+    background-color: #c9c9c8;
     color: #2f2f2e;
   }
 
