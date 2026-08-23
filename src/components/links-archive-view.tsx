@@ -198,7 +198,15 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
+    // Transparent, not bg-scroll-100 — reported directly. /archive/links
+    // is a plain route (see page.tsx), not a parallel-route modal like
+    // gallery's own @modal/(.)[id] intercepting post-modal.tsx, so
+    // there's no previous page still mounted underneath to reveal —
+    // what actually shows through is whatever the shared archive
+    // layout.tsx and root layout.tsx still render around this page
+    // (ArchiveSideNav, Nav, the music player) plus the flat body
+    // background color, not the trpg page's own content.
+    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
       {/* Always mounted (not conditionally rendered) so width/max-height can
           transition instead of popping in/out. On desktop, collapsing no
           longer hides the sidebar entirely — it narrows to a persistent
