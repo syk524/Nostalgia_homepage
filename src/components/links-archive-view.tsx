@@ -134,7 +134,6 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                   className="flex-1 min-w-0 text-left px-2 py-2"
                 >
                   <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
-                  <p className="text-xs text-ink-400 truncate">{link.url}</p>
                 </button>
                 <button
                   type="button"
