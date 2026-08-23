@@ -86,11 +86,6 @@ export default async function TrpgListPage() {
     ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
-  // Matches archive/layout.tsx's own isAdmin gate on ArchiveSideNav — the
-  // TRPG/Links rail (and its mobile ArchiveSectionTabs counterpart below)
-  // stays admin-only, reported directly, even though the list itself and
-  // canEdit are broader.
-  const isAdmin = profile?.role === 'admin'
 
   return (
     // Same breakout as profile/page.tsx: escapes the shared <main>'s
@@ -116,9 +111,10 @@ export default async function TrpgListPage() {
       <div className="animate-fade-up space-y-8">
         {/* Mobile counterpart to ArchiveSideNav's fixed rail (hidden below
             1020px there) — same "pills at the top of the list" placement
-            gallery/page.tsx uses for its own category filters. Admin-gated
-            to match the rail it stands in for. */}
-        {isAdmin && <ArchiveSectionTabs />}
+            gallery/page.tsx uses for its own category filters. Gated on
+            canEdit (editor-or-admin), matching the rail it stands in for
+            — widened from admin-only, reported directly. */}
+        {canEdit && <ArchiveSectionTabs />}
 
         {!sessions?.length && (
           <p className="text-ink-500">No sessions logged yet — back up the first one.</p>
