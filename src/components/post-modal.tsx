@@ -76,13 +76,26 @@ export function PostModal({
     // gallery grid behind the modal (previously left transparent, which
     // let grid thumbnails show through and clip against the modal edge)
     // while the category links still render on top via Nav's z-[60].
-    <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row animate-fade-up">
+    // Below 1020px, the whole modal is one scrolling page (root itself
+    // overflow-y-auto, sidebar and image area both in normal flow) instead
+    // of the sidebar and image each owning a separate clipped scroll pane —
+    // that split used to pin the blurred backdrop to a fixed-height box
+    // with the actual image scrolling inside it, leaving the backdrop
+    // visibly shorter than the image content. Letting the image container
+    // size to its natural (unclamped) height instead means the backdrop's
+    // absolute inset-0/h-full resolves against that real content height,
+    // so it now extends the full length of the image instead of cutting
+    // off partway down. Desktop (min-[1020px]:) keeps the original
+    // independently-scrolling side-by-side panes, unchanged.
+    <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. 1020px,
           this site's own mobile/desktop breakpoint (not Tailwind's default
-          sm:), matching gallery/page.tsx and nav.tsx's own category rail. */}
-      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} max-h-[45vh] min-[1020px]:max-h-full min-[1020px]:h-full overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
+          sm:), matching gallery/page.tsx and nav.tsx's own category rail.
+          No max-h/overflow-y-auto of its own below 1020px — it's part of
+          the single root-level scroll there instead (see comment above). */}
+      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
         <div className="flex items-center gap-1 -ml-2">
           <button
             onClick={close}
@@ -148,9 +161,15 @@ export function PostModal({
       {/* Image area — blurred, scaled backdrop fills the dead space; the
           actual image(s) sit framed on top, scrolling as a stack for
           multi-image posts. Skipped entirely when there's nothing to show,
-          so the metadata sidebar above takes the full width instead. */}
+          so the metadata sidebar above takes the full width instead. Below
+          1020px this container's height is just its natural content height
+          (no flex-1/min-h-0/overflow-hidden clamp), so the absolute
+          backdrop's h-full — which resolves against that real height —
+          extends the full length of the image stack instead of being
+          clipped to a fixed viewport-height box; see the root div's own
+          comment above. */}
       {images.length > 0 && (
-        <div className="relative flex-1 min-h-0 overflow-hidden bg-scroll-200">
+        <div className="relative min-[1020px]:flex-1 min-[1020px]:min-h-0 min-[1020px]:overflow-hidden bg-scroll-200">
           {backdrop && (
             <img
               src={backdrop}
@@ -165,8 +184,10 @@ export function PostModal({
               hidden below the fold. The first image gets its own min-h-full
               wrapper so it sits vertically centered in the pane on load —
               later images (if any) just stack normally beneath it, not
-              individually centered. */}
-          <div className="relative h-full overflow-y-auto flex flex-col items-center gap-2 p-6 min-[1020px]:p-12">
+              individually centered. min-h-full/centering is a 1020px+-only
+              effect now, since it depends on the parent's own h-full, which
+              is desktop-only below. */}
+          <div className="relative min-[1020px]:h-full min-[1020px]:overflow-y-auto flex flex-col items-center gap-2 p-6 min-[1020px]:p-12">
             {images.map((img, i) => (
               i === 0 ? (
                 <div key={img.id} className="min-h-full w-full flex items-center justify-center shrink-0">
