@@ -313,11 +313,39 @@ export function CharacterPairDetail({
                   <div className="px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] pt-8 pb-4 space-y-8">
                     {/* Each section is sized to 80% of its own grid column
                         (not 80% of the whole row), capped at 650px so it
-                        doesn't balloon on very wide columns. */}
-                    <div className="grid grid-cols-1 min-[1020px]:grid-cols-2 gap-6 min-[1020px]:items-start">
-                      {[char1, char2].map((character, i) => (
-                        <CharacterDescriptionSections key={character.id} character={character} charIdx={i} />
-                      ))}
+                        doesn't balloon on very wide columns. gap-4 (mobile,
+                        down from the desktop gap-6) — reported directly:
+                        below 1020px every cell just stacks in one column
+                        (see .description-section-cell's own media query in
+                        globals.css), so this same gap sits between EVERY
+                        paragraph-like block, not just between rows, and
+                        24px read as excessive there. min-[1020px]:gap-6
+                        keeps desktop unchanged. */}
+                    <div className="grid grid-cols-1 min-[1020px]:grid-cols-2 gap-4 min-[1020px]:gap-6 min-[1020px]:items-start">
+                      {[char1, char2].flatMap((character, i) => [
+                        <CharacterDescriptionSections key={character.id} character={character} charIdx={i} />,
+                        // Divider between the two characters' stacked
+                        // blocks, mobile only — reported directly. Doesn't
+                        // exist on desktop (min-[1020px]:hidden): the two
+                        // characters already read as visually distinct
+                        // there, side by side in their own columns, so a
+                        // line between them would be redundant rather than
+                        // clarifying. Gated on both characters actually
+                        // having sections to show, not just charIdx — a
+                        // guest (description_sections is RLS-gated to
+                        // editor/admin) sees zero cells from either
+                        // character, and without this check would still
+                        // get a lone divider floating over nothing on
+                        // every pair, the same class of bug the row-1
+                        // name/stats header had before its own
+                        // sections.length fix above.
+                        i === 0
+                          && (char1.description_sections?.length ?? 0) > 0
+                          && (char2.description_sections?.length ?? 0) > 0
+                          && (
+                            <div key="mobile-character-divider" className="min-[1020px]:hidden h-px bg-scroll-100/20" />
+                          ),
+                      ]).filter(Boolean)}
                     </div>
 
                     <CharacterPairTimeline profile={activeProfile} char1={char1} char2={char2} />
