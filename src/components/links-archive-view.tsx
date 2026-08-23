@@ -105,11 +105,11 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
       <div
         className={`shrink-0 overflow-hidden border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r ${
           sidebarOpen
-            ? 'w-full min-[1020px]:w-48 max-h-[80vh] min-[1020px]:max-h-full opacity-100'
+            ? 'w-full min-[1020px]:w-[250px] max-h-[80vh] min-[1020px]:max-h-full opacity-100'
             : 'w-full min-[1020px]:w-0 max-h-0 min-[1020px]:max-h-full opacity-0'
         }`}
       >
-        <div className="w-full min-[1020px]:w-48 p-6 flex flex-col gap-4">
+        <div className="w-full min-[1020px]:w-[250px] p-6 flex flex-col gap-4">
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
