@@ -76,11 +76,13 @@ export function PostModal({
     // gallery grid behind the modal (previously left transparent, which
     // let grid thumbnails show through and clip against the modal edge)
     // while the category links still render on top via Nav's z-[60].
-    <div className="fixed inset-0 z-50 bg-scroll-100 sm:pl-[calc(2.6vw+159px)] flex flex-col sm:flex-row animate-fade-up">
+    <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row animate-fade-up">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
-          instead of leaving an empty placeholder pane next to it. */}
-      <div className={`${images.length ? 'w-full sm:w-96 shrink-0' : 'flex-1'} max-h-[45vh] sm:max-h-full sm:h-full overflow-y-auto border-b sm:border-b-0 sm:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
+          instead of leaving an empty placeholder pane next to it. 1020px,
+          this site's own mobile/desktop breakpoint (not Tailwind's default
+          sm:), matching gallery/page.tsx and nav.tsx's own category rail. */}
+      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} max-h-[45vh] min-[1020px]:max-h-full min-[1020px]:h-full overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
         <div className="flex items-center gap-1 -ml-2">
           <button
             onClick={close}
@@ -164,7 +166,7 @@ export function PostModal({
               wrapper so it sits vertically centered in the pane on load —
               later images (if any) just stack normally beneath it, not
               individually centered. */}
-          <div className="relative h-full overflow-y-auto flex flex-col items-center gap-2 p-6 sm:p-12">
+          <div className="relative h-full overflow-y-auto flex flex-col items-center gap-2 p-6 min-[1020px]:p-12">
             {images.map((img, i) => (
               i === 0 ? (
                 <div key={img.id} className="min-h-full w-full flex items-center justify-center shrink-0">
