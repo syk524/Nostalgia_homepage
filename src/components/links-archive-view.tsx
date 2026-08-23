@@ -61,90 +61,99 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
 
   return (
     <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
-      {sidebarOpen && (
-      <div className="w-full min-[1020px]:w-96 shrink-0 min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4">
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Hide link list"
-          className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
-        >
-          <PanelLeftClose size={15} />
-        </button>
-
-        <div className="flex flex-col gap-1">
-          {links.length === 0 && !adding && (
-            <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
-          )}
-          {links.map(link => (
-            <div
-              key={link.id}
-              className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-scroll-200' : 'hover:bg-scroll-200/60'}`}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedId(link.id)}
-                className="flex-1 min-w-0 text-left px-2 py-2"
-              >
-                <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
-                <p className="text-xs text-ink-400 truncate">{link.url}</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(link)}
-                disabled={deletingId === link.id}
-                aria-label={`Delete ${link.title}`}
-                className="shrink-0 w-6 h-6 mr-1 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {adding ? (
-          <form onSubmit={handleAdd} className="flex flex-col gap-2 pt-4 mt-2 border-t border-scroll-300">
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Title"
-              autoFocus
-              className="input"
-            />
-            <input
-              type="url"
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://…"
-              className="input"
-            />
-            {error && <p className="field-error text-xs">{error}</p>}
-            <div className="flex gap-2">
-              <button type="submit" disabled={submitting} className="btn-primary flex-1">
-                {submitting ? 'Adding…' : 'Add'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAdding(false); setError('') }}
-                className="btn-ghost"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
+      {/* Always mounted (not conditionally rendered) so width/max-height can
+          transition instead of popping in/out — the inner panel keeps a
+          fixed size and the wrapper just clips it as it collapses. */}
+      <div
+        className={`shrink-0 overflow-hidden border-scroll-300 bg-scroll-50 transition-[width,max-height,opacity] duration-300 ease-in-out min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r ${
+          sidebarOpen
+            ? 'w-full min-[1020px]:w-96 max-h-[80vh] min-[1020px]:max-h-full opacity-100'
+            : 'w-full min-[1020px]:w-0 max-h-0 min-[1020px]:max-h-full opacity-0'
+        }`}
+      >
+        <div className="w-full min-[1020px]:w-96 p-6 flex flex-col gap-4">
           <button
             type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-2 text-sm text-ink-400 hover:text-ink pt-4 mt-2 border-t border-scroll-300 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Hide link list"
+            className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
           >
-            <Plus size={14} />
-            Add a link
+            <PanelLeftClose size={15} />
           </button>
-        )}
+
+          <div className="flex flex-col gap-1">
+            {links.length === 0 && !adding && (
+              <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
+            )}
+            {links.map(link => (
+              <div
+                key={link.id}
+                className={`group flex items-center gap-2 rounded ${selectedId === link.id ? 'bg-scroll-200' : 'hover:bg-scroll-200/60'}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(link.id)}
+                  className="flex-1 min-w-0 text-left px-2 py-2"
+                >
+                  <p className={`text-sm truncate ${selectedId === link.id ? 'text-ink font-medium' : 'text-ink-400'}`}>{link.title}</p>
+                  <p className="text-xs text-ink-400 truncate">{link.url}</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(link)}
+                  disabled={deletingId === link.id}
+                  aria-label={`Delete ${link.title}`}
+                  className="shrink-0 w-6 h-6 mr-1 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {adding ? (
+            <form onSubmit={handleAdd} className="flex flex-col gap-2 pt-4 mt-2 border-t border-scroll-300">
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Title"
+                autoFocus
+                className="input"
+              />
+              <input
+                type="url"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://…"
+                className="input"
+              />
+              {error && <p className="field-error text-xs">{error}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                  {submitting ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setError('') }}
+                  className="btn-ghost"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-2 text-sm text-ink-400 hover:text-ink pt-4 mt-2 border-t border-scroll-300 transition-colors"
+            >
+              <Plus size={14} />
+              Add a link
+            </button>
+          )}
+        </div>
       </div>
-      )}
 
       {/* Selected-link preview — an iframe, not a fixed image the way
           post-modal.tsx shows one: what's being previewed here is
@@ -155,19 +164,20 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
           previewing arbitrary third-party URLs this way, not something
           fixable from this side. */}
       <div className="relative flex-1 min-h-0 bg-scroll-200 flex items-center justify-center">
-        {/* Only rendered while the list is hidden — otherwise the same
-            control living in the sidebar (above) is the one place to
-            toggle it, not two. */}
-        {!sidebarOpen && (
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Show link list"
-            className="absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-colors"
-          >
-            <PanelLeftOpen size={16} />
-          </button>
-        )}
+        {/* Always mounted so it fades in/out in step with the sidebar's own
+            collapse instead of popping in the instant the list finishes
+            hiding; pointer-events-none keeps it from intercepting clicks
+            while the sidebar is open and it's invisible. */}
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Show link list"
+          className={`absolute top-4 left-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-ink-400 bg-scroll-100 hover:text-ink hover:bg-scroll-50 shadow-sm transition-opacity duration-300 ease-in-out ${
+            sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          <PanelLeftOpen size={16} />
+        </button>
         {selected ? (
           <iframe
             key={selected.id}
