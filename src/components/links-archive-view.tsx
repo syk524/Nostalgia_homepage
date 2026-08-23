@@ -52,11 +52,23 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   // whenever selectedId changes so switching links shows the loader again
   // instead of holding the previous link's "loaded" state over the new src.
   const [iframeLoading, setIframeLoading] = useState(true)
+  // A private Google Doc/Sheet's /preview URL tries to sign the viewer in
+  // INSIDE the iframe, but Google itself refuses to let accounts.google.com
+  // be framed by anyone else — so that sign-in attempt can hang far longer
+  // than a normal page load, sometimes never firing the iframe's own load
+  // event at all. Nothing on this side can detect or fix that mid-hang, so
+  // instead of leaving the spinner up forever, a slow load surfaces this
+  // explanation and the same "open in new tab" escape hatch after a
+  // generous delay (public embeds in testing took ~8-10s on their own).
+  const [showSlowNotice, setShowSlowNotice] = useState(false)
 
   const selected = links.find(l => l.id === selectedId) ?? null
 
   useEffect(() => {
     setIframeLoading(true)
+    setShowSlowNotice(false)
+    const timer = setTimeout(() => setShowSlowNotice(true), 12000)
+    return () => clearTimeout(timer)
   }, [selectedId])
 
   async function handleAdd(e: FormEvent) {
@@ -223,8 +235,17 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 is already mounted and loading underneath by the time the
                 loader fades out — no extra round trip after onLoad fires. */}
             {iframeLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-scroll-200">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-scroll-200 px-8 text-center">
                 <DotMatrixLoader size={28} busyCursor={false} />
+                {showSlowNotice && (
+                  <p className="max-w-[240px] text-xs text-ink-400">
+                    Taking a while — a private Google Doc or Sheet can hang here while it tries to sign you in.{' '}
+                    <a href={selected.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-ink">
+                      Open it in a new tab
+                    </a>{' '}
+                    instead.
+                  </p>
+                )}
               </div>
             )}
             <iframe
