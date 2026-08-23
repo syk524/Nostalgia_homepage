@@ -5,6 +5,7 @@ import { DeleteCharacterPairButton } from '@/app/(main)/profile/[slug]/delete-bu
 import { CharacterPairHero } from '@/components/character-pair-hero'
 import { CharacterPairTimeline } from '@/components/character-pair-timeline'
 import { CustomHtmlProfileView } from '@/components/custom-html-profile-view'
+import { PairDescriptionView } from '@/components/pair-description-editor'
 import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
 import { PairLink } from '@/components/pair-link'
 import { PairProfileSideNav } from '@/components/pair-profile-side-nav'
@@ -37,7 +38,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           style={{ '--section-row': sectionIdx + 1, '--section-col': charIdx + 1 } as CSSProperties}
         >
           {section.title && <h3 className="text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
-          <p className="whitespace-pre-wrap leading-relaxed text-sm" style={{ color: section.text_color }}>{section.description}</p>
+          <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
         </div>
       ))}
     </>
@@ -73,7 +74,7 @@ function CharacterCard({ character }: { character: ProfileCharacter }) {
           {sections.map(section => (
             <div key={section.id}>
               {section.title && <h3 className="text-lg mb-1" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
-              <p className="whitespace-pre-wrap leading-relaxed text-sm" style={{ color: section.text_color }}>{section.description}</p>
+              <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
             </div>
           ))}
         </div>

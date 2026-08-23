@@ -7,6 +7,7 @@ import { createSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import { PARTICLE_EFFECTS } from '@/components/particle-effects'
+import { ColorSwatch } from '@/components/color-swatch'
 
 export function NewSessionForm() {
   const router = useRouter()
@@ -18,6 +19,7 @@ export function NewSessionForm() {
   const [backgroundPreview, setBackgroundPreview] = useState('')
   const [backgroundBlur, setBackgroundBlur] = useState(1)
   const [particleEffect, setParticleEffect] = useState('')
+  const [iconColor, setIconColor] = useState('#5c574d')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/new/new-post-form.tsx's identical field — Cancel's
@@ -58,6 +60,7 @@ export function NewSessionForm() {
       backgroundUrl,
       backgroundBlur,
       particleEffect: particleEffect || null,
+      iconColor,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not create the session.'); setSubmitting(false); return }
     router.push(`/archive/trpg/${result.slug}`)
@@ -154,6 +157,17 @@ export function NewSessionForm() {
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
+        </div>
+
+        {/* Same per-page tint concept as the pair profile's own icon
+            color picker (character-pair-form.tsx), but wider scope on
+            this page — reported directly: also recolors the title, date
+            range, and description text on the detail page, not just the
+            nav icon/back button/edit-delete controls the pair page's own
+            icon color touches. */}
+        <div>
+          <label className="label">Point color picker</label>
+          <ColorSwatch value={iconColor} onChange={setIconColor} />
         </div>
 
         <div>

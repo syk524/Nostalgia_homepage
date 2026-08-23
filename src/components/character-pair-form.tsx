@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadImage, uploadHtmlPage } from '@/lib/upload'
 import { createCharacterPair, updateCharacterPair } from '@/lib/actions/characters'
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
+import { ColorSwatch } from '@/components/color-swatch'
+import { PairDescriptionEditor } from '@/components/pair-description-editor'
 import type { CharacterPairWithProfiles, PairProfileWithContent } from '@/lib/character-pair-queries'
 import type { ProfileCharacter } from '@/types/database'
 
@@ -345,17 +347,6 @@ function FontSelect({ value, onChange }: { value: string; onChange: (value: stri
         <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
       ))}
     </select>
-  )
-}
-
-function ColorSwatch({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <input
-      type="color"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="h-10 w-10 rounded-full border border-scroll-300 cursor-pointer shrink-0"
-    />
   )
 }
 
@@ -886,13 +877,7 @@ function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onCh
               Apply these styles to all sections
             </button>
           )}
-          <textarea
-            className="textarea"
-            rows={3}
-            value={section.description}
-            onChange={e => patch(i, { description: e.target.value })}
-            placeholder="Section text"
-          />
+          <PairDescriptionEditor content={section.description} onChange={v => patch(i, { description: v })} />
         </div>
       ))}
     </div>

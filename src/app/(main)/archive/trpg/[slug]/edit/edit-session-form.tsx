@@ -9,8 +9,9 @@ import { updateSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import { PARTICLE_EFFECTS } from '@/components/particle-effects'
+import { ColorSwatch } from '@/components/color-swatch'
 
-export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur, initialParticleEffect }: {
+export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur, initialParticleEffect, initialIconColor }: {
   sessionId: string
   initialSlug: string
   initialTitle: string
@@ -20,6 +21,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   initialBackgroundUrl: string | null
   initialBackgroundBlur: number
   initialParticleEffect: string | null
+  initialIconColor: string
 }) {
   const router = useRouter()
   // Not state — the back button/Cancel only ever need the slug this page
@@ -37,6 +39,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   const [backgroundPreview, setBackgroundPreview] = useState(initialBackgroundUrl ?? '')
   const [backgroundBlur, setBackgroundBlur] = useState(initialBackgroundBlur)
   const [particleEffect, setParticleEffect] = useState(initialParticleEffect ?? '')
+  const [iconColor, setIconColor] = useState(initialIconColor)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/[id]/edit/edit-post-form.tsx's identical field.
@@ -74,6 +77,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
       backgroundUrl: finalBackgroundUrl,
       backgroundBlur,
       particleEffect: particleEffect || null,
+      iconColor,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not save the session.'); setSubmitting(false); return }
     router.push(`/archive/trpg/${result.slug}`)
@@ -182,6 +186,17 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Same per-page tint concept as the pair profile's own icon
+              color picker (character-pair-form.tsx), but wider scope on
+              this page — reported directly: also recolors the title,
+              date range, and description text on the detail page, not
+              just the nav icon/back button/edit-delete controls the pair
+              page's own icon color touches. */}
+          <div>
+            <label className="label">Point color picker</label>
+            <ColorSwatch value={iconColor} onChange={setIconColor} />
           </div>
 
           <div>

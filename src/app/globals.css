@@ -718,3 +718,28 @@ input[type="color"]::-moz-color-swatch {
   @apply inline-block w-7 h-7 align-middle mr-1.5 my-0;
   object-fit: cover;
 }
+
+/* pair-description-editor.tsx — the pair profile's own description
+   sections, bold/italic/bullet-list only (see that file's own comment on
+   why StarterKit is configured down to just those). No color/whitespace
+   rules here: text size and color are still each section's own call
+   (text_color, the text-sm on CharacterDescriptionSections), passed in as
+   className/style on PairDescriptionView rather than fixed here. */
+.pair-desc-content .ProseMirror {
+  @apply outline-none;
+}
+.pair-desc-editable .ProseMirror {
+  min-height: 72px;
+}
+.pair-desc-content p {
+  @apply my-2 first:mt-0 last:mb-0;
+}
+.pair-desc-content ul {
+  @apply list-disc pl-5 my-2 space-y-1 first:mt-0 last:mb-0;
+}
+.pair-desc-content strong {
+  @apply font-semibold;
+}
+.pair-desc-content em {
+  @apply italic;
+}
