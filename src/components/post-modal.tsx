@@ -163,13 +163,29 @@ export function PostModal({
           multi-image posts. Skipped entirely when there's nothing to show,
           so the metadata sidebar above takes the full width instead. Below
           1020px this container's height is just its natural content height
-          (no flex-1/min-h-0/overflow-hidden clamp), so the absolute
-          backdrop's h-full — which resolves against that real height —
-          extends the full length of the image stack instead of being
-          clipped to a fixed viewport-height box; see the root div's own
-          comment above. */}
+          (no flex-1/min-h-0 clamp), so the absolute backdrop's h-full —
+          which resolves against that real height — extends the full
+          length of the image stack instead of being clipped to a fixed
+          viewport-height box; see the root div's own comment above.
+          overflow-hidden stays unconditional (not min-[1020px]:-only) even
+          though the height clamp is desktop-only — blur-3xl on the
+          backdrop paints past its own element box (like a spread
+          box-shadow), and without a clip here that blur bled up past this
+          container's own top edge into the metadata sidebar above it,
+          reported directly. Clipping to the container's own (now
+          content-matched) bounds keeps the blur's visible edge exactly at
+          the image content's own top, not the sidebar. shrink-0 (base,
+          unconditional) guards against a flexbox-specific side effect of
+          that same overflow-hidden: a flex item's automatic min-height
+          normally floors at its content's own size, but overflow other
+          than visible switches that floor to 0 — which let this container
+          get squeezed down to whatever leftover space remained in the
+          fixed-height root flex column below 1020px, cropping the image
+          instead of the root scrolling past it. min-[1020px]:flex-1
+          overrides shrink-0 back on at that breakpoint, restoring the
+          original bounded/clipped desktop pane. */}
       {images.length > 0 && (
-        <div className="relative min-[1020px]:flex-1 min-[1020px]:min-h-0 min-[1020px]:overflow-hidden bg-scroll-200">
+        <div className="relative overflow-hidden shrink-0 min-[1020px]:flex-1 min-[1020px]:min-h-0 bg-scroll-200">
           {backdrop && (
             <img
               src={backdrop}
