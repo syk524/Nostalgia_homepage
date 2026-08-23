@@ -23,12 +23,13 @@ const GRID_CLASSES = 'grid grid-cols-1 min-[1020px]:grid-cols-2 gap-x-3 gap-y-5'
 // therefore the amount of the pair image's bottom edge that gets cropped)
 // now grows along with the column width instead of staying pinned, up to
 // MAX_THUMBNAIL_HEIGHT, past which it stops growing so very wide columns
-// don't blow the crop area out indefinitely. Below 1020px the grid is a
-// single full-width column (this file's own GRID_CLASSES), so aspect-[5/2]
-// there made the box noticeably tall; aspect-[5/1] (half the height, same
-// width) is what was asked for, reported directly. min-[1020px]:aspect-[5/2]
-// keeps desktop unchanged.
-const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/1] min-[1020px]:aspect-[5/2] max-h-[320px]'
+// don't blow the crop area out indefinitely. Was aspect-[5/1] on mobile
+// (half this height) for a few turns, then explicitly asked back up to
+// 2x that — i.e. exactly this ratio again — so mobile and desktop now
+// share one value; the background band inside stays at its own separate,
+// smaller mobile height regardless (see that div's own comment) since
+// this request was about the container, not the band.
+const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/2] max-h-[320px]'
 
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   const primaryProfile = pair.pair_profiles[0]
@@ -47,16 +48,14 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
         // sitting higher up the artwork.
         <div className={`relative w-full overflow-hidden rounded ${THUMBNAIL_ASPECT_CLASSES}`}>
           {primaryProfile.background_url && (
-            // h-10 (40px) below 1020px, not the desktop BACKGROUND_HEIGHT
-            // (140px) — that fixed value comfortably fit inside the taller
-            // desktop box with headroom to spare above it (where the
-            // character's own head/torso "pops out" of the band into open
-            // space instead of sitting on top of it), but on the roughly-
-            // half-height mobile box it exceeded the box's own height
-            // outright, so the band ended up filling the entire card with
-            // no headroom left and the pop-out effect disappeared,
-            // reported directly. 40px leaves a proportionally similar gap
-            // on the shorter mobile box instead.
+            // h-10 (40px) below 1020px, not the desktop 140px — kept as
+            // its own separate, smaller value on a deliberate request to
+            // grow the container back up without touching this band, so
+            // it now leaves noticeably MORE headroom above it on mobile
+            // than it originally did on desktop (where the character's
+            // own head/torso "pops out" of the band into that open space
+            // instead of sitting on top of it) — a wider gap here, not a
+            // narrower one, is the intended result of that request.
             <div
               className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[1020px]:h-[140px]"
             >
