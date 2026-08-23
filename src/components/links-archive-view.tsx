@@ -57,12 +57,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
   return (
     <div className="fixed inset-0 z-50 bg-scroll-100 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up">
       <div className="w-full min-[1020px]:w-96 shrink-0 min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4">
-        <div className="space-y-2 pt-2">
-          <p className="text-ink-400 text-xs font-mono uppercase tracking-wide">Archive</p>
-          <h1 className="text-2xl text-ink leading-tight">Links</h1>
-        </div>
-
-        <div className="flex flex-col gap-1 pt-4 mt-2 border-t border-scroll-300">
+        <div className="flex flex-col gap-1">
           {links.length === 0 && !adding && (
             <p className="text-ink-400 text-sm py-2">No links yet — add the first one.</p>
           )}
