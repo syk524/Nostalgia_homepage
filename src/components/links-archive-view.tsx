@@ -132,7 +132,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               type="button"
               onClick={() => setSidebarOpen(false)}
               aria-label="Hide link list"
-              className="self-end -mr-1 -mt-1 w-7 h-7 rounded-full flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
+              className="self-end -mr-1 -mt-1 w-7 h-7 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-colors"
             >
               <PanelLeftClose size={15} />
             </button>
@@ -240,7 +240,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 type="button"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Show link list"
-                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-scroll-200 transition-colors"
+                className="thought-tt-trigger w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink hover:bg-[#C9C9C8] transition-colors"
               >
                 <PanelLeftOpen size={16} />
               </button>
