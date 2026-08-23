@@ -183,7 +183,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                 onClick={() => setAdding(true)}
                 aria-label="Add a link"
                 title="Add a link"
-                className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
+                className="self-start w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#EFEFEF] transition-colors"
               >
                 <Plus size={18} />
               </button>
@@ -210,7 +210,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open ${link.title} in a new tab`}
-                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
+                    className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ink hover:bg-scroll-300 transition-all"
                   >
                     <ArrowUpRight size={13} />
                   </a>
@@ -219,7 +219,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                     onClick={() => handleDelete(link)}
                     disabled={deletingId === link.id}
                     aria-label={`Delete ${link.title}`}
-                    className="shrink-0 w-6 h-6 mr-1 rounded-full flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
+                    className="shrink-0 w-6 h-6 mr-1 rounded flex items-center justify-center text-ink-400 opacity-0 group-hover:opacity-100 hover:text-ember hover:bg-ember/10 transition-all disabled:opacity-50"
                   >
                     <X size={13} />
                   </button>
