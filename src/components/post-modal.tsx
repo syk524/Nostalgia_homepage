@@ -95,7 +95,27 @@ export function PostModal({
           sm:), matching gallery/page.tsx and nav.tsx's own category rail.
           No max-h/overflow-y-auto of its own below 1020px — it's part of
           the single root-level scroll there instead (see comment above). */}
-      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 flex flex-col gap-4`}>
+      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 p-6 relative z-0 overflow-hidden`}>
+        {/* Grid texture layered under the panel's own bg-scroll-50 (not
+            replacing it) — z-0 on this wrapper gives the img (default
+            z-index:auto) and the z-10 content wrapper below their own
+            local stacking order, so the content always paints above the
+            image regardless of DOM order, without touching stacking
+            anywhere else on the page. Scrolls along with the sidebar's
+            own content rather than staying fixed — a deliberate
+            simplification for a decorative background, not something
+            that needs to stay pinned while the panel scrolls. Plain,
+            unblended img — see archive-side-nav.tsx's identical use of
+            this same asset for why adding mix-blend-mode here would
+            double up the SVG's own already-baked-in soft-light blend and
+            wash it out to invisible. */}
+        <img
+          src="/images/nostalgio-grid.svg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full pointer-events-none"
+        />
+        <div className="relative z-10 flex flex-col gap-4 h-full">
         <div className="flex items-center gap-1 -ml-2">
           <button
             onClick={close}
@@ -156,6 +176,7 @@ export function PostModal({
             <DeletePostButton postId={post.id} />
           </div>
         )}
+        </div>
       </div>
 
       {/* Image area — blurred, scaled backdrop fills the dead space; the
