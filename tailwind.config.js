@@ -7,7 +7,7 @@ module.exports = {
         // Neutral ink scale — DEFAULT is a warm gray (not near-black) to
         // match the softer "weight of paper" reference tone; numbered
         // shades are untouched.
-        ink:    { DEFAULT: '#5c574d', 50: '#f7f7f6', 100: '#ececea', 200: '#d6d4d0', 300: '#b3b0aa', 400: '#8a8782', 500: '#6b6864', 600: '#524f4c', 700: '#3a3836', 800: '#282625', 900: '#1a1918' },
+        ink:    { DEFAULT: '#2f2f2e', 50: '#f7f7f6', 100: '#ececea', 200: '#d6d4d0', 300: '#b3b0aa', 400: '#8a8782', 500: '#6b6864', 600: '#524f4c', 700: '#3a3836', 800: '#282625', 900: '#1a1918' },
         // Neutral surface scale — 100 is the site's painted page background (#f1f1f1)
         scroll: { DEFAULT: '#e9e7e2', 50: '#faf9f7', 100: '#f1f1f1', 200: '#e9e7e2', 300: '#dbd8d1', 400: '#c2beb5', 500: '#a39e93', 600: '#847e72', 700: '#665f54', 800: '#494339', 900: '#2c2822' },
         // Error/danger accent

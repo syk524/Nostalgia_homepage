@@ -17,7 +17,7 @@ type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 
 function AddSessionCard() {
   return (
     <Link href="/archive/trpg/new" className="group block self-start">
-      <div className="w-full aspect-[3/4] rounded flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20">
+      <div className="w-full aspect-[3/4] rounded flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20">
         <Plus size={28} />
       </div>
     </Link>

@@ -19,7 +19,7 @@ export function NewSessionForm() {
   const [backgroundPreview, setBackgroundPreview] = useState('')
   const [backgroundBlur, setBackgroundBlur] = useState(1)
   const [particleEffect, setParticleEffect] = useState('')
-  const [iconColor, setIconColor] = useState('#5c574d')
+  const [iconColor, setIconColor] = useState('#2f2f2e')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   // See gallery/new/new-post-form.tsx's identical field — Cancel's
@@ -133,7 +133,7 @@ export function NewSessionForm() {
               value={backgroundBlur}
               onChange={e => setBackgroundBlur(Number(e.target.value))}
               className="w-full block"
-              style={{ accentColor: '#5c574d' }}
+              style={{ accentColor: '#2f2f2e' }}
             />
           </div>
         </div>

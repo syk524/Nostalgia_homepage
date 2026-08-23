@@ -132,7 +132,7 @@ function AddPairCard() {
   return (
     <Link href="/profile/new" className="group block self-end">
       <div
-        className={`w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20 ${THUMBNAIL_ASPECT_CLASSES}`}
+        className={`w-full rounded flex items-center justify-center text-ink-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20 ${THUMBNAIL_ASPECT_CLASSES}`}
       >
         <Plus size={28} />
       </div>

@@ -19,7 +19,7 @@ import type { ProfileCharacter } from '@/types/database'
 type SectionState = { id: string; title: string; titleColor: string; titleFont: string; description: string; textColor: string }
 
 function emptySection(): SectionState {
-  return { id: crypto.randomUUID(), title: '', titleColor: '#5c574d', titleFont: 'default', description: '', textColor: '#5c574d' }
+  return { id: crypto.randomUUID(), title: '', titleColor: '#2f2f2e', titleFont: 'default', description: '', textColor: '#2f2f2e' }
 }
 
 // Same client-only `id` convention as SectionState — a stable React key
@@ -32,7 +32,7 @@ type TimelineEntryState = {
 
 function emptyTimelineEntry(): TimelineEntryState {
   return {
-    id: crypto.randomUUID(), subtitle: '', subtitleColor: '#5c574d', title: '', titleColor: '#5c574d', description: '', char1Thought: '', char2Thought: '',
+    id: crypto.randomUUID(), subtitle: '', subtitleColor: '#2f2f2e', title: '', titleColor: '#2f2f2e', description: '', char1Thought: '', char2Thought: '',
     imageUrl: null, imageFile: null, imagePreview: '', uploadingImage: false,
   }
 }
@@ -56,7 +56,7 @@ type ProfileCharState = {
 function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
   return {
     name: existing?.name ?? '',
-    nameColor: existing?.name_color ?? '#5c574d',
+    nameColor: existing?.name_color ?? '#2f2f2e',
     nameFont: existing?.name_font ?? 'default',
     nameUnderlineColor: existing?.name_underline_color ?? '#ffffff',
     profileImageUrl: existing?.profile_image_url ?? null,
@@ -64,17 +64,17 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     profileImagePreview: existing?.profile_image_url ?? '',
     uploadingProfileImage: false,
     catchphrase: existing?.catchphrase ?? '',
-    catchphraseColor: existing?.catchphrase_color ?? '#5c574d',
+    catchphraseColor: existing?.catchphrase_color ?? '#2f2f2e',
     catchphraseFont: existing?.catchphrase_font ?? 'default',
     quote: existing?.quote ?? '',
-    quoteColor: existing?.quote_color ?? '#5c574d',
+    quoteColor: existing?.quote_color ?? '#2f2f2e',
     quoteFont: existing?.quote_font ?? 'default',
     keyword1: existing?.keyword_1 ?? '',
     keyword2: existing?.keyword_2 ?? '',
     keyword3: existing?.keyword_3 ?? '',
     keywordFont: existing?.keyword_font ?? 'default',
-    keywordColor: existing?.keyword_color ?? '#5c574d',
-    descriptionColor: existing?.description_color ?? '#5c574d',
+    keywordColor: existing?.keyword_color ?? '#2f2f2e',
+    descriptionColor: existing?.description_color ?? '#2f2f2e',
     captionShadowColor: existing?.caption_shadow_color ?? '#000000',
     captionShadowStrength: existing?.caption_shadow_strength ?? 2,
     captionOffsetY: existing?.caption_offset_y ?? 0,
@@ -82,7 +82,7 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     height: existing?.height ?? '',
     weight: existing?.weight ?? '',
     job: existing?.job ?? '',
-    statsColor: existing?.stats_color ?? '#5c574d',
+    statsColor: existing?.stats_color ?? '#2f2f2e',
     statsFont: existing?.stats_font ?? 'default',
     sections: existing
       ? existing.description_sections?.map(s => ({
@@ -119,13 +119,13 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     title: existing?.title ?? '',
     profileTitle: existing?.profile_title ?? '',
     titleFont: existing?.title_font ?? 'default',
-    titleColor: existing?.title_color ?? '#5c574d',
+    titleColor: existing?.title_color ?? '#2f2f2e',
     titleSize: existing?.title_size ?? 32,
-    iconColor: existing?.icon_color ?? '#5c574d',
+    iconColor: existing?.icon_color ?? '#2f2f2e',
     linkText: existing?.link_text ?? '',
     linkUrl: existing?.link_url ?? '',
     linkFont: existing?.link_font ?? 'default',
-    linkColor: existing?.link_color ?? '#5c574d',
+    linkColor: existing?.link_color ?? '#2f2f2e',
     hasMusic: existing?.has_music ?? false,
     isPrimary: existing?.is_primary ?? false,
     pageType: existing?.page_type ?? 'template',
@@ -139,7 +139,7 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     uploadingPairImage: false,
     illustrationSource: existing?.illustration_source ?? '',
     illustrationSourceFont: existing?.illustration_source_font ?? 'default',
-    illustrationSourceColor: existing?.illustration_source_color ?? '#5c574d',
+    illustrationSourceColor: existing?.illustration_source_color ?? '#2f2f2e',
     backgroundUrl: existing?.background_url ?? null,
     backgroundFile: null,
     backgroundPreview: existing?.background_url ?? '',
@@ -147,9 +147,9 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     backgroundBlur: existing?.background_blur ?? 1,
     timelineSubtitleFont: existing?.timeline_subtitle_font ?? 'default',
     timelineTitleFont: existing?.timeline_title_font ?? 'default',
-    timelineTextColor: existing?.timeline_text_color ?? '#5c574d',
-    timelineDotColor: existing?.timeline_dot_color ?? '#5c574d',
-    timelineLineColor: existing?.timeline_line_color ?? '#5c574d',
+    timelineTextColor: existing?.timeline_text_color ?? '#2f2f2e',
+    timelineDotColor: existing?.timeline_dot_color ?? '#2f2f2e',
+    timelineLineColor: existing?.timeline_line_color ?? '#2f2f2e',
     timelineShadow: existing?.timeline_shadow ?? false,
     timelineEntries: existing
       ? existing.timeline_entries?.map(e => ({
@@ -615,7 +615,7 @@ function ProfileFieldset({
                 value={profile.backgroundBlur}
                 onChange={e => onPatch({ backgroundBlur: Number(e.target.value) })}
                 className="w-full block"
-                style={{ accentColor: '#5c574d' }}
+                style={{ accentColor: '#2f2f2e' }}
               />
             </div>
           </div>

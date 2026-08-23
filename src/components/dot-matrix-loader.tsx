@@ -9,7 +9,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 // actually uses and framer-motion (already installed) has the same API.
 const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const
 
-export function DotMatrixLoader({ size = 32, speed = 1, color = '#5C574D', busyCursor = true }: {
+export function DotMatrixLoader({ size = 32, speed = 1, color = '#2F2F2E', busyCursor = true }: {
   size?: number
   speed?: number
   color?: string

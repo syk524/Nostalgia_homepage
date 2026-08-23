@@ -140,7 +140,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
             {/* Same quiet-icon-then-tinted-hover treatment as the profile
                 grid's own "add new" tile (character-pair-grid.tsx's
                 AddPairCard: text-ink-400 → hover:text-ink-600 with a
-                hover:bg-[#5C574D]/20 tint) — referenced rather than reused
+                hover:bg-[#2F2F2E]/20 tint) — referenced rather than reused
                 directly since that one is a full grid tile sized to match a
                 pair card, which doesn't fit a compact sidebar list. Moved to
                 the top of the list (not the old bottom placement) so opening
@@ -248,7 +248,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
               type="button"
               onClick={() => { setSidebarOpen(true); setAdding(true) }}
               aria-label="Add a link"
-              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#5C574D]/20 transition-colors"
+              className="group relative w-8 h-8 rounded flex items-center justify-center text-ink-400 hover:text-ink-600 hover:bg-[#2F2F2E]/20 transition-colors"
             >
               <Plus size={16} />
               <span

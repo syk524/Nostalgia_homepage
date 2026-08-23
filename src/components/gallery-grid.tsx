@@ -66,7 +66,7 @@ function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.
 function AddPostTile({ href }: { href: string }) {
   return (
     <a href={href} className="group block rounded overflow-hidden">
-      <div className="w-full aspect-video flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#5C574D]/20">
+      <div className="w-full aspect-video flex items-center justify-center text-scroll-400 transition-colors group-hover:text-ink-600 group-hover:bg-[#2F2F2E]/20">
         <Plus size={28} />
       </div>
     </a>

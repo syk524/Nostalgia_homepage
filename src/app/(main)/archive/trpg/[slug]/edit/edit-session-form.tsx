@@ -162,7 +162,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
                 value={backgroundBlur}
                 onChange={e => setBackgroundBlur(Number(e.target.value))}
                 className="w-full block"
-                style={{ accentColor: '#5c574d' }}
+                style={{ accentColor: '#2f2f2e' }}
               />
             </div>
           </div>
