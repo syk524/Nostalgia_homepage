@@ -58,23 +58,36 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
               <img src={primaryProfile.background_url} alt="" className="w-full h-full object-cover" />
             </div>
           )}
+          {/* top-[15px] was calibrated against the desktop-height box
+              (aspect-[5/2]) — on the much shorter mobile box
+              (aspect-[5/1]) that same offset only ever showed the top
+              ~15% of the artwork (hair/headroom), not the characters'
+              faces, reported directly. min-[1020px]:top-[15px] keeps
+              desktop exactly as it was; the mobile-only top-[-64px]
+              pushes the image up so the visible window falls lower into
+              the artwork instead, roughly where faces tend to sit. */}
           <img
             src={primaryProfile.pair_image_url}
             alt=""
-            className="absolute left-1/2 top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
+            className="absolute left-1/2 top-[-64px] min-[1020px]:top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
           />
           {primaryProfile.illustration_source && (
             // Always this exact font/color/size regardless of what's
             // picked for the detail page — the thumbnail is a fixed,
             // consistent design element, not a per-profile customization
             // surface. Noto Sans KR's light (300) weight, loaded in
-            // layout.tsx specifically for this. Anchored off the box's
-            // own bottom (not top) so it sits a fixed 6px above the
-            // background band's own top edge regardless of the box's
-            // total height — BACKGROUND_HEIGHT (the band's height) + 6.
+            // layout.tsx specifically for this. Was anchored off the box's
+            // own bottom (bottom: BACKGROUND_HEIGHT + 6, sitting just
+            // above the background band's own top edge) back when the
+            // band only covered part of a taller box — now that the band
+            // fills the whole box at both this aspect ratio and the
+            // mobile one below it, that same math places the credit
+            // above the box's own top edge entirely (invisible), reported
+            // directly. Anchored from the top instead — top-right of the
+            // image, plainly, regardless of box height. */}
             <span
-              className="absolute right-0 z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
-              style={{ bottom: BACKGROUND_HEIGHT + 6, fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
+              className="absolute right-1.5 top-1.5 z-20 max-w-[60%] truncate text-[10.8px] pointer-events-none"
+              style={{ fontFamily: 'var(--font-noto-sans-kr), sans-serif', fontWeight: 300, color: '#5B574E' }}
             >
               ©{primaryProfile.illustration_source}
             </span>
