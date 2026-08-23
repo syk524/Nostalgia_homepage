@@ -381,7 +381,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                     onClick={() => setSelectedId(link.id)}
                     aria-label={link.title}
                     className={`thought-tt-trigger w-8 h-8 shrink-0 rounded flex items-center justify-center text-xs font-medium transition-colors ${
-                      selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-scroll-200/60'
+                      selectedId === link.id ? 'bg-[#EFEFEF] text-ink' : 'text-ink-400 hover:bg-[#EFEFEF]'
                     }`}
                   >
                     {(link.title.trim().charAt(0) || '?').toUpperCase()}
