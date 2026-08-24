@@ -8,10 +8,10 @@ import { uploadImage } from '@/lib/upload'
 import { updateSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
-import { PARTICLE_EFFECTS } from '@/components/particle-effects'
+import { PARTICLE_EFFECTS, DEFAULT_PARTICLE_COLORS } from '@/components/particle-effects'
 import { ColorSwatch } from '@/components/color-swatch'
 
-export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur, initialParticleEffect, initialIconColor }: {
+export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialDateRange, initialDescription, initialBody, initialBackgroundUrl, initialBackgroundBlur, initialParticleEffect, initialParticleColor, initialIconColor }: {
   sessionId: string
   initialSlug: string
   initialTitle: string
@@ -21,6 +21,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   initialBackgroundUrl: string | null
   initialBackgroundBlur: number
   initialParticleEffect: string | null
+  initialParticleColor: string | null
   initialIconColor: string
 }) {
   const router = useRouter()
@@ -39,6 +40,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
   const [backgroundPreview, setBackgroundPreview] = useState(initialBackgroundUrl ?? '')
   const [backgroundBlur, setBackgroundBlur] = useState(initialBackgroundBlur)
   const [particleEffect, setParticleEffect] = useState(initialParticleEffect ?? '')
+  const [particleColor, setParticleColor] = useState(initialParticleColor)
   const [iconColor, setIconColor] = useState(initialIconColor)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -77,6 +79,7 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
       backgroundUrl: finalBackgroundUrl,
       backgroundBlur,
       particleEffect: particleEffect || null,
+      particleColor,
       iconColor,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not save the session.'); setSubmitting(false); return }
@@ -187,6 +190,31 @@ export function EditSessionForm({ sessionId, initialSlug, initialTitle, initialD
               ))}
             </select>
           </div>
+
+          {/* Same pattern as new-session-form.tsx's own copy of this
+              control — see that file's comment for why the checkbox
+              exists (an unset color has no way to "clear" a plain color
+              input back to it otherwise). */}
+          {particleEffect && (
+            <div>
+              <label className="label flex items-center justify-between gap-3">
+                <span>Particle color</span>
+                <label className="flex items-center gap-1.5 text-xs text-ink-400 normal-case tracking-normal cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={particleColor !== null}
+                    onChange={e => setParticleColor(e.target.checked ? DEFAULT_PARTICLE_COLORS[particleEffect as keyof typeof DEFAULT_PARTICLE_COLORS] : null)}
+                  />
+                  Custom
+                </label>
+              </label>
+              {particleColor !== null && (
+                <div className="mt-2">
+                  <ColorSwatch value={particleColor} onChange={setParticleColor} label="Particle color" />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Same per-page tint concept as the pair profile's own icon
               color picker (character-pair-form.tsx), but wider scope on

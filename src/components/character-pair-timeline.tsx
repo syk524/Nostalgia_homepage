@@ -68,7 +68,7 @@ export function CharacterPairTimeline({ profile, char1, char2 }: { profile: Pair
   if (!entries.length) return null
 
   return (
-    <div className="max-w-[650px] mx-auto w-full">
+    <div className="max-w-[650px] mx-auto w-full pt-10">
       {entries.map((entry, i) => {
         const isLast = i === entries.length - 1
         return (

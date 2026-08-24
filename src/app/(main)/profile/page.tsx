@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { CharacterPairGrid } from '@/components/character-pair-grid'
+import { NoirFloatingParticles } from '@/components/noir-floating-particles'
+import { getUserTheme } from '@/lib/get-user-theme'
 import type { Profile, CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
 export default async function CharacterArchivePage() {
@@ -10,6 +12,7 @@ export default async function CharacterArchivePage() {
     ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data as Profile | null
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
+  const { key: theme } = await getUserTheme()
 
   // pair_profiles/profile_characters are locked to signed-in reads only
   // (see migration 052) — a guest can't query them directly, so the
@@ -22,35 +25,48 @@ export default async function CharacterArchivePage() {
   const pairs = rawPairs as unknown as (CharacterPair & { pair_profiles: PrimaryProfileSummary[] })[] | null
 
   return (
-    // Breaks out of the shared <main>'s centered max-w-5xl — without this,
-    // the grid was capped at 1024px and stopped growing on wider screens,
-    // which read as "not responsive." min-[1020px]:pl clears the same
-    // side-nav gutter gallery/page.tsx reserves (see that file for why vw,
-    // not %), so cards never sit under Nav's floating category rail —
-    // 1020px, this site's own mobile/desktop breakpoint, not Tailwind's
-    // default sm: (640px); below it there's no gutter at all any more,
-    // reported directly, since nothing actually occupies that space on
-    // this page below the breakpoint either. animate-fade-up has to stay
-    // off this outer div and live on the inner one instead — its keyframe
-    // sets `transform: translateY(...)`, which as a plain CSS animation
-    // would replace the whole `transform` property and cancel out this
-    // div's own -translate-x-1/2 (see character-pair-detail.tsx for the
-    // same fix). No max-width on the inner div either — it now fills the
-    // full viewport width at any screen size; only each card's own pair
-    // image keeps its own max-w-[600px] cap (character-pair-grid.tsx), so
-    // the background/grid scales freely while the artwork itself doesn't
-    // blow up past a sane size. -mt-8 (mobile only) pulls the grid up
-    // against the shared layout's own pt-24 (main's top padding, sized
-    // for desktop's own nav row) — reported directly, same fix as
-    // character-pair-detail.tsx's own hero wrapper, for the same reason:
-    // that fixed 96px left a lot of empty space above the first row on a
-    // narrow phone screen. min-[1020px]:mt-0 keeps desktop unchanged.
-    // px-4 (mobile)/min-[1020px]:pr-6 (desktop right edge, unchanged) —
-    // written as two separate side-specific classes rather than px-6 plus
-    // an overriding pl, so the desktop-only pl-[calc(2.6vw+159px)] below
-    // is never fighting another same-breakpoint class over the same
-    // property.
-    <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
+    <>
+      {/* Sibling of the breakout div below, not nested inside it — that
+          div carries its own -translate-x-1/2 transform, which would
+          become this fixed layer's containing block instead of the
+          viewport if it were nested there (same class of bug as the
+          animate-fade-up/transform issue documented throughout this
+          page's own sibling files). -z-10 sinks it under the grid's own
+          unpositioned content without needing z-index on every card. */}
+      {theme === 'noir' && (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <NoirFloatingParticles />
+        </div>
+      )}
+      {/* Breaks out of the shared <main>'s centered max-w-5xl — without this,
+          the grid was capped at 1024px and stopped growing on wider screens,
+          which read as "not responsive." min-[1020px]:pl clears the same
+          side-nav gutter gallery/page.tsx reserves (see that file for why vw,
+          not %), so cards never sit under Nav's floating category rail —
+          1020px, this site's own mobile/desktop breakpoint, not Tailwind's
+          default sm: (640px); below it there's no gutter at all any more,
+          reported directly, since nothing actually occupies that space on
+          this page below the breakpoint either. animate-fade-up has to stay
+          off this outer div and live on the inner one instead — its keyframe
+          sets `transform: translateY(...)`, which as a plain CSS animation
+          would replace the whole `transform` property and cancel out this
+          div's own -translate-x-1/2 (see character-pair-detail.tsx for the
+          same fix). No max-width on the inner div either — it now fills the
+          full viewport width at any screen size; only each card's own pair
+          image keeps its own max-w-[600px] cap (character-pair-grid.tsx), so
+          the background/grid scales freely while the artwork itself doesn't
+          blow up past a sane size. -mt-8 (mobile only) pulls the grid up
+          against the shared layout's own pt-24 (main's top padding, sized
+          for desktop's own nav row) — reported directly, same fix as
+          character-pair-detail.tsx's own hero wrapper, for the same reason:
+          that fixed 96px left a lot of empty space above the first row on a
+          narrow phone screen. min-[1020px]:mt-0 keeps desktop unchanged.
+          px-4 (mobile)/min-[1020px]:pr-6 (desktop right edge, unchanged) —
+          written as two separate side-specific classes rather than px-6 plus
+          an overriding pl, so the desktop-only pl-[calc(2.6vw+159px)] below
+          is never fighting another same-breakpoint class over the same
+          property. */}
+      <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0">
       <div className="animate-fade-up space-y-6">
         {!pairs?.length && !canEdit && (
           <p className="text-ink-500">No pairs registered yet.</p>
@@ -59,5 +75,6 @@ export default async function CharacterArchivePage() {
         <CharacterPairGrid pairs={pairs ?? []} canEdit={canEdit} />
       </div>
     </div>
+    </>
   )
 }

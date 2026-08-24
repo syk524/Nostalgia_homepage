@@ -9,6 +9,7 @@ import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } fro
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
 import { ColorSwatch } from '@/components/color-swatch'
 import { PairDescriptionEditor } from '@/components/pair-description-editor'
+import { PARTICLE_EFFECTS, DEFAULT_PARTICLE_COLORS } from '@/components/particle-effects'
 import type { CharacterPairWithProfiles, PairProfileWithContent } from '@/lib/character-pair-queries'
 import type { ProfileCharacter } from '@/types/database'
 
@@ -137,6 +138,8 @@ type ProfileCharState = {
   captionOffsetY: number
   age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
   dividerImageUrl: string | null; dividerImageFile: File | null; dividerImagePreview: string; uploadingDividerImage: boolean
+  captionImageUrl: string | null; captionImageFile: File | null; captionImagePreview: string; uploadingCaptionImage: boolean
+  captionImagePosition: 'top' | 'bottom'; captionImageSize: number
   sections: SectionState[]
 }
 
@@ -175,6 +178,12 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     dividerImageFile: null,
     dividerImagePreview: existing?.description_divider_url ?? '',
     uploadingDividerImage: false,
+    captionImageUrl: existing?.caption_image_url ?? null,
+    captionImageFile: null,
+    captionImagePreview: existing?.caption_image_url ?? '',
+    uploadingCaptionImage: false,
+    captionImagePosition: existing?.caption_image_position ?? 'top',
+    captionImageSize: existing?.caption_image_size ?? 320,
     sections: existing
       ? existing.description_sections?.map(s => ({
           id: s.id, title: s.title ?? '', titleColor: s.title_color, titleFont: s.title_font, description: s.description, textColor: s.text_color,
@@ -198,6 +207,8 @@ type ProfileState = {
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
+  particleEffect: string | null
+  particleColor: string | null
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
   timelineEntries: TimelineEntryState[]
   characters: [ProfileCharState, ProfileCharState]
@@ -239,6 +250,8 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     backgroundBlur: existing?.background_blur ?? 1,
     backgroundOverlayColor: existing?.background_overlay_color ?? '#000000',
     backgroundOverlayOpacity: existing?.background_overlay_opacity ?? 0,
+    particleEffect: existing?.particle_effect ?? null,
+    particleColor: existing?.particle_color ?? null,
     timelineSubtitleFont: existing?.timeline_subtitle_font ?? 'default',
     timelineTitleFont: existing?.timeline_title_font ?? 'default',
     timelineTextColor: existing?.timeline_text_color ?? '#2f2f2e',
@@ -356,7 +369,13 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
           if (err) { setError(err); setSubmitting(false); return }
           finalDividerImageUrl = url
         }
-        resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl, finalDividerImageUrl))
+        let finalCaptionImageUrl = c.captionImageUrl
+        if (c.captionImageFile) {
+          const { url, error: err } = await uploadImage(c.captionImageFile, user.id, 'gallery-images')
+          if (err) { setError(err); setSubmitting(false); return }
+          finalCaptionImageUrl = url
+        }
+        resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl, finalDividerImageUrl, finalCaptionImageUrl))
       }
 
       const resolvedTimelineEntries: (TimelineEntryInput)[] = []
@@ -382,6 +401,8 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         backgroundOverlayColor: p.backgroundOverlayColor, backgroundOverlayOpacity: p.backgroundOverlayOpacity,
+        particleEffect: p.particleEffect,
+        particleColor: p.particleColor,
         timelineSubtitleFont: p.timelineSubtitleFont, timelineTitleFont: p.timelineTitleFont, timelineTextColor: p.timelineTextColor,
         timelineDotColor: p.timelineDotColor, timelineLineColor: p.timelineLineColor, timelineShadow: p.timelineShadow,
         timelineEntries: resolvedTimelineEntries,
@@ -477,7 +498,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
   )
 }
 
-function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null, dividerImageUrl: string | null) {
+function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null, dividerImageUrl: string | null, captionImageUrl: string | null) {
   return {
     name: c.name, nameColor: c.nameColor, nameFont: c.nameFont, nameUnderlineColor: c.nameUnderlineColor, profileImageUrl,
     catchphrase: c.catchphrase, catchphraseColor: c.catchphraseColor, catchphraseFont: c.catchphraseFont,
@@ -487,6 +508,7 @@ function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null,
     captionShadowColor: c.captionShadowColor, captionShadowStrength: c.captionShadowStrength, captionOffsetY: c.captionOffsetY,
     age: c.age, height: c.height, weight: c.weight, job: c.job, statsColor: c.statsColor, statsFont: c.statsFont,
     dividerImageUrl,
+    captionImageUrl, captionImagePosition: c.captionImagePosition, captionImageSize: c.captionImageSize,
     sections: c.sections.map(s => ({ title: s.title, titleColor: s.titleColor, titleFont: s.titleFont, description: s.description, textColor: s.textColor })),
   }
 }
@@ -770,6 +792,52 @@ function ProfileFieldset({
                 </div>
               </div>
             </div>
+            {/* Same dropdown/component pair as the TRPG session form
+                (new-session-form.tsx) — reused as-is, not reimplemented,
+                since it's the identical concept applied to a different
+                page (see particle-effects.tsx and character-pair-
+                detail.tsx, which layers this the same way [slug]/page.tsx
+                does for a session). */}
+            <div className="mt-3">
+              <label className="label" htmlFor={`particle-effect-${profile.id}`}>파티클 효과</label>
+              <select
+                id={`particle-effect-${profile.id}`}
+                className="input"
+                value={profile.particleEffect ?? ''}
+                onChange={e => onPatch({ particleEffect: e.target.value || null })}
+              >
+                <option value="">없음</option>
+                {PARTICLE_EFFECTS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            {/* Only shown once an effect is picked — an unset
+                particleColor renders as that effect's own built-in
+                default (DEFAULT_PARTICLE_COLORS in particle-effects.tsx),
+                so there's nothing to configure until then. The checkbox
+                is what lets someone go back to that default too, since a
+                plain color input has no "unset" state of its own. */}
+            {profile.particleEffect && (
+              <div className="mt-3">
+                <label className="label flex items-center justify-between gap-3">
+                  <span>파티클 색상</span>
+                  <label className="flex items-center gap-1.5 text-xs text-ink-400 normal-case tracking-normal cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={profile.particleColor !== null}
+                      onChange={e => onPatch({ particleColor: e.target.checked ? DEFAULT_PARTICLE_COLORS[profile.particleEffect as keyof typeof DEFAULT_PARTICLE_COLORS] : null })}
+                    />
+                    직접 지정
+                  </label>
+                </label>
+                {profile.particleColor !== null && (
+                  <div className="mt-2">
+                    <ColorSwatch value={profile.particleColor} onChange={v => onPatch({ particleColor: v })} label="파티클 색상" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <CharacterFieldset id="section-char-1" label="캐릭터 1" state={profile.characters[0]} onPatch={patch => onPatchChar(0, patch)} />
@@ -844,6 +912,12 @@ function CharacterFieldset({
     const file = e.target.files?.[0]
     if (!file) return
     onPatch({ dividerImageFile: file, dividerImagePreview: URL.createObjectURL(file) })
+  }
+
+  function handleCaptionImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ captionImageFile: file, captionImagePreview: URL.createObjectURL(file) })
   }
 
   return (
@@ -985,6 +1059,78 @@ function CharacterFieldset({
                 <span className="text-[10px] text-ink-400 normal-case tracking-normal">px</span>
               </div>
             </label>
+          </div>
+
+          <div>
+            <label className="label">캡션 이미지</label>
+            <p className="text-xs text-ink-400 mb-2">캡션 위 또는 아래에 표시됩니다 (높이는 원본 비율 유지).</p>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                {state.captionImagePreview
+                  ? <img src={state.captionImagePreview} alt="" className="w-full h-full object-contain" />
+                  : <span className="text-xl text-scroll-400">◯</span>
+                }
+              </div>
+              <div className="flex flex-col gap-2 items-start">
+                <label className="btn-ghost text-xs cursor-pointer" aria-busy={state.uploadingCaptionImage}>
+                  {state.uploadingCaptionImage ? '업로드 중…' : '이미지 선택'}
+                  <input type="file" accept="image/*" onChange={handleCaptionImageChange} className="sr-only" disabled={state.uploadingCaptionImage} />
+                </label>
+                {state.captionImagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => onPatch({ captionImageUrl: null, captionImageFile: null, captionImagePreview: '' })}
+                    className="text-xs text-ink-400 hover:text-ember"
+                  >
+                    제거
+                  </button>
+                )}
+              </div>
+            </div>
+            {state.captionImagePreview && (
+              <>
+                <div className="flex items-center gap-3 mt-3">
+                  <span className="text-xs text-ink-400">위치</span>
+                  <div className="flex gap-1.5">
+                    {(['top', 'bottom'] as const).map(pos => (
+                      <button
+                        key={pos}
+                        type="button"
+                        onClick={() => onPatch({ captionImagePosition: pos })}
+                        className={`pill ${state.captionImagePosition === pos ? 'pill-active' : ''}`}
+                      >
+                        {pos === 'top' ? '위' : '아래'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* 50-650px — 650 matches CharacterCaption's own fixed
+                    max-w-[650px] (character-pair-hero.tsx), so the image
+                    can never be told to render wider than the caption
+                    column it sits in. */}
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-xs text-ink-400 shrink-0">크기</span>
+                  <input
+                    type="range"
+                    min={50}
+                    max={650}
+                    step={1}
+                    value={state.captionImageSize}
+                    onChange={e => onPatch({ captionImageSize: Number(e.target.value) })}
+                    className="w-full"
+                  />
+                  <input
+                    type="number"
+                    min={50}
+                    max={650}
+                    value={state.captionImageSize}
+                    onChange={e => onPatch({ captionImageSize: Math.min(650, Math.max(50, Number(e.target.value))) })}
+                    className="input w-20 text-center shrink-0"
+                  />
+                  <span className="text-[10px] text-ink-400 shrink-0">px</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </details>

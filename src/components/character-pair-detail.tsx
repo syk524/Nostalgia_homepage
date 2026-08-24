@@ -6,6 +6,7 @@ import { DeleteCharacterPairButton } from '@/app/(main)/profile/[slug]/delete-bu
 import { CharacterPairHero } from '@/components/character-pair-hero'
 import { CharacterPairTimeline } from '@/components/character-pair-timeline'
 import { CustomHtmlProfileView } from '@/components/custom-html-profile-view'
+import { ParticleEffect } from '@/components/particle-effects'
 import { PairDescriptionView } from '@/components/pair-description-editor'
 import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
 import { PairProfileSideNav } from '@/components/pair-profile-side-nav'
@@ -229,6 +230,13 @@ export function CharacterPairDetail({
               )}
             </div>
           )}
+
+          {/* Same component/placement pattern as the TRPG session detail
+              page ([slug]/page.tsx) — a standalone, unconditional sibling
+              rather than nested inside the background_url block above,
+              so an editor can still pick an effect on a profile with no
+              background image set. */}
+          <ParticleEffect effect={activeProfile.particle_effect} color={activeProfile.particle_color} />
 
           {/* Breaks out of <main>'s centered max-w-5xl the same way gallery does
               — and unlike gallery, doesn't re-cap with its own max-w either, so

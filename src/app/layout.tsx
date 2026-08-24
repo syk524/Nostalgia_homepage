@@ -3,8 +3,7 @@ import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue, Playfair_Display } from '
 import localFont from 'next/font/local'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
 import { CustomCursor } from '@/components/custom-cursor'
-import { createClient } from '@/lib/supabase/server'
-import { THEMES, isThemeKey } from '@/lib/themes'
+import { getUserTheme } from '@/lib/get-user-theme'
 import './globals.css'
 
 const notoSansKR = Noto_Sans_KR({
@@ -119,26 +118,6 @@ const anomale = localFont({
 export const metadata: Metadata = {
   title: 'Nustalgio',
   description: 'A place to keep and share what matters',
-}
-
-// Reads the signed-in user's theme so nav, the auth forms, and list-view
-// titles render with the right --theme-accent from first paint — a guest
-// (or a user whose profile fetch fails) always gets 'default', same as
-// the migration's own column default. Returns the key alongside the
-// resolved colors — most consumers only need the CSS variables, but a
-// few overrides (button hovers, panel backgrounds) can't be expressed as
-// a variable value swap alone and need a real selector to hook into
-// (see the [data-theme="noir"] rules in globals.css), hence data-theme
-// on <html> below.
-async function getUserTheme() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { key: 'default' as const, ...THEMES.default }
-
-  const { data: profile } = await supabase.from('profiles').select('theme').eq('id', user.id).single()
-  const theme = profile?.theme
-  const key = isThemeKey(theme ?? '') ? theme as keyof typeof THEMES : 'default'
-  return { key, ...THEMES[key] }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

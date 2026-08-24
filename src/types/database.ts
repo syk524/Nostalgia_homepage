@@ -48,6 +48,7 @@ export type TrpgSession = {
   background_url: string | null
   background_blur: number
   particle_effect: string | null
+  particle_color: string | null
   icon_color: string
   created_by: string | null
   created_at: string
@@ -117,6 +118,9 @@ export type ProfileCharacter = {
   stats_color: string
   stats_font: string
   description_divider_url: string | null
+  caption_image_url: string | null
+  caption_image_position: 'top' | 'bottom'
+  caption_image_size: number
   created_at: string
   updated_at: string
   description_sections?: DescriptionSection[]
@@ -171,6 +175,8 @@ export type PairProfile = {
   background_blur: number
   background_overlay_color: string
   background_overlay_opacity: number
+  particle_effect: string | null
+  particle_color: string | null
   timeline_subtitle_font: string
   timeline_title_font: string
   timeline_text_color: string
@@ -288,7 +294,7 @@ export type Database = {
       trpg_sessions: {
         Row: TrpgSession
         Insert: Omit<TrpgSession, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Pick<TrpgSession, 'title' | 'slug' | 'date_range' | 'description' | 'body' | 'cover_url' | 'background_url' | 'background_blur' | 'particle_effect' | 'icon_color'>>
+        Update: Partial<Pick<TrpgSession, 'title' | 'slug' | 'date_range' | 'description' | 'body' | 'cover_url' | 'background_url' | 'background_blur' | 'particle_effect' | 'particle_color' | 'icon_color'>>
         Relationships: []
       }
       archive_links: {
@@ -317,13 +323,13 @@ export type Database = {
       pair_profiles: {
         Row: Omit<PairProfile, 'profile_characters' | 'timeline_entries'>
         Insert: Omit<PairProfile, 'id' | 'created_at' | 'updated_at' | 'profile_characters' | 'timeline_entries'>
-        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'illustration_source' | 'illustration_source_font' | 'illustration_source_color' | 'background_url' | 'background_blur' | 'background_overlay_color' | 'background_overlay_opacity' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
+        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'illustration_source' | 'illustration_source_font' | 'illustration_source_color' | 'background_url' | 'background_blur' | 'background_overlay_color' | 'background_overlay_opacity' | 'particle_effect' | 'particle_color' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
         Relationships: []
       }
       profile_characters: {
         Row: Omit<ProfileCharacter, 'description_sections'>
         Insert: Omit<ProfileCharacter, 'id' | 'created_at' | 'updated_at' | 'description_sections'>
-        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y' | 'age' | 'height' | 'weight' | 'job' | 'stats_color' | 'stats_font' | 'description_divider_url'>>
+        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y' | 'age' | 'height' | 'weight' | 'job' | 'stats_color' | 'stats_font' | 'description_divider_url' | 'caption_image_url' | 'caption_image_position' | 'caption_image_size'>>
         Relationships: []
       }
       description_sections: {

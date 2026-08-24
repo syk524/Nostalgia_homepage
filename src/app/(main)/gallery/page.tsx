@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { GalleryGrid } from '@/components/gallery-grid'
 import { TrackListView } from '@/components/track-list-view'
+import { NoirFloatingParticles } from '@/components/noir-floating-particles'
+import { isThemeKey } from '@/lib/themes'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 // Reading `searchParams` already makes this dynamic on the server —
@@ -57,6 +59,8 @@ export default async function GalleryPage({
     postsQuery,
   ])
   const canEdit = (profile as Profile | null)?.role === 'editor' || (profile as Profile | null)?.role === 'admin'
+  const themeKey = (profile as Profile | null)?.theme
+  const theme = isThemeKey(themeKey ?? '') ? themeKey : 'default'
 
   // Drag-reordering only makes sense on the unfiltered view — reordering a
   // filtered subset would leave the interleaving with other categories'
@@ -74,6 +78,16 @@ export default async function GalleryPage({
       <Suspense fallback={null}>
         <TrackListView />
       </Suspense>
+
+      {/* Sibling of the breakout div below, not nested inside it — same
+          reasoning as profile/page.tsx's own NoirFloatingParticles wrapper:
+          that div's own -translate-x-1/2 transform would become this
+          fixed layer's containing block otherwise. */}
+      {theme === 'noir' && (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <NoirFloatingParticles />
+        </div>
+      )}
 
       {/* Breaks out of the shared <main>'s centered max-w-5xl — that
           centering grows the left margin on wide viewports independently of

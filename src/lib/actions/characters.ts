@@ -18,6 +18,7 @@ type ProfileCharInput = {
   captionShadowColor: string; captionShadowStrength: number; captionOffsetY: number
   age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
   dividerImageUrl: string | null
+  captionImageUrl: string | null; captionImagePosition: 'top' | 'bottom'; captionImageSize: number
   sections: SectionInput[]
 }
 type ProfileInput = {
@@ -28,6 +29,8 @@ type ProfileInput = {
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
+  particleEffect: string | null
+  particleColor: string | null
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
   timelineEntries: TimelineEntryInput[]
   characters: [ProfileCharInput, ProfileCharInput]
@@ -143,14 +146,14 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     .eq('pair_id', pairId)
   const oldProfileIds = (oldProfiles ?? []).map(p => p.id)
   const { data: oldChars } = oldProfileIds.length
-    ? await supabase.from('profile_characters').select('profile_image_url, description_divider_url').in('profile_id', oldProfileIds)
-    : { data: [] as { profile_image_url: string | null; description_divider_url: string | null }[] }
+    ? await supabase.from('profile_characters').select('profile_image_url, description_divider_url, caption_image_url').in('profile_id', oldProfileIds)
+    : { data: [] as { profile_image_url: string | null; description_divider_url: string | null; caption_image_url: string | null }[] }
   const { data: oldEntries } = oldProfileIds.length
     ? await supabase.from('timeline_entries').select('image_url').in('profile_id', oldProfileIds)
     : { data: [] as { image_url: string | null }[] }
   const oldImageUrls = [
     ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
-    ...(oldChars ?? []).flatMap(c => [c.profile_image_url, c.description_divider_url]),
+    ...(oldChars ?? []).flatMap(c => [c.profile_image_url, c.description_divider_url, c.caption_image_url]),
     ...(oldEntries ?? []).map(e => e.image_url),
   ]
 
@@ -164,6 +167,8 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     p.characters[1].profileImageUrl,
     p.characters[0].dividerImageUrl,
     p.characters[1].dividerImageUrl,
+    p.characters[0].captionImageUrl,
+    p.characters[1].captionImageUrl,
     ...p.timelineEntries.map(e => e.imageUrl),
   ])
   await deleteOrphanedImages(supabase, oldImageUrls, newImageUrls)
@@ -210,6 +215,7 @@ async function saveProfiles(
     illustration_source_font: p.illustrationSourceFont, illustration_source_color: p.illustrationSourceColor,
     background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
     background_overlay_color: p.backgroundOverlayColor, background_overlay_opacity: p.backgroundOverlayOpacity,
+    particle_effect: p.particleEffect, particle_color: p.particleColor,
     timeline_subtitle_font: p.timelineSubtitleFont, timeline_title_font: p.timelineTitleFont, timeline_text_color: p.timelineTextColor,
     timeline_dot_color: p.timelineDotColor, timeline_line_color: p.timelineLineColor, timeline_shadow: p.timelineShadow,
     position,
@@ -224,6 +230,7 @@ async function saveProfiles(
       age: c.age.trim() || null, height: c.height.trim() || null, weight: c.weight.trim() || null, job: c.job.trim() || null,
       stats_color: c.statsColor, stats_font: c.statsFont,
       description_divider_url: c.dividerImageUrl,
+      caption_image_url: c.captionImageUrl, caption_image_position: c.captionImagePosition, caption_image_size: c.captionImageSize,
       sections: c.sections.map((s, pos) => ({
         position: pos, title: s.title.trim() || null, title_color: s.titleColor, title_font: s.titleFont,
         description: s.description.trim(), text_color: s.textColor,

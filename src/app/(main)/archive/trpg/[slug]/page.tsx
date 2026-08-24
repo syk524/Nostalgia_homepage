@@ -58,7 +58,7 @@ export default async function TrpgSessionPage({ params }: { params: Promise<{ sl
           it sits above the background (z-0) — the log card below gets an
           explicit z-10 so it stacks above this regardless of DOM order,
           rather than relying on implicit stacking rules. */}
-      <ParticleEffect effect={typedSession.particle_effect} />
+      <ParticleEffect effect={typedSession.particle_effect} color={typedSession.particle_color} />
 
       {/* Fixed, icon-only, positioned like the pair-detail page's own back
           button (character-pair-detail.tsx) — same top-rail placement as

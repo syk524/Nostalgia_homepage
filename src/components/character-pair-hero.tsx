@@ -79,6 +79,29 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
         className={`t-caption-popout pt-7 min-[1020px]:pt-0 min-[1020px]:!opacity-100 min-[1020px]:!scale-100 min-[1020px]:!pointer-events-auto ${isOpen ? 'is-open' : isClosing ? 'is-closing' : ''}`}
         data-origin={align === 'right' ? 'top-right' : 'top-left'}
       >
+        {character.caption_image_url && character.caption_image_position === 'top' && (
+          // Plain <img>, not next/image — same reasoning as the big pair
+          // image above this component's own root: height is `h-auto`,
+          // driven by whatever aspect ratio the uploaded file actually
+          // has, which next/image's required width/height (or a
+          // known-aspect fill parent) has nothing to go on for. Lives
+          // inside .t-caption-popout (not as a sibling of it), so it
+          // shares that div's own mobile collapse/expand and desktop
+          // always-visible behavior, and inherits the same sticky/scroll
+          // positioning as the rest of the caption for free — both come
+          // from the ancestor this is nested in, not anything set here.
+          <img
+            src={character.caption_image_url}
+            alt=""
+            // maxWidth as a style, not a Tailwind class — this is a
+            // per-character runtime value (50-650px, editor-set), and
+            // Tailwind's arbitrary-value classes can't be built from a
+            // runtime-interpolated string (same reasoning as
+            // --section-row/--section-col elsewhere in this app).
+            style={{ maxWidth: character.caption_image_size }}
+            className={`w-full h-auto block rounded drop-shadow mb-3 ${align === 'right' ? 'ml-auto' : ''}`}
+          />
+        )}
         {character.catchphrase && (
           // letter-spacing doesn't accept percentages in CSS — 140% is
           // expressed as 1.4em, i.e. 140% of the font size, the standard
@@ -142,6 +165,14 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
               <span key={i}>#{k}</span>
             ))}
           </div>
+        )}
+        {character.caption_image_url && character.caption_image_position === 'bottom' && (
+          <img
+            src={character.caption_image_url}
+            alt=""
+            style={{ maxWidth: character.caption_image_size }}
+            className={`w-full h-auto block rounded drop-shadow mt-3 ${align === 'right' ? 'ml-auto' : ''}`}
+          />
         )}
       </div>
     </div>

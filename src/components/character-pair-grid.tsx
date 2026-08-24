@@ -114,10 +114,24 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
         <div className="w-full aspect-video rounded flex items-center justify-center text-scroll-400 text-3xl">◯</div>
       )}
 
+      {/* tracking-[0.1em] on hover, not a literal "1.1x" of the resting
+          tracking-normal (0 — multiplying that by anything is still 0) —
+          same "letter-spacing as a percent of font-size" convention
+          character-pair-hero.tsx's own catchphrase already uses (that
+          one's 1.4em, "140% tracking"), so 0.1em here reads as the
+          asked-for 1.1x on the same scale. Character names only, not
+          the pair title in the middle, reported directly. The ! is
+          load-bearing: .group:hover .group-hover\:tracking-[0.1em]'s
+          own specificity (0,3,0) should already beat plain
+          .tracking-normal's (0,1,0) on paper, but it didn't win in
+          testing — confirmed via injected !important instead of chasing
+          why (the same "don't trust specificity math alone against
+          Tailwind's generated output" lesson as the sticker z-index/
+          shrink-to-fit issues earlier this session, just once more). */}
       <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
-        <span style={{ fontFamily: pairFontFamily(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
+        <span className="tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
         <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font), color: 'var(--theme-accent)' }}>{primaryProfile?.title}</span>
-        <span className="text-right" style={{ fontFamily: pairFontFamily(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
+        <span className="text-right tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
       </div>
     </Link>
   )

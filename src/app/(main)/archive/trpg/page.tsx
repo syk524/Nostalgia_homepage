@@ -3,6 +3,8 @@ import Image from 'next/image'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { ArchiveSectionTabs } from '@/components/archive-side-nav'
+import { NoirFloatingParticles } from '@/components/noir-floating-particles'
+import { getUserTheme } from '@/lib/get-user-theme'
 import type { TrpgSession } from '@/types/database'
 
 type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 'description' | 'cover_url'>
@@ -93,27 +95,38 @@ export default async function TrpgListPage() {
     ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
     : null
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
+  const { key: theme } = await getUserTheme()
 
   return (
-    // Same breakout as profile/page.tsx: escapes the shared <main>'s
-    // centered max-w-5xl so this list fills the rest of the screen width
-    // instead of stopping at 1024px, with min-[1020px]:pl clearing the
-    // same side-nav gutter (ArchiveSideNav's own left-[2.6%]) so rows
-    // never sit under it — 1020px, this site's own mobile/desktop
-    // breakpoint, not Tailwind's default sm: (640px). animate-fade-up has
-    // to stay off this outer div and live on the inner one instead — its
-    // keyframe sets `transform: translateY(...)`, which as a plain CSS
-    // animation would replace the whole `transform` property and cancel
-    // out this div's own -translate-x-1/2 (see profile/page.tsx and
-    // character-pair-detail.tsx for the same fix). px-4 (mobile)/
-    // min-[1020px]:pr-6 (desktop right edge, unchanged) — written as two
-    // separate side-specific classes rather than px-6 plus an overriding
-    // pl, so the desktop-only pl-[calc(2.6vw+159px)] below is never
-    // fighting another same-breakpoint class over the same property. A
-    // mobile -mt-8 top-padding reduction (matching profile/page.tsx and
-    // character-pair-detail.tsx's own hero wrapper) was tried here too
-    // but reverted on request — this page keeps the shared layout's own
-    // pt-24 untouched.
+    <>
+    {theme === 'noir' && (
+      // Sibling of the breakout div below, not nested inside it — same
+      // reasoning as profile/page.tsx's own NoirFloatingParticles wrapper:
+      // that div's own -translate-x-1/2 transform would become this
+      // fixed layer's containing block otherwise.
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <NoirFloatingParticles />
+      </div>
+    )}
+    {/* Same breakout as profile/page.tsx: escapes the shared <main>'s
+        centered max-w-5xl so this list fills the rest of the screen width
+        instead of stopping at 1024px, with min-[1020px]:pl clearing the
+        same side-nav gutter (ArchiveSideNav's own left-[2.6%]) so rows
+        never sit under it — 1020px, this site's own mobile/desktop
+        breakpoint, not Tailwind's default sm: (640px). animate-fade-up has
+        to stay off this outer div and live on the inner one instead — its
+        keyframe sets `transform: translateY(...)`, which as a plain CSS
+        animation would replace the whole `transform` property and cancel
+        out this div's own -translate-x-1/2 (see profile/page.tsx and
+        character-pair-detail.tsx for the same fix). px-4 (mobile)/
+        min-[1020px]:pr-6 (desktop right edge, unchanged) — written as two
+        separate side-specific classes rather than px-6 plus an overriding
+        pl, so the desktop-only pl-[calc(2.6vw+159px)] below is never
+        fighting another same-breakpoint class over the same property. A
+        mobile -mt-8 top-padding reduction (matching profile/page.tsx and
+        character-pair-detail.tsx's own hero wrapper) was tried here too
+        but reverted on request — this page keeps the shared layout's own
+        pt-24 untouched. */}
     <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
       <div className="animate-fade-up space-y-8">
         {/* Mobile counterpart to ArchiveSideNav's fixed rail (hidden below
@@ -145,5 +158,6 @@ export default async function TrpgListPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

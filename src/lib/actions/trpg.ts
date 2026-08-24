@@ -52,6 +52,7 @@ export type SessionInput = {
   backgroundUrl: string | null
   backgroundBlur: number
   particleEffect: string | null
+  particleColor: string | null
   iconColor: string
 }
 
@@ -76,6 +77,7 @@ export async function createSession(input: SessionInput) {
       background_url: input.backgroundUrl,
       background_blur: input.backgroundBlur,
       particle_effect: input.particleEffect,
+      particle_color: input.particleColor,
       icon_color: input.iconColor,
       created_by: user.id,
     })
@@ -122,6 +124,7 @@ export async function updateSession(sessionId: string, input: SessionInput) {
       background_url: input.backgroundUrl,
       background_blur: input.backgroundBlur,
       particle_effect: input.particleEffect,
+      particle_color: input.particleColor,
       icon_color: input.iconColor,
     })
     .eq('id', sessionId)

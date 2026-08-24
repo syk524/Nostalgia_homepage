@@ -6,7 +6,7 @@ import { uploadImage } from '@/lib/upload'
 import { createSession } from '@/lib/actions/trpg'
 import { TrpgSessionEditor, deriveCoverUrl } from '@/components/trpg-session-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
-import { PARTICLE_EFFECTS } from '@/components/particle-effects'
+import { PARTICLE_EFFECTS, DEFAULT_PARTICLE_COLORS } from '@/components/particle-effects'
 import { ColorSwatch } from '@/components/color-swatch'
 
 export function NewSessionForm() {
@@ -19,6 +19,7 @@ export function NewSessionForm() {
   const [backgroundPreview, setBackgroundPreview] = useState('')
   const [backgroundBlur, setBackgroundBlur] = useState(1)
   const [particleEffect, setParticleEffect] = useState('')
+  const [particleColor, setParticleColor] = useState<string | null>(null)
   const [iconColor, setIconColor] = useState('#2f2f2e')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -60,6 +61,7 @@ export function NewSessionForm() {
       backgroundUrl,
       backgroundBlur,
       particleEffect: particleEffect || null,
+      particleColor,
       iconColor,
     })
     if (result.error || !result.slug) { setError(result.error ?? 'Could not create the session.'); setSubmitting(false); return }
@@ -158,6 +160,34 @@ export function NewSessionForm() {
             ))}
           </select>
         </div>
+
+        {/* Only shown once an effect is actually picked — an unset
+            particleColor renders as that effect's own built-in default
+            (DEFAULT_PARTICLE_COLORS in particle-effects.tsx), so there's
+            nothing to configure until then. The checkbox is what lets
+            someone go back to that default too (rather than the picker
+            just starting empty), since a plain color input has no
+            "unset" state of its own to fall back to. */}
+        {particleEffect && (
+          <div>
+            <label className="label flex items-center justify-between gap-3">
+              <span>Particle color</span>
+              <label className="flex items-center gap-1.5 text-xs text-ink-400 normal-case tracking-normal cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={particleColor !== null}
+                  onChange={e => setParticleColor(e.target.checked ? DEFAULT_PARTICLE_COLORS[particleEffect as keyof typeof DEFAULT_PARTICLE_COLORS] : null)}
+                />
+                Custom
+              </label>
+            </label>
+            {particleColor !== null && (
+              <div className="mt-2">
+                <ColorSwatch value={particleColor} onChange={setParticleColor} label="Particle color" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Same per-page tint concept as the pair profile's own icon
             color picker (character-pair-form.tsx), but wider scope on
