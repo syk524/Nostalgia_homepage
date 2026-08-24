@@ -6,6 +6,7 @@
 export const PAIR_FONTS = {
   default: { label: 'Default', family: 'var(--font-roboto), var(--font-noto-sans-kr), system-ui, sans-serif' },
   serif: { label: '조선명조체 (KR)', family: 'var(--font-chosun-nm), Georgia, serif' },
+  serifBold: { label: '조선명조체 볼드 (KR)', family: 'var(--font-chosun-km), Georgia, serif' },
   display: { label: 'Bebas Neue (Eng)', family: 'var(--font-bebas-neue), sans-serif' },
   mono: { label: 'Chivo Mono (Eng)', family: 'var(--font-chivo-mono), ui-monospace, monospace' },
   zaslia: { label: 'Zaslia (Eng)', family: 'var(--font-zaslia), cursive' },

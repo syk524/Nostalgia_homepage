@@ -52,6 +52,16 @@ const chosunNm = localFont({
   display: 'swap',
 })
 
+// The bold weight of the same Chosun Myeongjo family as chosunNm above —
+// a separate font file (not a `weight`/`style` variant on chosunNm's own
+// localFont call), so it's its own selectable PAIR_FONTS entry rather
+// than an alternate rendering of the "serif" one.
+const chosunKm = localFont({
+  src: './fonts/ChosunKm.ttf',
+  variable: '--font-chosun-km',
+  display: 'swap',
+})
+
 const zaslia = localFont({
   src: './fonts/Zaslia.otf',
   variable: '--font-zaslia',
@@ -142,7 +152,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
         suppressHydrationWarning
       >
         {children}
