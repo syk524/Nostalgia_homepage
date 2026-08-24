@@ -196,6 +196,17 @@ export function CharacterPairDetail({
                 className="object-cover scale-105"
                 style={{ filter: `blur(${(activeProfile.background_blur / 100) * 40}px)` }}
               />
+              {/* A flat color layer over the background, independent of
+                  the blur above — lets an editor darken/tint a busy
+                  background without also softening it. Skipped entirely
+                  at 0% (the default) rather than rendering a fully
+                  transparent div for every profile that hasn't opted in. */}
+              {activeProfile.background_overlay_opacity > 0 && (
+                <div
+                  className="absolute inset-0"
+                  style={{ backgroundColor: activeProfile.background_overlay_color, opacity: activeProfile.background_overlay_opacity / 100 }}
+                />
+              )}
             </div>
           )}
 

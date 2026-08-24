@@ -26,6 +26,7 @@ type ProfileInput = {
   pairImageUrl: string | null
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundBlur: number
+  backgroundOverlayColor: string; backgroundOverlayOpacity: number
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
   timelineEntries: TimelineEntryInput[]
   characters: [ProfileCharInput, ProfileCharInput]
@@ -195,6 +196,7 @@ async function saveProfiles(
     illustration_source: p.illustrationSource.trim().replace(/^©\s*/, '') || null,
     illustration_source_font: p.illustrationSourceFont, illustration_source_color: p.illustrationSourceColor,
     background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
+    background_overlay_color: p.backgroundOverlayColor, background_overlay_opacity: p.backgroundOverlayOpacity,
     timeline_subtitle_font: p.timelineSubtitleFont, timeline_title_font: p.timelineTitleFont, timeline_text_color: p.timelineTextColor,
     timeline_dot_color: p.timelineDotColor, timeline_line_color: p.timelineLineColor, timeline_shadow: p.timelineShadow,
     position,

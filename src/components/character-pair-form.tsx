@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide-react'
@@ -192,6 +192,7 @@ type ProfileState = {
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
+  backgroundOverlayColor: string; backgroundOverlayOpacity: number
   timelineSubtitleFont: string; timelineTitleFont: string; timelineTextColor: string; timelineDotColor: string; timelineLineColor: string; timelineShadow: boolean
   timelineEntries: TimelineEntryState[]
   characters: [ProfileCharState, ProfileCharState]
@@ -231,6 +232,8 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     backgroundPreview: existing?.background_url ?? '',
     uploadingBackground: false,
     backgroundBlur: existing?.background_blur ?? 1,
+    backgroundOverlayColor: existing?.background_overlay_color ?? '#000000',
+    backgroundOverlayOpacity: existing?.background_overlay_opacity ?? 0,
     timelineSubtitleFont: existing?.timeline_subtitle_font ?? 'default',
     timelineTitleFont: existing?.timeline_title_font ?? 'default',
     timelineTextColor: existing?.timeline_text_color ?? '#2f2f2e',
@@ -248,33 +251,9 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
   }
 }
 
-// One localStorage slot per pair (or 'new' for pairs not yet created) —
-// keyed off the same id the edit page is already loaded with, so drafts
-// don't leak across different pairs sharing one browser.
-function draftKey(pairId: string | undefined) {
-  return `pair-draft:${pairId ?? 'new'}`
-}
-
-// Files/blob preview URLs can't survive a reload (the blob: URL dies with
-// the tab, and File objects don't serialize meaningfully) — drafts persist
-// only already-uploaded URLs, falling back to blank previews for anything
-// still-local. Anyone resuming a draft mid-upload just re-picks that one
-// file; everything else (text, colors, fonts, layout) comes back intact.
-function stripForStorage(profiles: ProfileState[]): ProfileState[] {
-  return profiles.map(p => ({
-    ...p,
-    pairImageFile: null, pairImagePreview: p.pairImageUrl ?? '', uploadingPairImage: false,
-    backgroundFile: null, backgroundPreview: p.backgroundUrl ?? '', uploadingBackground: false,
-    customHtmlFile: null, uploadingCustomHtml: false,
-    timelineEntries: p.timelineEntries.map(e => ({ ...e, imageFile: null, imagePreview: e.imageUrl ?? '', uploadingImage: false })),
-    characters: p.characters.map(c => ({ ...c, profileImageFile: null, profileImagePreview: c.profileImageUrl ?? '', uploadingProfileImage: false })) as [ProfileCharState, ProfileCharState],
-  }))
-}
-
 export function CharacterPairForm({ initialData }: { initialData?: { pair: CharacterPairWithProfiles } }) {
   const router = useRouter()
   const isEdit = !!initialData
-  const pairId = initialData?.pair.id
 
   const [profiles, setProfiles] = useState<ProfileState[]>(() =>
     initialData?.pair.pair_profiles.length
@@ -287,53 +266,6 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-
-  // Offered once, on mount, only if a draft actually exists — never
-  // overwritten by the autosave effect below until the user has answered.
-  const [draftBanner, setDraftBanner] = useState<{ savedAt: number; profiles: ProfileState[] } | null>(null)
-  const draftChecked = useRef(false)
-  useEffect(() => {
-    if (draftChecked.current) return
-    draftChecked.current = true
-    try {
-      const raw = localStorage.getItem(draftKey(pairId))
-      if (!raw) return
-      const parsed = JSON.parse(raw) as { savedAt: number; profiles: ProfileState[] }
-      if (parsed?.profiles?.length) setDraftBanner(parsed)
-    } catch { /* corrupt/old draft — ignore */ }
-    // Only ever check the draft that matches the pair this form mounted
-    // with — not on every pairId change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Debounced autosave — skips the very first render (nothing's changed
-  // yet) and skips entirely while a restore offer is still on screen, so
-  // it can't clobber the saved draft before the user has chosen.
-  const skipFirstSave = useRef(true)
-  useEffect(() => {
-    if (skipFirstSave.current) { skipFirstSave.current = false; return }
-    if (draftBanner) return
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem(draftKey(pairId), JSON.stringify({ savedAt: Date.now(), profiles: stripForStorage(profiles) }))
-      } catch { /* storage full/unavailable — silently skip autosave */ }
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [profiles, pairId, draftBanner])
-
-  function restoreDraft() {
-    if (!draftBanner) return
-    setProfiles(draftBanner.profiles)
-    setActiveIndex(0)
-    setDraftBanner(null)
-  }
-  function discardDraft() {
-    try { localStorage.removeItem(draftKey(pairId)) } catch { /* ignore */ }
-    setDraftBanner(null)
-  }
-  function clearDraft() {
-    try { localStorage.removeItem(draftKey(pairId)) } catch { /* ignore */ }
-  }
 
   function updateProfile(index: number, patch: Partial<ProfileState>) {
     setProfiles(prev => prev.map((p, i) => i === index ? { ...p, ...patch } : p))
@@ -438,6 +370,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         pairImageUrl: finalPairImageUrl,
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
+        backgroundOverlayColor: p.backgroundOverlayColor, backgroundOverlayOpacity: p.backgroundOverlayOpacity,
         timelineSubtitleFont: p.timelineSubtitleFont, timelineTitleFont: p.timelineTitleFont, timelineTextColor: p.timelineTextColor,
         timelineDotColor: p.timelineDotColor, timelineLineColor: p.timelineLineColor, timelineShadow: p.timelineShadow,
         timelineEntries: resolvedTimelineEntries,
@@ -452,7 +385,6 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       : await createCharacterPair(input)
 
     if (result?.error || !result?.pairSlug) { setError(result?.error ?? '페어를 저장할 수 없습니다.'); setSubmitting(false); return }
-    clearDraft()
     router.push(`/profile/${result.pairSlug}`)
   }
 
@@ -484,18 +416,6 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       <SectionNav pageType={activeProfile.pageType} />
 
       <form onSubmit={handleSubmit} className="animate-fade-up space-y-6">
-        {draftBanner && (
-          <div className="rounded border border-scroll-300 bg-scroll-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
-            <span className="text-ink-500">
-              저장되지 않은 초안을 찾았습니다 ({new Date(draftBanner.savedAt).toLocaleString()}). 복원하시겠습니까? (아직 업로드되지 않은 이미지는 다시 선택해야 합니다.)
-            </span>
-            <div className="flex gap-2 shrink-0">
-              <button type="button" onClick={restoreDraft} className="btn-ghost text-xs px-3 py-1.5">복원</button>
-              <button type="button" onClick={discardDraft} className="btn-ghost text-xs px-3 py-1.5">삭제</button>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center gap-2 flex-wrap">
           {profiles.map((p, i) => (
             <div key={p.id} className={`pill !gap-1.5 ${i === activeIndex ? 'pill-active' : ''}`}>
@@ -814,6 +734,29 @@ function ProfileFieldset({
                 className="w-full block"
                 style={{ accentColor: '#2f2f2e' }}
               />
+            </div>
+            {/* A flat color layer over the background image, independent
+                of the blur above — lets a busy background be darkened/
+                tinted without also softening it. 0% opacity (the default)
+                renders identically to no overlay at all. */}
+            <div className="mt-3">
+              <label className="label">배경 색상 오버레이</label>
+              <div className="flex flex-wrap items-center gap-3">
+                <ColorSwatch value={profile.backgroundOverlayColor} onChange={v => onPatch({ backgroundOverlayColor: v })} label="배경 오버레이 색상" />
+                <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={profile.backgroundOverlayOpacity}
+                    onChange={e => onPatch({ backgroundOverlayOpacity: Number(e.target.value) })}
+                    className="w-full block"
+                    style={{ accentColor: '#2f2f2e' }}
+                  />
+                  <span className="text-xs text-ink-500 normal-case tracking-normal w-10 text-right shrink-0">{profile.backgroundOverlayOpacity}%</span>
+                </div>
+              </div>
             </div>
           </div>
 
