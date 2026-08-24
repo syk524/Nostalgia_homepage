@@ -31,7 +31,7 @@ export default async function NewCharacterPairPage() {
           viewport) — same class of bug character-pair-detail.tsx hit with
           its own side nav. animate-fade-up moves down onto the pieces
           that actually need to animate instead. */}
-      <h2 className="text-3xl text-ink animate-fade-up">새 페어 만들기</h2>
+      <h2 className="text-3xl text-ink noir-accent-color animate-fade-up">새 페어 만들기</h2>
       <CharacterPairForm />
     </div>
   )

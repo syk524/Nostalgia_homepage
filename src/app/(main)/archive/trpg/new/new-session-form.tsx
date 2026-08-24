@@ -74,7 +74,7 @@ export function NewSessionForm() {
 
   return (
     <div className="animate-fade-up max-w-3xl mx-auto space-y-6">
-      <h2 className="text-3xl text-ink">New Session</h2>
+      <h2 className="text-3xl text-ink noir-accent-color">New Session</h2>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
         <div>

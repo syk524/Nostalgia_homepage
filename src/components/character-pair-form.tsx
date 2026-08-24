@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage, uploadHtmlPage } from '@/lib/upload'
 import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } from '@/lib/actions/characters'
@@ -459,6 +460,27 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
 
   return (
     <>
+      {/* Same fixed left-[2.6%]/top-[3%] position, size, and hover
+          treatment as the pair detail page's own back arrow
+          (character-pair-detail.tsx) — including sourcing its color from
+          this profile's own icon_color, so it looks like literally the
+          same button whether you're viewing the pair or editing it. Goes
+          back to the pair's own page when editing (matching the Cancel
+          button below), or the profile grid for a pair that doesn't exist
+          yet. A plain sibling here, not nested inside the form/either page
+          wrapper's div — position:fixed only resolves against the real
+          viewport as long as no transformed ancestor turns itself into
+          its containing block (see the animate-fade-up fix elsewhere in
+          this file for the bug that happens when one does). */}
+      <Link
+        href={isEdit ? `/profile/${initialData!.pair.slug}` : '/profile'}
+        aria-label="뒤로 가기"
+        className="fixed left-[2.6%] top-[3%] z-[60] inline-flex w-8 h-8 rounded-full items-center justify-start hover:opacity-70 transition-opacity"
+        style={{ color: activeProfile.iconColor }}
+      >
+        <ArrowLeft size={18} />
+      </Link>
+
       <SectionNav pageType={activeProfile.pageType} />
 
       <form onSubmit={handleSubmit} className="animate-fade-up space-y-6">
