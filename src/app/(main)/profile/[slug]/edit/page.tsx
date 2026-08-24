@@ -16,9 +16,9 @@ export default async function EditCharacterPairPage({ params }: { params: Promis
   if (!canEdit) {
     return (
       <div className="animate-fade-up space-y-2">
-        <h2 className="text-3xl text-ink">Edit Pair</h2>
+        <h2 className="text-3xl text-ink">페어 편집</h2>
         <p className="text-ink-500">
-          You don&apos;t have edit authority yet. <Link href={`/profile/${slug}`} className="text-ember hover:underline">Back to pair</Link>
+          아직 편집 권한이 없습니다. <Link href={`/profile/${slug}`} className="text-ember hover:underline">페어로 돌아가기</Link>
         </p>
       </div>
     )
@@ -28,8 +28,8 @@ export default async function EditCharacterPairPage({ params }: { params: Promis
   if (!pair) notFound()
 
   return (
-    <div className="animate-fade-up max-w-2xl space-y-6 mx-auto">
-      <h2 className="text-3xl text-ink">Edit Pair</h2>
+    <div className="animate-fade-up max-w-[1400px] space-y-6 mx-auto">
+      <h2 className="text-3xl text-ink">페어 편집</h2>
       <CharacterPairForm initialData={{ pair }} />
     </div>
   )

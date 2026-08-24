@@ -137,7 +137,7 @@ export function PostModal({
     // deliberately keeps its normal light background regardless of the
     // viewer's site theme (e.g. Noir's #010101), so it doesn't need its
     // own explicit background on every other page that opens it.
-    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up bg-scroll-100">
+    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up bg-scroll-100 noir-modal-bg-transparent">
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. 1020px,
@@ -145,7 +145,7 @@ export function PostModal({
           sm:), matching gallery/page.tsx and nav.tsx's own category rail.
           No max-h/overflow-y-auto of its own below 1020px — it's part of
           the single root-level scroll there instead (see comment above). */}
-      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
+      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 noir-border bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
         {/* Same rounded (not rounded-full) + hover:bg-[#EFEFEF] treatment
             as the link bar's own collapse/expand toggle
             (links-archive-view.tsx's "Hide/Show link list" buttons) —
@@ -156,7 +156,7 @@ export function PostModal({
           <button
             onClick={close}
             aria-label="Close"
-            className="w-8 h-8 rounded text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-row-hover flex items-center justify-center transition-colors"
           >
             <X size={16} />
           </button>
@@ -170,7 +170,7 @@ export function PostModal({
             onClick={() => goTo(prevId)}
             disabled={!prevId || navigating}
             aria-label="Previous post"
-            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${prevId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${prevId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-row-hover' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronLeft size={16} />
           </button>
@@ -179,7 +179,7 @@ export function PostModal({
             onClick={() => goTo(nextId)}
             disabled={!nextId || navigating}
             aria-label="Next post"
-            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${nextId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-hover' : 'text-scroll-300 cursor-default'}`}
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors disabled:opacity-40 ${nextId ? 'text-ink-400 hover:text-ink hover:bg-[#EFEFEF] noir-row-hover' : 'text-scroll-300 cursor-default'}`}
           >
             <ChevronRight size={16} />
           </button>
@@ -205,7 +205,7 @@ export function PostModal({
             </div>
             {post.category && (
               <div className="flex justify-between items-baseline gap-4">
-                <span className="font-mono text-xs uppercase tracking-wide" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Category</span>
+                <span className="font-mono text-xs uppercase tracking-wide noir-accent-color" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Category</span>
                 <span className="tag">{post.category.name}</span>
               </div>
             )}
@@ -218,7 +218,7 @@ export function PostModal({
 
         {canEdit && (
           <div className="flex gap-2 pt-4 mt-auto border-t border-scroll-300">
-            <a href={`/gallery/${post.id}/edit`} className="btn-ghost">Edit</a>
+            <a href={`/gallery/${post.id}/edit`} className="btn-ghost noir-accent-color noir-edit-border">Edit</a>
             <DeletePostButton postId={post.id} />
           </div>
         )}

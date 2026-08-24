@@ -564,6 +564,13 @@
 [data-theme="noir"] .noir-links-nav-color {
   color: #010101 !important;
 }
+/* Same problem as .noir-links-nav-color above, different route: the post
+   modal's own hazy backdrop (post-modal.tsx) sits under the top nav and
+   the gallery category rail on a post-detail page, and Noir's usual
+   near-white --nav-icon-color/--theme-accent washes out against it. */
+[data-theme="noir"] .noir-post-detail-nav-color {
+  color: #010101 !important;
+}
 /* For an element whose color is a hardcoded inline style (not a
    className, so a plain specificity edge isn't enough to win) — e.g. a
    per-context accent that's deliberately its own fixed color on Default
@@ -571,6 +578,32 @@
    is the only way a class-based rule ever beats an inline style. */
 [data-theme="noir"] .noir-accent-color {
   color: var(--theme-accent) !important;
+}
+/* .btn-ghost's own border-ink/20 (globals.css's .btn-ghost rule above)
+   is too faint to read against the post modal's dark Noir sidebar —
+   scoped to the modal's own Edit button, not .btn-ghost generally, so
+   every other ghost button elsewhere keeps its usual border. */
+[data-theme="noir"] .noir-edit-border {
+  border-color: var(--theme-accent);
+}
+/* post-modal.tsx's root wrapper carries a solid bg-scroll-100 fill
+   (a deliberate, theme-independent fix on Default — see that file's own
+   comment on why: an earlier transparent version let gallery grid
+   thumbnails clip messily against the modal edge/Nav's category rail) —
+   but that fixed light gray never follows Noir's own near-black
+   --theme-bg, so it shows as a stray light column behind Nav's category
+   rail on the left. Scoped to Noir only; Default keeps the original fill. */
+[data-theme="noir"] .noir-modal-bg-transparent {
+  background-color: transparent;
+}
+/* .pill-active's own border-ink (globals.css's .pill-active rule above)
+   sits close enough in tone to its own bg-ink fill to read as borderless
+   on Default — but against Noir's near-black page background, that same
+   border-ink shows up as a distinct light ring around the pill. Scoped to
+   the mobile gallery category row (gallery/page.tsx) only, not
+   .pill-active generally. */
+[data-theme="noir"] .noir-mobile-category-no-border {
+  border-color: transparent;
 }
 
 /* Scrollbar styling */

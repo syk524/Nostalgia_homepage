@@ -13,16 +13,16 @@ export default async function NewCharacterPairPage() {
   if (!canEdit) {
     return (
       <div className="animate-fade-up space-y-2">
-        <h2 className="text-3xl text-ink">New Pair</h2>
+        <h2 className="text-3xl text-ink">새 페어 만들기</h2>
         <p className="text-ink-500">
-          You don&apos;t have edit authority yet. <Link href="/profile" className="text-ember hover:underline">Back to Profile</Link>
+          아직 편집 권한이 없습니다. <Link href="/profile" className="text-ember hover:underline">프로필로 돌아가기</Link>
         </p>
       </div>
     )
   }
 
   return (
-    <div className="animate-fade-up max-w-2xl space-y-6 mx-auto">
+    <div className="animate-fade-up max-w-[1400px] space-y-6 mx-auto">
       <h2 className="text-3xl text-ink">New Pair</h2>
       <CharacterPairForm />
     </div>

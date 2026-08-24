@@ -101,12 +101,12 @@ export default async function GalleryPage({
               own min-[1020px]:flex below), where Nav's floating category
               pills (see nav.tsx) are hidden for lack of room. */}
           <div className="flex min-[1020px]:hidden flex-wrap gap-2">
-            <Link href="/gallery" className={!activeCategory ? 'pill pill-active' : 'pill'}>All</Link>
+            <Link href="/gallery" className={!activeCategory ? 'pill pill-active noir-mobile-category-no-border' : 'pill'}>All</Link>
             {(categories ?? []).map((cat: Category) => (
               <Link
                 key={cat.id}
                 href={{ pathname: '/gallery', query: { category: cat.name } }}
-                className={activeCategory?.id === cat.id ? 'pill pill-active' : 'pill'}
+                className={activeCategory?.id === cat.id ? 'pill pill-active noir-mobile-category-no-border' : 'pill'}
               >
                 {cat.name}
               </Link>

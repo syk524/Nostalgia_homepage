@@ -144,7 +144,7 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
           few px above the back button's, reported directly. items-center
           then centers the text within that shared 32px box instead of the
           box just being taller than the glyphs need. */}
-      <nav className={`hidden min-[1020px]:flex h-8 font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink ${onLinksArchive ? 'noir-links-nav-color' : ''}`} style={NAV_COLOR_STYLE}>
+      <nav className={`hidden min-[1020px]:flex h-8 font-mono fixed right-[2.6%] top-[3%] z-[60] items-center gap-10 text-[14px] uppercase tracking-tight text-ink ${onLinksArchive ? 'noir-links-nav-color' : ''} ${onPostDetail ? 'noir-post-detail-nav-color' : ''}`} style={NAV_COLOR_STYLE}>
         {links.map(link => (
           <Link
             key={link.href}
@@ -208,7 +208,7 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
           <CategoryLink
             href="/gallery"
             hardNav={onPostDetail}
-            className={`flex items-center gap-2 ${!activeCategory ? 'font-medium' : ''}`}
+            className={`flex items-center gap-2 ${!activeCategory ? 'font-medium' : ''} ${onPostDetail ? 'noir-accent-color' : ''}`}
             style={{ color: !activeCategory ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
           >
             <span><ScrambleText text="All" /> ({totalPostCount})</span>
@@ -219,7 +219,7 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
               key={cat.id}
               href={`/gallery?category=${encodeURIComponent(cat.name)}`}
               hardNav={onPostDetail}
-              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'font-medium' : ''}`}
+              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'font-medium' : ''} ${onPostDetail ? 'noir-accent-color' : ''}`}
               style={{ color: activeCategory === cat.name ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
             >
               <span><ScrambleText text={cat.name} /> ({categoryPostCounts[cat.id] ?? 0})</span>

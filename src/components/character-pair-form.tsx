@@ -1,15 +1,72 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { GripVertical, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage, uploadHtmlPage } from '@/lib/upload'
 import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } from '@/lib/actions/characters'
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
 import { ColorSwatch } from '@/components/color-swatch'
 import { PairDescriptionEditor } from '@/components/pair-description-editor'
+import { PairProfilePreview } from '@/components/pair-profile-preview'
 import type { CharacterPairWithProfiles, PairProfileWithContent } from '@/lib/character-pair-queries'
 import type { ProfileCharacter } from '@/types/database'
+
+// Sections a profile can jump to via SectionNav below — Pair Info/
+// Character 1/Character 2/Timeline only exist for template pages, so the
+// list itself is computed per-profile (see sectionsFor below) rather than
+// being one fixed constant.
+type NavSection = { id: string; label: string }
+function sectionsFor(pageType: 'template' | 'custom_html'): NavSection[] {
+  const base: NavSection[] = [{ id: 'section-profile-info', label: '프로필 정보' }]
+  if (pageType === 'custom_html') return base
+  return [
+    ...base,
+    { id: 'section-pair-info', label: '페어 정보' },
+    { id: 'section-char-1', label: '캐릭터 1' },
+    { id: 'section-char-2', label: '캐릭터 2' },
+    { id: 'section-timeline', label: '타임라인' },
+  ]
+}
+
+// Scroll-spy nav for the long per-profile form below — plain
+// IntersectionObserver against each section's own heading, re-subscribed
+// whenever the active profile's section list changes (switching profiles
+// or toggling page type changes which ids exist in the DOM).
+function SectionNav({ sections }: { sections: NavSection[] }) {
+  const [activeId, setActiveId] = useState(sections[0]?.id)
+
+  useEffect(() => {
+    setActiveId(sections[0]?.id)
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) setActiveId(visible[0].target.id)
+      },
+      { rootMargin: '-15% 0px -70% 0px' },
+    )
+    sections.forEach(s => {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [sections])
+
+  return (
+    <nav className="hidden min-[1280px]:flex flex-col gap-1 sticky top-24 text-xs font-mono uppercase tracking-wide">
+      {sections.map(s => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className={`text-left px-2 py-1.5 rounded transition-colors ${s.id === activeId ? 'bg-ink text-scroll-100' : 'text-ink-400 hover:text-ink hover:bg-ink/5'}`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </nav>
+  )
+}
 
 // `id` here is a client-only key (existing sections keep their real db id;
 // new ones get a fresh crypto.randomUUID()) — it never gets sent to the
@@ -162,9 +219,33 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
   }
 }
 
+// One localStorage slot per pair (or 'new' for pairs not yet created) —
+// keyed off the same id the edit page is already loaded with, so drafts
+// don't leak across different pairs sharing one browser.
+function draftKey(pairId: string | undefined) {
+  return `pair-draft:${pairId ?? 'new'}`
+}
+
+// Files/blob preview URLs can't survive a reload (the blob: URL dies with
+// the tab, and File objects don't serialize meaningfully) — drafts persist
+// only already-uploaded URLs, falling back to blank previews for anything
+// still-local. Anyone resuming a draft mid-upload just re-picks that one
+// file; everything else (text, colors, fonts, layout) comes back intact.
+function stripForStorage(profiles: ProfileState[]): ProfileState[] {
+  return profiles.map(p => ({
+    ...p,
+    pairImageFile: null, pairImagePreview: p.pairImageUrl ?? '', uploadingPairImage: false,
+    backgroundFile: null, backgroundPreview: p.backgroundUrl ?? '', uploadingBackground: false,
+    customHtmlFile: null, uploadingCustomHtml: false,
+    timelineEntries: p.timelineEntries.map(e => ({ ...e, imageFile: null, imagePreview: e.imageUrl ?? '', uploadingImage: false })),
+    characters: p.characters.map(c => ({ ...c, profileImageFile: null, profileImagePreview: c.profileImageUrl ?? '', uploadingProfileImage: false })) as [ProfileCharState, ProfileCharState],
+  }))
+}
+
 export function CharacterPairForm({ initialData }: { initialData?: { pair: CharacterPairWithProfiles } }) {
   const router = useRouter()
   const isEdit = !!initialData
+  const pairId = initialData?.pair.id
 
   const [profiles, setProfiles] = useState<ProfileState[]>(() =>
     initialData?.pair.pair_profiles.length
@@ -177,6 +258,53 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  // Offered once, on mount, only if a draft actually exists — never
+  // overwritten by the autosave effect below until the user has answered.
+  const [draftBanner, setDraftBanner] = useState<{ savedAt: number; profiles: ProfileState[] } | null>(null)
+  const draftChecked = useRef(false)
+  useEffect(() => {
+    if (draftChecked.current) return
+    draftChecked.current = true
+    try {
+      const raw = localStorage.getItem(draftKey(pairId))
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { savedAt: number; profiles: ProfileState[] }
+      if (parsed?.profiles?.length) setDraftBanner(parsed)
+    } catch { /* corrupt/old draft — ignore */ }
+    // Only ever check the draft that matches the pair this form mounted
+    // with — not on every pairId change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Debounced autosave — skips the very first render (nothing's changed
+  // yet) and skips entirely while a restore offer is still on screen, so
+  // it can't clobber the saved draft before the user has chosen.
+  const skipFirstSave = useRef(true)
+  useEffect(() => {
+    if (skipFirstSave.current) { skipFirstSave.current = false; return }
+    if (draftBanner) return
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey(pairId), JSON.stringify({ savedAt: Date.now(), profiles: stripForStorage(profiles) }))
+      } catch { /* storage full/unavailable — silently skip autosave */ }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [profiles, pairId, draftBanner])
+
+  function restoreDraft() {
+    if (!draftBanner) return
+    setProfiles(draftBanner.profiles)
+    setActiveIndex(0)
+    setDraftBanner(null)
+  }
+  function discardDraft() {
+    try { localStorage.removeItem(draftKey(pairId)) } catch { /* ignore */ }
+    setDraftBanner(null)
+  }
+  function clearDraft() {
+    try { localStorage.removeItem(draftKey(pairId)) } catch { /* ignore */ }
+  }
 
   function updateProfile(index: number, patch: Partial<ProfileState>) {
     setProfiles(prev => prev.map((p, i) => i === index ? { ...p, ...patch } : p))
@@ -200,6 +328,8 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
     setActiveIndex(profiles.length)
   }
   function removeProfile(index: number) {
+    const label = profiles[index].profileTitle || `프로필 ${index + 1}`
+    if (!window.confirm(`"${label}"을(를) 삭제하시겠습니까? 제목, 두 캐릭터, 모든 설명 섹션, 전체 타임라인이 삭제됩니다. 저장하기 전까지는 되돌릴 수 없습니다.`)) return
     const next = profiles.filter((_, i) => i !== index)
     setProfiles(next)
     setActiveIndex(prev => Math.min(prev, next.length - 1))
@@ -209,16 +339,16 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
     e.preventDefault()
     setError('')
 
-    if (!profiles.length) { setError('At least one profile is required.'); return }
-    if (profiles.some(p => p.pageType === 'template' && !p.title.trim())) { setError('Every template profile needs a title.'); return }
-    if (profiles.some(p => !p.profileTitle.trim())) { setError('Every profile needs a profile title.'); return }
-    if (profiles.some(p => p.pageType === 'template' && (!p.characters[0].name.trim() || !p.characters[1].name.trim()))) { setError('Both characters need a name in every template profile.'); return }
-    if (profiles.filter(p => p.isPrimary).length !== 1) { setError('Exactly one profile must be starred as primary.'); return }
+    if (!profiles.length) { setError('프로필이 최소 1개 필요합니다.'); return }
+    if (profiles.some(p => p.pageType === 'template' && !p.title.trim())) { setError('모든 템플릿 프로필에는 제목이 필요합니다.'); return }
+    if (profiles.some(p => !p.profileTitle.trim())) { setError('모든 프로필에는 프로필 제목이 필요합니다.'); return }
+    if (profiles.some(p => p.pageType === 'template' && (!p.characters[0].name.trim() || !p.characters[1].name.trim()))) { setError('모든 템플릿 프로필에서 두 캐릭터 모두 이름이 필요합니다.'); return }
+    if (profiles.filter(p => p.isPrimary).length !== 1) { setError('정확히 하나의 프로필만 대표로 지정해야 합니다.'); return }
 
     setSubmitting(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
+    if (!user) { setError('로그인이 필요합니다.'); setSubmitting(false); return }
 
     const resolvedProfiles: Parameters<typeof createCharacterPair>[0]['profiles'] = []
     for (const p of profiles) {
@@ -243,7 +373,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         finalCustomHtmlUrl = url
       }
       if (p.pageType === 'custom_html' && !finalCustomHtmlUrl) {
-        setError(`Upload an HTML file for "${p.title || 'a profile'}".`); setSubmitting(false); return
+        setError(`"${p.title || '프로필'}"의 HTML 파일을 업로드하세요.`); setSubmitting(false); return
       }
 
       const resolvedCharacters: ReturnType<typeof toProfileCharInput>[] = []
@@ -292,60 +422,84 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
       ? await updateCharacterPair(initialData!.pair.id, input)
       : await createCharacterPair(input)
 
-    if (result?.error || !result?.pairSlug) { setError(result?.error ?? 'Could not save the pair.'); setSubmitting(false); return }
+    if (result?.error || !result?.pairSlug) { setError(result?.error ?? '페어를 저장할 수 없습니다.'); setSubmitting(false); return }
+    clearDraft()
     router.push(`/profile/${result.pairSlug}`)
   }
 
   const activeProfile = profiles[activeIndex]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-2 flex-wrap">
-        {profiles.map((p, i) => (
-          <div key={p.id} className={`pill !gap-1.5 ${i === activeIndex ? 'pill-active' : ''}`}>
-            <button type="button" onClick={() => setActiveIndex(i)}>
-              {p.profileTitle || `Profile ${i + 1}`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPrimary(i)}
-              disabled={p.pageType === 'custom_html'}
-              aria-label={p.isPrimary ? 'Primary profile' : p.pageType === 'custom_html' ? 'Custom HTML pages can’t be primary' : 'Make primary'}
-              className="shrink-0 disabled:opacity-20 disabled:cursor-not-allowed"
-            >
-              <Star size={12} className={p.isPrimary ? 'fill-current' : 'opacity-40'} />
-            </button>
-            {profiles.length > 1 && !p.isPrimary && (
-              <button type="button" onClick={() => removeProfile(i)} aria-label="Remove profile" className="shrink-0 opacity-60 hover:opacity-100">
-                <X size={12} />
-              </button>
-            )}
+    <div className="grid grid-cols-1 min-[1280px]:grid-cols-[160px_minmax(0,600px)_minmax(0,1fr)] gap-6 items-start">
+      <SectionNav sections={sectionsFor(activeProfile.pageType)} />
+
+      <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+        {draftBanner && (
+          <div className="rounded border border-scroll-300 bg-scroll-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+            <span className="text-ink-500">
+              저장되지 않은 초안을 찾았습니다 ({new Date(draftBanner.savedAt).toLocaleString()}). 복원하시겠습니까? (아직 업로드되지 않은 이미지는 다시 선택해야 합니다.)
+            </span>
+            <div className="flex gap-2 shrink-0">
+              <button type="button" onClick={restoreDraft} className="btn-ghost text-xs px-3 py-1.5">복원</button>
+              <button type="button" onClick={discardDraft} className="btn-ghost text-xs px-3 py-1.5">삭제</button>
+            </div>
           </div>
-        ))}
-        <button type="button" onClick={addProfile} className="pill pill-dashed">+ Add profile</button>
-      </div>
-
-      <div className="card p-6 space-y-6">
-        <ProfileFieldset
-          profile={activeProfile}
-          onPatch={patch => updateProfile(activeIndex, patch)}
-          onPatchChar={(slot, patch) => updateProfileChar(activeIndex, slot, patch)}
-        />
-
-        {error && (
-          <p className="field-error bg-ember/10 border border-ember/20 rounded px-4 py-2.5 text-sm">{error}</p>
         )}
 
-        <div className="flex gap-2">
-          <button type="submit" disabled={submitting} className="btn-primary">
-            {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Register Pair'}
-          </button>
-          <button type="button" onClick={() => router.push(isEdit ? `/profile/${initialData!.pair.slug}` : '/profile')} className="btn-ghost">
-            Cancel
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {profiles.map((p, i) => (
+            <div key={p.id} className={`pill !gap-1.5 ${i === activeIndex ? 'pill-active' : ''}`}>
+              <button type="button" onClick={() => setActiveIndex(i)}>
+                {p.profileTitle || `프로필 ${i + 1}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrimary(i)}
+                disabled={p.pageType === 'custom_html'}
+                aria-label={p.isPrimary ? '대표 프로필' : p.pageType === 'custom_html' ? '커스텀 HTML 페이지는 대표로 지정할 수 없습니다' : '대표로 지정'}
+                className="shrink-0 disabled:opacity-20 disabled:cursor-not-allowed"
+              >
+                <Star size={12} className={p.isPrimary ? 'fill-current' : 'opacity-40'} />
+              </button>
+              {profiles.length > 1 && !p.isPrimary && (
+                <button type="button" onClick={() => removeProfile(i)} aria-label="프로필 삭제" className="shrink-0 opacity-60 hover:opacity-100">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+          <button type="button" onClick={addProfile} className="pill pill-dashed">+ 프로필 추가</button>
         </div>
-      </div>
-    </form>
+
+        <div className="card p-6 space-y-6">
+          <ProfileFieldset
+            profile={activeProfile}
+            onPatch={patch => updateProfile(activeIndex, patch)}
+            onPatchChar={(slot, patch) => updateProfileChar(activeIndex, slot, patch)}
+          />
+
+          {error && (
+            <p className="field-error bg-ember/10 border border-ember/20 rounded px-4 py-2.5 text-sm">{error}</p>
+          )}
+
+          <div className="flex gap-2">
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? '저장 중…' : isEdit ? '변경사항 저장' : '페어 등록'}
+            </button>
+            <button type="button" onClick={() => router.push(isEdit ? `/profile/${initialData!.pair.slug}` : '/profile')} className="btn-ghost">
+              취소
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {activeProfile.pageType !== 'custom_html' && (
+        <div className="hidden min-[1280px]:block sticky top-24">
+          <p className="label mb-2">실시간 미리보기</p>
+          <PairProfilePreview profile={activeProfile} />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -420,7 +574,7 @@ function StyledTextRow({
             <span className="text-xs text-ink-500">px</span>
           </div>
         )}
-        <ColorSwatch value={color} onChange={onColorChange} />
+        <ColorSwatch value={color} onChange={onColorChange} label={`${label} color`} />
       </div>
     </div>
   )
@@ -455,38 +609,38 @@ function ProfileFieldset({
 
   return (
     <div className="space-y-6">
-      <p className="text-base font-semibold text-ink uppercase tracking-wide font-mono">Profile Info</p>
+      <p id="section-profile-info" className="text-base font-semibold text-ink uppercase tracking-wide font-mono scroll-mt-24">프로필 정보</p>
 
       <div>
-        <label className="label">Page type</label>
+        <label className="label">페이지 유형</label>
         <select className="input" value={profile.pageType} onChange={e => onPatch({ pageType: e.target.value as ProfileState['pageType'] })}>
-          <option value="template">Standard template</option>
-          <option value="custom_html" disabled={profile.isPrimary}>Custom HTML page</option>
+          <option value="template">기본 템플릿</option>
+          <option value="custom_html" disabled={profile.isPrimary}>커스텀 HTML 페이지</option>
         </select>
         {profile.isPrimary && (
-          <p className="text-xs text-ink-400 mt-1">The starred profile always uses the standard template — star a different profile to free this one up for a custom page.</p>
+          <p className="text-xs text-ink-400 mt-1">별표된 프로필은 항상 기본 템플릿을 사용합니다 — 이 프로필을 커스텀 페이지로 사용하려면 다른 프로필에 별표를 지정하세요.</p>
         )}
       </div>
 
       <div>
-        <label className="label">Profile Title</label>
+        <label className="label">프로필 제목</label>
         <input
           className="input"
           value={profile.profileTitle}
           onChange={e => onPatch({ profileTitle: e.target.value })}
-          placeholder="e.g. Debut Era"
+          placeholder="예: 데뷔 시절"
           required
         />
       </div>
 
-      <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono border-t border-scroll-300">Pair Info</p>
+      <p id="section-pair-info" className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono border-t border-scroll-300 scroll-mt-24">페어 정보</p>
 
       {profile.pageType !== 'custom_html' && (
         <>
           <StyledTextRow
-            label="Title"
+            label="제목"
             value={profile.title}
-            placeholder="Pair title"
+            placeholder="페어 제목"
             required
             font={profile.titleFont}
             color={profile.titleColor}
@@ -498,19 +652,19 @@ function ProfileFieldset({
           />
 
           <div>
-            <label className="label">Link (optional)</label>
+            <label className="label">링크 (선택)</label>
             <div className="flex flex-wrap gap-3">
               <input
                 className="input flex-1 min-w-[140px]"
                 value={profile.linkText}
                 onChange={e => onPatch({ linkText: e.target.value })}
-                placeholder="Link text"
+                placeholder="링크 텍스트"
                 style={{ fontFamily: pairFontFamily(profile.linkFont) }}
               />
               <div className="w-36">
                 <FontSelect value={profile.linkFont} onChange={v => onPatch({ linkFont: v })} />
               </div>
-              <ColorSwatch value={profile.linkColor} onChange={v => onPatch({ linkColor: v })} />
+              <ColorSwatch value={profile.linkColor} onChange={v => onPatch({ linkColor: v })} label="링크 색상" />
             </div>
             <input
               type="url"
@@ -521,33 +675,33 @@ function ProfileFieldset({
             />
             <label className="flex items-center gap-2 mt-2 text-xs text-ink-500 normal-case tracking-normal">
               <input type="checkbox" checked={profile.hasMusic} onChange={e => onPatch({ hasMusic: e.target.checked })} className="cursor-pointer" />
-              Show a music note icon before the link text
+              링크 텍스트 앞에 음표 아이콘 표시
             </label>
           </div>
         </>
       )}
 
       <div>
-        <label className="label">Icon color picker</label>
-        <ColorSwatch value={profile.iconColor} onChange={v => onPatch({ iconColor: v })} />
+        <label className="label">아이콘 색상 선택</label>
+        <ColorSwatch value={profile.iconColor} onChange={v => onPatch({ iconColor: v })} label="아이콘 색상" />
       </div>
 
       {profile.pageType === 'custom_html' ? (
         <div>
-          <label className="label">HTML file</label>
+          <label className="label">HTML 파일</label>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-ink-500">{profile.customHtmlFileName || 'No file chosen'}</span>
+            <span className="text-sm text-ink-500">{profile.customHtmlFileName || '선택된 파일 없음'}</span>
             <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingCustomHtml}>
-              {profile.uploadingCustomHtml ? 'Uploading…' : 'Choose file'}
+              {profile.uploadingCustomHtml ? '업로드 중…' : '파일 선택'}
               <input type="file" accept=".html,text/html" onChange={handleCustomHtmlChange} className="sr-only" disabled={profile.uploadingCustomHtml} />
             </label>
           </div>
-          <p className="text-xs text-ink-400 mt-1">A single self-contained .html file, rendered in a sandboxed frame.</p>
+          <p className="text-xs text-ink-400 mt-1">샌드박스 처리된 프레임에서 렌더링되는, 단일 자기 완결형 .html 파일입니다.</p>
         </div>
       ) : (
         <>
           <div>
-            <label className="label">Pair image</label>
+            <label className="label">페어 이미지</label>
             <div className="flex items-center gap-4">
               <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
                 {profile.pairImagePreview
@@ -556,14 +710,14 @@ function ProfileFieldset({
                 }
               </div>
               <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingPairImage}>
-                {profile.uploadingPairImage ? 'Uploading…' : 'Choose image'}
+                {profile.uploadingPairImage ? '업로드 중…' : '이미지 선택'}
                 <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
               </label>
             </div>
           </div>
 
           <div>
-            <label className="label">Illustration source (optional)</label>
+            <label className="label">일러스트 출처 (선택)</label>
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-[140px]">
                 <span
@@ -576,19 +730,19 @@ function ProfileFieldset({
                   className="input pl-8"
                   value={profile.illustrationSource}
                   onChange={e => onPatch({ illustrationSource: e.target.value })}
-                  placeholder="e.g. 부때"
+                  placeholder="예: 부때"
                   style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont) }}
                 />
               </div>
               <div className="w-36">
                 <FontSelect value={profile.illustrationSourceFont} onChange={v => onPatch({ illustrationSourceFont: v })} />
               </div>
-              <ColorSwatch value={profile.illustrationSourceColor} onChange={v => onPatch({ illustrationSourceColor: v })} />
+              <ColorSwatch value={profile.illustrationSourceColor} onChange={v => onPatch({ illustrationSourceColor: v })} label="일러스트 출처 색상" />
             </div>
           </div>
 
           <div>
-            <label className="label">Background</label>
+            <label className="label">배경</label>
             <div className="flex items-center gap-4">
               <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
                 {profile.backgroundPreview
@@ -597,13 +751,13 @@ function ProfileFieldset({
                 }
               </div>
               <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingBackground}>
-                {profile.uploadingBackground ? 'Uploading…' : 'Choose image'}
+                {profile.uploadingBackground ? '업로드 중…' : '이미지 선택'}
                 <input type="file" accept="image/*" onChange={handleBackgroundChange} className="sr-only" disabled={profile.uploadingBackground} />
               </label>
             </div>
             <div className="mt-3">
               <label className="label flex items-center justify-between" htmlFor={`background-blur-${profile.id}`}>
-                <span>Background image blur strength</span>
+                <span>배경 이미지 흐림 강도</span>
                 <span className="text-ink-500 normal-case tracking-normal">{profile.backgroundBlur}%</span>
               </label>
               <input
@@ -620,14 +774,14 @@ function ProfileFieldset({
             </div>
           </div>
 
-          <CharacterFieldset label="Character 1" state={profile.characters[0]} onPatch={patch => onPatchChar(0, patch)} />
-          <CharacterFieldset label="Character 2" state={profile.characters[1]} onPatch={patch => onPatchChar(1, patch)} />
+          <CharacterFieldset id="section-char-1" label="캐릭터 1" state={profile.characters[0]} onPatch={patch => onPatchChar(0, patch)} />
+          <CharacterFieldset id="section-char-2" label="캐릭터 2" state={profile.characters[1]} onPatch={patch => onPatchChar(1, patch)} />
 
           <div className="space-y-4 pt-4 border-t border-scroll-300">
-            <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono">Timeline</p>
+            <p id="section-timeline" className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono scroll-mt-24">타임라인</p>
 
             <div>
-              <label className="label">Subtitle &amp; title font</label>
+              <label className="label">부제목 &amp; 제목 폰트</label>
               <div className="flex flex-wrap gap-3">
                 <div className="w-36">
                   <FontSelect value={profile.timelineSubtitleFont} onChange={v => onPatch({ timelineSubtitleFont: v })} />
@@ -639,24 +793,24 @@ function ProfileFieldset({
             </div>
 
             <div>
-              <label className="label">Description text color</label>
-              <ColorSwatch value={profile.timelineTextColor} onChange={v => onPatch({ timelineTextColor: v })} />
+              <label className="label">설명 텍스트 색상</label>
+              <ColorSwatch value={profile.timelineTextColor} onChange={v => onPatch({ timelineTextColor: v })} label="타임라인 설명 텍스트 색상" />
             </div>
 
             <div>
-              <label className="label">Dot &amp; line</label>
+              <label className="label">점 &amp; 선</label>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">Circle</span>
-                  <ColorSwatch value={profile.timelineDotColor} onChange={v => onPatch({ timelineDotColor: v })} />
+                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">원</span>
+                  <ColorSwatch value={profile.timelineDotColor} onChange={v => onPatch({ timelineDotColor: v })} label="타임라인 점 색상" />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">Line</span>
-                  <ColorSwatch value={profile.timelineLineColor} onChange={v => onPatch({ timelineLineColor: v })} />
+                  <span className="text-[10px] text-ink-400 normal-case tracking-normal">선</span>
+                  <ColorSwatch value={profile.timelineLineColor} onChange={v => onPatch({ timelineLineColor: v })} label="타임라인 선 색상" />
                 </div>
                 <label className="flex items-center gap-2 text-xs text-ink-500 normal-case tracking-normal cursor-pointer">
                   <input type="checkbox" checked={profile.timelineShadow} onChange={e => onPatch({ timelineShadow: e.target.checked })} className="cursor-pointer" />
-                  Add a shadow behind them
+                  뒤에 그림자 추가
                 </label>
               </div>
             </div>
@@ -675,8 +829,9 @@ function ProfileFieldset({
 }
 
 function CharacterFieldset({
-  label, state, onPatch,
+  id, label, state, onPatch,
 }: {
+  id?: string
   label: string
   state: ProfileCharState
   onPatch: (patch: Partial<ProfileCharState>) => void
@@ -689,29 +844,29 @@ function CharacterFieldset({
 
   return (
     <div className="space-y-4 pt-4 border-t border-scroll-300">
-      <p className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono">{label}</p>
+      <p id={id} className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono scroll-mt-24">{label}</p>
 
       <div>
-        <label className="label">Profile picture</label>
-        <p className="text-xs text-ink-400 mb-2">Shown as this character's icon on the timeline's thought hovers.</p>
+        <label className="label">프로필 사진</label>
+        <p className="text-xs text-ink-400 mb-2">타임라인의 생각 말풍선에 이 캐릭터의 아이콘으로 표시됩니다.</p>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+          <div className="w-20 h-20 rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
             {state.profileImagePreview
               ? <img src={state.profileImagePreview} alt="" className="w-full h-full object-cover" />
               : <span className="text-xl text-scroll-400">◯</span>
             }
           </div>
           <label className="btn-ghost text-xs cursor-pointer" aria-busy={state.uploadingProfileImage}>
-            {state.uploadingProfileImage ? 'Uploading…' : 'Choose image'}
+            {state.uploadingProfileImage ? '업로드 중…' : '이미지 선택'}
             <input type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" disabled={state.uploadingProfileImage} />
           </label>
         </div>
       </div>
 
       <StyledTextRow
-        label="Name"
+        label="이름"
         value={state.name}
-        placeholder="Character name"
+        placeholder="캐릭터 이름"
         required
         font={state.nameFont}
         color={state.nameColor}
@@ -721,8 +876,8 @@ function CharacterFieldset({
       />
 
       <div>
-        <label className="label">Line under name</label>
-        <ColorSwatch value={state.nameUnderlineColor} onChange={v => onPatch({ nameUnderlineColor: v })} />
+        <label className="label">이름 밑줄</label>
+        <ColorSwatch value={state.nameUnderlineColor} onChange={v => onPatch({ nameUnderlineColor: v })} label="이름 밑줄 색상" />
       </div>
 
       {/* Shown on the detail page as one line under the character's
@@ -730,142 +885,207 @@ function CharacterFieldset({
           directly. Age/height/weight are just the number here; "세"/"cm"/
           "kg" are added automatically at render time
           (character-pair-detail.tsx), not typed in. */}
-      <div>
-        <label className="label">Stats</label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <input
-            className="input"
-            value={state.age}
-            onChange={e => onPatch({ age: e.target.value })}
-            placeholder="Age"
-          />
-          <div className="relative">
-            <input
-              className="input pr-9"
-              value={state.height}
-              onChange={e => onPatch({ height: e.target.value })}
-              placeholder="Height"
+      <details open className="group pt-2">
+        <summary className="text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono cursor-pointer list-none flex items-center gap-1.5 select-none">
+          <ChevronDown size={12} className="shrink-0 group-open:hidden" />
+          <ChevronUp size={12} className="shrink-0 hidden group-open:block" />
+          캐릭터 캡션
+        </summary>
+
+        <div className="space-y-4 mt-4">
+          <div>
+            <StyledTextRow
+              label="캐치프레이즈"
+              value={state.catchphrase}
+              placeholder="짧은 태그라인"
+              font={state.catchphraseFont}
+              color={state.catchphraseColor}
+              onValueChange={v => onPatch({ catchphrase: v })}
+              onFontChange={v => onPatch({ catchphraseFont: v })}
+              onColorChange={v => onPatch({ catchphraseColor: v })}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">cm</span>
+            <CharHint value={state.catchphrase} softLimit={18} note="자간이 매우 넓게 적용되어 긴 텍스트는 빨리 줄바꿈됩니다" />
           </div>
-          <div className="relative">
-            <input
-              className="input pr-9"
-              value={state.weight}
-              onChange={e => onPatch({ weight: e.target.value })}
-              placeholder="Weight"
+
+          <div>
+            <StyledTextRow
+              label="인용구"
+              value={state.quote}
+              placeholder="시그니처 대사"
+              font={state.quoteFont}
+              color={state.quoteColor}
+              onValueChange={v => onPatch({ quote: v })}
+              onFontChange={v => onPatch({ quoteFont: v })}
+              onColorChange={v => onPatch({ quoteColor: v })}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">kg</span>
+            <CharHint value={state.quote} softLimit={40} note="박스 너비가 350px로 제한되어 있어 텍스트가 길면 더 많은 줄로 나뉩니다" />
           </div>
-          <input
-            className="input"
-            value={state.job}
-            onChange={e => onPatch({ job: e.target.value })}
-            placeholder="Job"
-          />
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <div className="w-36">
-            <FontSelect value={state.statsFont} onChange={v => onPatch({ statsFont: v })} />
+
+          <div>
+            <label className="label">키워드</label>
+            <div className="flex flex-wrap gap-3">
+              {(['keyword1', 'keyword2', 'keyword3'] as const).map((key, i) => (
+                <input
+                  key={key}
+                  className="input flex-1 min-w-[100px]"
+                  value={state[key]}
+                  onChange={e => onPatch({ [key]: e.target.value })}
+                  placeholder={`키워드 ${i + 1}`}
+                  style={{ fontFamily: pairFontFamily(state.keywordFont) }}
+                />
+              ))}
+              <div className="w-36">
+                <FontSelect value={state.keywordFont} onChange={v => onPatch({ keywordFont: v })} />
+              </div>
+              <ColorSwatch value={state.keywordColor} onChange={v => onPatch({ keywordColor: v })} label="키워드 색상" />
+            </div>
           </div>
-          <ColorSwatch value={state.statsColor} onChange={v => onPatch({ statsColor: v })} />
-        </div>
-      </div>
 
-      <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Character Caption</p>
-
-      <StyledTextRow
-        label="Catchphrase"
-        value={state.catchphrase}
-        placeholder="A short tagline"
-        font={state.catchphraseFont}
-        color={state.catchphraseColor}
-        onValueChange={v => onPatch({ catchphrase: v })}
-        onFontChange={v => onPatch({ catchphraseFont: v })}
-        onColorChange={v => onPatch({ catchphraseColor: v })}
-      />
-
-      <StyledTextRow
-        label="Quote"
-        value={state.quote}
-        placeholder="A signature line"
-        font={state.quoteFont}
-        color={state.quoteColor}
-        onValueChange={v => onPatch({ quote: v })}
-        onFontChange={v => onPatch({ quoteFont: v })}
-        onColorChange={v => onPatch({ quoteColor: v })}
-      />
-
-      <div>
-        <label className="label">Keywords</label>
-        <div className="flex flex-wrap gap-3">
-          {(['keyword1', 'keyword2', 'keyword3'] as const).map((key, i) => (
-            <input
-              key={key}
-              className="input flex-1 min-w-[100px]"
-              value={state[key]}
-              onChange={e => onPatch({ [key]: e.target.value })}
-              placeholder={`Keyword ${i + 1}`}
-              style={{ fontFamily: pairFontFamily(state.keywordFont) }}
-            />
-          ))}
-          <div className="w-36">
-            <FontSelect value={state.keywordFont} onChange={v => onPatch({ keywordFont: v })} />
+          <div>
+            <label className="label flex items-center justify-between gap-3">
+              <span>캡션 텍스트 그림자</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 w-40 shrink-0">
+                  <span className="text-[10px] text-ink-400 normal-case tracking-normal shrink-0">강도</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    value={state.captionShadowStrength}
+                    onChange={e => onPatch({ captionShadowStrength: Number(e.target.value) })}
+                    className="input flex-1 min-w-0 text-center"
+                  />
+                </div>
+                <ColorSwatch value={state.captionShadowColor} onChange={v => onPatch({ captionShadowColor: v })} label="캡션 그림자 색상" />
+              </div>
+            </label>
           </div>
-          <ColorSwatch value={state.keywordColor} onChange={v => onPatch({ keywordColor: v })} />
-        </div>
-      </div>
 
-      <div>
-        <label className="label flex items-center justify-between gap-3">
-          <span>Caption text shadow</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 w-40 shrink-0">
-              <span className="text-[10px] text-ink-400 normal-case tracking-normal shrink-0">Strength</span>
+          <div>
+            <label className="label flex items-center justify-between gap-3">
+              <span className="flex items-center gap-1.5">
+                캡션 수직 오프셋
+                <span className="text-[10px] text-ink-400 normal-case tracking-normal">(200px ~ -200px)</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={-200}
+                  max={200}
+                  step={1}
+                  value={state.captionOffsetY}
+                  onChange={e => onPatch({ captionOffsetY: Math.min(200, Math.max(-200, Number(e.target.value))) })}
+                  className="input w-20 text-center"
+                />
+                <span className="text-[10px] text-ink-400 normal-case tracking-normal">px</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <details open className="group pt-2">
+        <summary className="text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono cursor-pointer list-none flex items-center gap-1.5 select-none">
+          <ChevronDown size={12} className="shrink-0 group-open:hidden" />
+          <ChevronUp size={12} className="shrink-0 hidden group-open:block" />
+          설명
+        </summary>
+
+        <div className="space-y-4 mt-4">
+          <div>
+            <label className="label">기본 정보</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <input
-                type="number"
-                min={0}
-                max={10}
-                step={0.5}
-                value={state.captionShadowStrength}
-                onChange={e => onPatch({ captionShadowStrength: Number(e.target.value) })}
-                className="input flex-1 min-w-0 text-center"
+                className="input"
+                value={state.age}
+                onChange={e => onPatch({ age: e.target.value })}
+                placeholder="나이"
+              />
+              <div className="relative">
+                <input
+                  className="input pr-9"
+                  value={state.height}
+                  onChange={e => onPatch({ height: e.target.value })}
+                  placeholder="키"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">cm</span>
+              </div>
+              <div className="relative">
+                <input
+                  className="input pr-9"
+                  value={state.weight}
+                  onChange={e => onPatch({ weight: e.target.value })}
+                  placeholder="몸무게"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-400 pointer-events-none">kg</span>
+              </div>
+              <input
+                className="input"
+                value={state.job}
+                onChange={e => onPatch({ job: e.target.value })}
+                placeholder="직업"
               />
             </div>
-            <ColorSwatch value={state.captionShadowColor} onChange={v => onPatch({ captionShadowColor: v })} />
+            <div className="flex items-center gap-3 mt-2">
+              <div className="w-36">
+                <FontSelect value={state.statsFont} onChange={v => onPatch({ statsFont: v })} />
+              </div>
+              <ColorSwatch value={state.statsColor} onChange={v => onPatch({ statsColor: v })} label="기본 정보 색상" />
+            </div>
           </div>
-        </label>
-      </div>
 
-      <div>
-        <label className="label flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5">
-            Caption vertical offset
-            <span className="text-[10px] text-ink-400 normal-case tracking-normal">(200px to -200px)</span>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min={-200}
-              max={200}
-              step={1}
-              value={state.captionOffsetY}
-              onChange={e => onPatch({ captionOffsetY: Math.min(200, Math.max(-200, Number(e.target.value))) })}
-              className="input w-20 text-center"
-            />
-            <span className="text-[10px] text-ink-400 normal-case tracking-normal">px</span>
+          <div>
+            <label className="label">설명 배경 그라데이션</label>
+            <ColorSwatch value={state.descriptionColor} onChange={v => onPatch({ descriptionColor: v })} label="설명 배경 그라데이션" />
           </div>
-        </label>
-      </div>
 
-      <p className="pt-6 text-sm font-semibold text-ink/70 uppercase tracking-wide font-mono">Description</p>
+          <SectionsEditor sections={state.sections} onChange={sections => onPatch({ sections })} />
+        </div>
+      </details>
+    </div>
+  )
+}
 
-      <div>
-        <label className="label">Description background gradient</label>
-        <ColorSwatch value={state.descriptionColor} onChange={v => onPatch({ descriptionColor: v })} />
-      </div>
+// Soft, non-blocking guidance under a caption field — there's no hard
+// character cap in the schema (these boxes just wrap), so this reports the
+// live count plus a one-line reason once it crosses a rough
+// comfortable-fit threshold, rather than pretending there's a real limit.
+function CharHint({ value, softLimit, note }: { value: string; softLimit: number; note: string }) {
+  const count = value.length
+  const over = count > softLimit
+  return (
+    <p className={`text-[10px] mt-1 normal-case tracking-normal ${over ? 'text-ember/80' : 'text-ink-400'}`}>
+      {count}자{over ? ` — ${note}` : ''}
+    </p>
+  )
+}
 
-      <SectionsEditor sections={state.sections} onChange={sections => onPatch({ sections })} />
+// Keyboard-reachable alternative to the drag handle next to it — native
+// HTML5 drag-and-drop (used for the actual reorder below) has no keyboard
+// equivalent at all, so without this a keyboard-only user simply couldn't
+// reorder these lists.
+function ReorderButtons({ index, count, onMove }: { index: number; count: number; onMove: (from: number, to: number) => void }) {
+  return (
+    <div className="flex flex-col shrink-0 -my-1">
+      <button
+        type="button"
+        onClick={() => onMove(index, index - 1)}
+        disabled={index === 0}
+        aria-label="위로 이동"
+        className="text-ink-400 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed"
+      >
+        <ChevronUp size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(index, index + 1)}
+        disabled={index === count - 1}
+        aria-label="아래로 이동"
+        className="text-ink-400 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed"
+      >
+        <ChevronDown size={14} />
+      </button>
     </div>
   )
 }
@@ -875,7 +1095,8 @@ function CharacterFieldset({
 // characters.ts, which replaces a profile's section set wholesale).
 // Drag-and-drop reorder mirrors image-manager.tsx's native HTML5
 // draggable/onDragStart/onDrop pattern rather than pulling in a DnD
-// library for one more reorderable list.
+// library for one more reorderable list; ReorderButtons above gives
+// keyboard users the same capability drag-and-drop can't offer them.
 function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onChange: (sections: SectionState[]) => void }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
@@ -899,6 +1120,7 @@ function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onCh
   // it only reaches this character's own sections, not the other
   // character's.
   function applyToAll(index: number) {
+    if (!window.confirm('이 섹션의 제목 폰트/색상과 텍스트 색상으로 다른 모든 섹션을 덮어쓸까요? 이 작업은 되돌릴 수 없습니다.')) return
     const { titleColor, titleFont, textColor } = sections[index]
     onChange(sections.map(s => ({ ...s, titleColor, titleFont, textColor })))
   }
@@ -906,11 +1128,11 @@ function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onCh
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <label className="label mb-0">Description sections</label>
-        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ Add section</button>
+        <label className="label mb-0">설명 섹션</label>
+        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ 섹션 추가</button>
       </div>
 
-      {!sections.length && <p className="text-xs text-ink-400">No sections yet — add one to give this character a description.</p>}
+      {!sections.length && <p className="text-xs text-ink-400">아직 섹션이 없습니다 — 캐릭터 설명을 추가하려면 섹션을 만드세요.</p>}
 
       {sections.map((section, i) => (
         <div
@@ -924,31 +1146,32 @@ function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onCh
         >
           <div className="flex items-center gap-2 flex-wrap">
             <GripVertical size={14} className="text-ink-300 shrink-0 cursor-move" />
+            <ReorderButtons index={i} count={sections.length} onMove={reorder} />
             <input
               className="input flex-1 min-w-[120px]"
               value={section.title}
               onChange={e => patch(i, { title: e.target.value })}
-              placeholder="Section title (optional)"
+              placeholder="섹션 제목 (선택)"
               style={{ fontFamily: pairFontFamily(section.titleFont) }}
             />
             <div className="w-32 shrink-0">
               <FontSelect value={section.titleFont} onChange={v => patch(i, { titleFont: v })} />
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Title</span>
-              <ColorSwatch value={section.titleColor} onChange={v => patch(i, { titleColor: v })} />
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">제목</span>
+              <ColorSwatch value={section.titleColor} onChange={v => patch(i, { titleColor: v })} label="섹션 제목 색상" />
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Text</span>
-              <ColorSwatch value={section.textColor} onChange={v => patch(i, { textColor: v })} />
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">텍스트</span>
+              <ColorSwatch value={section.textColor} onChange={v => patch(i, { textColor: v })} label="섹션 텍스트 색상" />
             </div>
-            <button type="button" onClick={() => remove(i)} aria-label="Remove section" className="text-ink-400 hover:text-ember shrink-0">
+            <button type="button" onClick={() => remove(i)} aria-label="섹션 삭제" className="text-ink-400 hover:text-ember shrink-0">
               <X size={16} />
             </button>
           </div>
           {sections.length > 1 && (
             <button type="button" onClick={() => applyToAll(i)} className="text-xs text-ink-400 hover:text-ink underline underline-offset-2">
-              Apply these styles to all sections
+              이 스타일을 모든 섹션에 적용
             </button>
           )}
           <PairDescriptionEditor content={section.description} onChange={v => patch(i, { description: v })} />
@@ -996,6 +1219,7 @@ function TimelineEditor({
   // same shape as SectionsEditor's applyToAll, minus font (the timeline's
   // subtitle/title fonts are already shared pair-wide, not per-entry).
   function applyToAll(index: number) {
+    if (!window.confirm('이 항목의 부제목/제목 색상으로 다른 모든 항목을 덮어쓸까요? 이 작업은 되돌릴 수 없습니다.')) return
     const { subtitleColor, titleColor } = entries[index]
     onChange(entries.map(e => ({ ...e, subtitleColor, titleColor })))
   }
@@ -1003,11 +1227,11 @@ function TimelineEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <label className="label mb-0">Timeline entries</label>
-        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ Add entry</button>
+        <label className="label mb-0">타임라인 항목</label>
+        <button type="button" onClick={add} className="btn-ghost text-xs px-2 py-1">+ 항목 추가</button>
       </div>
 
-      {!entries.length && <p className="text-xs text-ink-400">No entries yet — add one to give this profile a timeline.</p>}
+      {!entries.length && <p className="text-xs text-ink-400">아직 항목이 없습니다 — 이 프로필에 타임라인을 추가하려면 항목을 만드세요.</p>}
 
       {entries.map((entry, i) => (
         <div
@@ -1021,17 +1245,18 @@ function TimelineEditor({
         >
           <div className="flex items-center gap-2 flex-wrap">
             <GripVertical size={14} className="text-ink-300 shrink-0 cursor-move" />
+            <ReorderButtons index={i} count={entries.length} onMove={reorder} />
             <input
               className="input flex-1 min-w-[120px]"
               value={entry.subtitle}
               onChange={e => patch(i, { subtitle: e.target.value })}
-              placeholder="Subtitle (e.g. Before debut)"
+              placeholder="부제목 (예: 데뷔 전)"
             />
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Subtitle</span>
-              <ColorSwatch value={entry.subtitleColor} onChange={v => patch(i, { subtitleColor: v })} />
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">부제목</span>
+              <ColorSwatch value={entry.subtitleColor} onChange={v => patch(i, { subtitleColor: v })} label="부제목 색상" />
             </div>
-            <button type="button" onClick={() => remove(i)} aria-label="Remove entry" className="text-ink-400 hover:text-ember shrink-0">
+            <button type="button" onClick={() => remove(i)} aria-label="항목 삭제" className="text-ink-400 hover:text-ember shrink-0">
               <X size={16} />
             </button>
           </div>
@@ -1040,16 +1265,16 @@ function TimelineEditor({
               className="input flex-1 min-w-[120px]"
               value={entry.title}
               onChange={e => patch(i, { title: e.target.value })}
-              placeholder="Title"
+              placeholder="제목"
             />
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-ink-400 normal-case tracking-normal">Title</span>
-              <ColorSwatch value={entry.titleColor} onChange={v => patch(i, { titleColor: v })} />
+              <span className="text-[10px] text-ink-400 normal-case tracking-normal">제목</span>
+              <ColorSwatch value={entry.titleColor} onChange={v => patch(i, { titleColor: v })} label="항목 제목 색상" />
             </div>
           </div>
           {entries.length > 1 && (
             <button type="button" onClick={() => applyToAll(i)} className="text-xs text-ink-400 hover:text-ink underline underline-offset-2">
-              Apply these colors to all entries
+              이 색상을 모든 항목에 적용
             </button>
           )}
           <textarea
@@ -1057,7 +1282,7 @@ function TimelineEditor({
             rows={3}
             value={entry.description}
             onChange={e => patch(i, { description: e.target.value })}
-            placeholder="Entry text"
+            placeholder="항목 내용"
           />
           {/* Same preview-tile + file-input pattern as the pair/background
               pickers above — optional, shown below the entry's own
@@ -1071,7 +1296,7 @@ function TimelineEditor({
               }
             </div>
             <label className="btn-ghost text-xs cursor-pointer" aria-busy={entry.uploadingImage}>
-              {entry.uploadingImage ? 'Uploading…' : 'Choose image'}
+              {entry.uploadingImage ? '업로드 중…' : '이미지 선택'}
               <input type="file" accept="image/*" onChange={e => handleImageChange(i, e)} className="sr-only" disabled={entry.uploadingImage} />
             </label>
           </div>
@@ -1081,14 +1306,14 @@ function TimelineEditor({
               rows={2}
               value={entry.char1Thought}
               onChange={e => patch(i, { char1Thought: e.target.value })}
-              placeholder={`${char1Name || 'Character 1'}’s thought (optional)`}
+              placeholder={`${char1Name || '캐릭터 1'}의 생각 (선택)`}
             />
             <textarea
               className="textarea"
               rows={2}
               value={entry.char2Thought}
               onChange={e => patch(i, { char2Thought: e.target.value })}
-              placeholder={`${char2Name || 'Character 2'}’s thought (optional)`}
+              placeholder={`${char2Name || '캐릭터 2'}의 생각 (선택)`}
             />
           </div>
         </div>
