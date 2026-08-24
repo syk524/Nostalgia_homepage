@@ -17,6 +17,7 @@ type ProfileCharInput = {
   descriptionColor: string
   captionShadowColor: string; captionShadowStrength: number; captionOffsetY: number
   age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
+  dividerImageUrl: string | null
   sections: SectionInput[]
 }
 type ProfileInput = {
@@ -142,14 +143,14 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     .eq('pair_id', pairId)
   const oldProfileIds = (oldProfiles ?? []).map(p => p.id)
   const { data: oldChars } = oldProfileIds.length
-    ? await supabase.from('profile_characters').select('profile_image_url').in('profile_id', oldProfileIds)
-    : { data: [] as { profile_image_url: string | null }[] }
+    ? await supabase.from('profile_characters').select('profile_image_url, description_divider_url').in('profile_id', oldProfileIds)
+    : { data: [] as { profile_image_url: string | null; description_divider_url: string | null }[] }
   const { data: oldEntries } = oldProfileIds.length
     ? await supabase.from('timeline_entries').select('image_url').in('profile_id', oldProfileIds)
     : { data: [] as { image_url: string | null }[] }
   const oldImageUrls = [
     ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
-    ...(oldChars ?? []).map(c => c.profile_image_url),
+    ...(oldChars ?? []).flatMap(c => [c.profile_image_url, c.description_divider_url]),
     ...(oldEntries ?? []).map(e => e.image_url),
   ]
 
@@ -161,6 +162,8 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     p.backgroundUrl,
     p.characters[0].profileImageUrl,
     p.characters[1].profileImageUrl,
+    p.characters[0].dividerImageUrl,
+    p.characters[1].dividerImageUrl,
     ...p.timelineEntries.map(e => e.imageUrl),
   ])
   await deleteOrphanedImages(supabase, oldImageUrls, newImageUrls)
@@ -176,17 +179,27 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
 // profile_characters, description_sections, and timeline_entries), then
 // reinsert the whole submitted set. Profile slugs are computed in-memory
 // (see uniqueProfileSlugs) since the full set is already in hand.
+//
+// The delete and every insert used to be separate PostgREST calls from
+// here — not atomic, so a failure partway through (an insert rejected
+// after the delete had already gone through) left the pair half-deleted
+// instead of rolled back. This now builds the same row shapes as before
+// but hands them to save_pair_profiles (see migration 076) as one jsonb
+// payload, so the whole replace runs inside a single Postgres function
+// call — one transaction, all-or-nothing.
 async function saveProfiles(
   supabase: Awaited<ReturnType<typeof createClient>>,
   pairId: string,
   profiles: ProfileInput[],
 ): Promise<string | null> {
-  await supabase.from('pair_profiles').delete().eq('pair_id', pairId)
-  if (!profiles.length) return null
+  if (!profiles.length) {
+    await supabase.from('pair_profiles').delete().eq('pair_id', pairId)
+    return null
+  }
 
   const slugs = uniqueProfileSlugs(profiles)
-  const profileRows = profiles.map((p, position) => ({
-    pair_id: pairId, profile_slug: slugs[position], title: p.title.trim(), profile_title: p.profileTitle.trim(),
+  const payload = profiles.map((p, position) => ({
+    profile_slug: slugs[position], title: p.title.trim(), profile_title: p.profileTitle.trim(),
     title_font: p.titleFont, title_color: p.titleColor, title_size: p.titleSize, icon_color: p.iconColor,
     link_text: p.linkText.trim() || null, link_url: p.linkUrl.trim() || null, link_font: p.linkFont, link_color: p.linkColor, has_music: p.hasMusic,
     is_primary: p.isPrimary, page_type: p.pageType, custom_html_url: p.pageType === 'custom_html' ? p.customHtmlUrl : null,
@@ -200,15 +213,8 @@ async function saveProfiles(
     timeline_subtitle_font: p.timelineSubtitleFont, timeline_title_font: p.timelineTitleFont, timeline_text_color: p.timelineTextColor,
     timeline_dot_color: p.timelineDotColor, timeline_line_color: p.timelineLineColor, timeline_shadow: p.timelineShadow,
     position,
-  }))
-  const { data: insertedProfiles, error: profileErr } = await supabase.from('pair_profiles').insert(profileRows).select('id, position')
-  if (profileErr) return profileErr.message
-
-  for (const profileRow of insertedProfiles) {
-    const p = profiles[profileRow.position]
-
-    const charRows = p.characters.map((c, i) => ({
-      profile_id: profileRow.id, slot: (i + 1) as 1 | 2, name: c.name.trim(), name_color: c.nameColor, name_font: c.nameFont, name_underline_color: c.nameUnderlineColor, profile_image_url: c.profileImageUrl,
+    characters: p.characters.map((c, i) => ({
+      slot: i + 1, name: c.name.trim(), name_color: c.nameColor, name_font: c.nameFont, name_underline_color: c.nameUnderlineColor, profile_image_url: c.profileImageUrl,
       catchphrase: c.catchphrase.trim() || null, catchphrase_color: c.catchphraseColor, catchphrase_font: c.catchphraseFont,
       quote: c.quote.trim() || null, quote_color: c.quoteColor, quote_font: c.quoteFont,
       keyword_1: c.keyword1.trim() || null, keyword_2: c.keyword2.trim() || null, keyword_3: c.keyword3.trim() || null,
@@ -217,31 +223,21 @@ async function saveProfiles(
       caption_shadow_color: c.captionShadowColor, caption_shadow_strength: c.captionShadowStrength, caption_offset_y: c.captionOffsetY,
       age: c.age.trim() || null, height: c.height.trim() || null, weight: c.weight.trim() || null, job: c.job.trim() || null,
       stats_color: c.statsColor, stats_font: c.statsFont,
-    }))
-    const { data: insertedProfileChars, error: pcErr } = await supabase.from('profile_characters').insert(charRows).select('id, slot')
-    if (pcErr) return pcErr.message
-
-    for (const profileChar of insertedProfileChars) {
-      const sections = p.characters[profileChar.slot - 1].sections
-      if (!sections.length) continue
-      const sectionRows = sections.map((s, pos) => ({
-        profile_character_id: profileChar.id, position: pos, title: s.title.trim() || null, title_color: s.titleColor, title_font: s.titleFont,
+      description_divider_url: c.dividerImageUrl,
+      sections: c.sections.map((s, pos) => ({
+        position: pos, title: s.title.trim() || null, title_color: s.titleColor, title_font: s.titleFont,
         description: s.description.trim(), text_color: s.textColor,
-      }))
-      const { error } = await supabase.from('description_sections').insert(sectionRows)
-      if (error) return error.message
-    }
+      })),
+    })),
+    timeline_entries: p.timelineEntries.map((e, pos) => ({
+      position: pos, subtitle: e.subtitle.trim() || null, subtitle_color: e.subtitleColor,
+      title: e.title.trim() || null, title_color: e.titleColor, description: e.description.trim() || null,
+      char1_thought: e.char1Thought.trim() || null, char2_thought: e.char2Thought.trim() || null,
+      image_url: e.imageUrl,
+    })),
+  }))
 
-    if (p.timelineEntries.length) {
-      const entryRows = p.timelineEntries.map((e, pos) => ({
-        profile_id: profileRow.id, position: pos, subtitle: e.subtitle.trim() || null, subtitle_color: e.subtitleColor,
-        title: e.title.trim() || null, title_color: e.titleColor, description: e.description.trim() || null,
-        char1_thought: e.char1Thought.trim() || null, char2_thought: e.char2Thought.trim() || null,
-        image_url: e.imageUrl,
-      }))
-      const { error } = await supabase.from('timeline_entries').insert(entryRows)
-      if (error) return error.message
-    }
-  }
+  const { error } = await supabase.rpc('save_pair_profiles', { p_pair_id: pairId, p_profiles: payload })
+  if (error) return error.message
   return null
 }

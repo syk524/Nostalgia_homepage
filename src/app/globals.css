@@ -1029,7 +1029,7 @@ input[type="color"]::-moz-color-swatch {
   min-height: 72px;
 }
 .pair-desc-content p {
-  @apply my-2 first:mt-0 last:mb-0;
+  @apply my-1 first:mt-0 last:mb-0;
 }
 .pair-desc-content ul {
   @apply list-disc pl-5 my-2 space-y-1 first:mt-0 last:mb-0;

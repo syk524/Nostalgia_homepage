@@ -136,6 +136,7 @@ type ProfileCharState = {
   captionShadowColor: string; captionShadowStrength: number
   captionOffsetY: number
   age: string; height: string; weight: string; job: string; statsColor: string; statsFont: string
+  dividerImageUrl: string | null; dividerImageFile: File | null; dividerImagePreview: string; uploadingDividerImage: boolean
   sections: SectionState[]
 }
 
@@ -170,6 +171,10 @@ function emptyProfileChar(existing?: ProfileCharacter): ProfileCharState {
     job: existing?.job ?? '',
     statsColor: existing?.stats_color ?? '#2f2f2e',
     statsFont: existing?.stats_font ?? 'default',
+    dividerImageUrl: existing?.description_divider_url ?? null,
+    dividerImageFile: null,
+    dividerImagePreview: existing?.description_divider_url ?? '',
+    uploadingDividerImage: false,
     sections: existing
       ? existing.description_sections?.map(s => ({
           id: s.id, title: s.title ?? '', titleColor: s.title_color, titleFont: s.title_font, description: s.description, textColor: s.text_color,
@@ -345,7 +350,13 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
           if (err) { setError(err); setSubmitting(false); return }
           finalProfileImageUrl = url
         }
-        resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl))
+        let finalDividerImageUrl = c.dividerImageUrl
+        if (c.dividerImageFile) {
+          const { url, error: err } = await uploadImage(c.dividerImageFile, user.id, 'gallery-images')
+          if (err) { setError(err); setSubmitting(false); return }
+          finalDividerImageUrl = url
+        }
+        resolvedCharacters.push(toProfileCharInput(c, finalProfileImageUrl, finalDividerImageUrl))
       }
 
       const resolvedTimelineEntries: (TimelineEntryInput)[] = []
@@ -466,7 +477,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
   )
 }
 
-function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null) {
+function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null, dividerImageUrl: string | null) {
   return {
     name: c.name, nameColor: c.nameColor, nameFont: c.nameFont, nameUnderlineColor: c.nameUnderlineColor, profileImageUrl,
     catchphrase: c.catchphrase, catchphraseColor: c.catchphraseColor, catchphraseFont: c.catchphraseFont,
@@ -475,6 +486,7 @@ function toProfileCharInput(c: ProfileCharState, profileImageUrl: string | null)
     descriptionColor: c.descriptionColor,
     captionShadowColor: c.captionShadowColor, captionShadowStrength: c.captionShadowStrength, captionOffsetY: c.captionOffsetY,
     age: c.age, height: c.height, weight: c.weight, job: c.job, statsColor: c.statsColor, statsFont: c.statsFont,
+    dividerImageUrl,
     sections: c.sections.map(s => ({ title: s.title, titleColor: s.titleColor, titleFont: s.titleFont, description: s.description, textColor: s.textColor })),
   }
 }
@@ -828,6 +840,12 @@ function CharacterFieldset({
     onPatch({ profileImageFile: file, profileImagePreview: URL.createObjectURL(file) })
   }
 
+  function handleDividerImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ dividerImageFile: file, dividerImagePreview: URL.createObjectURL(file) })
+  }
+
   return (
     <div className="space-y-4 pt-4 border-t border-scroll-300">
       <p id={id} className="pt-6 text-base font-semibold text-ink uppercase tracking-wide font-mono scroll-mt-24">{label}</p>
@@ -1024,6 +1042,34 @@ function CharacterFieldset({
           <div>
             <label className="label">설명 배경 그라데이션</label>
             <ColorSwatch value={state.descriptionColor} onChange={v => onPatch({ descriptionColor: v })} label="설명 배경 그라데이션" />
+          </div>
+
+          <div>
+            <label className="label">구분선 이미지</label>
+            <p className="text-xs text-ink-400 mb-2">설명 섹션 사이 정중앙에 64×64px로 표시됩니다.</p>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                {state.dividerImagePreview
+                  ? <img src={state.dividerImagePreview} alt="" className="w-full h-full object-contain" />
+                  : <span className="text-xl text-scroll-400">◯</span>
+                }
+              </div>
+              <div className="flex flex-col gap-2 items-start">
+                <label className="btn-ghost text-xs cursor-pointer" aria-busy={state.uploadingDividerImage}>
+                  {state.uploadingDividerImage ? '업로드 중…' : '이미지 선택'}
+                  <input type="file" accept="image/*" onChange={handleDividerImageChange} className="sr-only" disabled={state.uploadingDividerImage} />
+                </label>
+                {state.dividerImagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => onPatch({ dividerImageUrl: null, dividerImageFile: null, dividerImagePreview: '' })}
+                    className="text-xs text-ink-400 hover:text-ember"
+                  >
+                    제거
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <SectionsEditor sections={state.sections} onChange={sections => onPatch({ sections })} />

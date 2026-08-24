@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import type { CSSProperties } from 'react'
+import { Fragment, type CSSProperties } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteCharacterPairButton } from '@/app/(main)/profile/[slug]/delete-button'
 import { CharacterPairHero } from '@/components/character-pair-hero'
@@ -71,6 +71,8 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
   // breakpoint (reported directly), matching the hero's caption dots and
   // the side-nav's own min-[1020px]:flex above it.
   const alignClass = charIdx === 0 ? 'min-[1020px]:justify-self-start' : 'min-[1020px]:justify-self-end'
+  const dividerUrl = character.description_divider_url
+  let row = 1
   return (
     <>
       {/* No left padding — reported directly: this whole column sits
@@ -98,16 +100,34 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           <CharacterStatsLine character={character} />
         </div>
       )}
-      {sections.map((section, sectionIdx) => (
-        <div
-          key={section.id}
-          className={`description-section-cell rounded pr-6 pt-6 pb-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
-          style={{ '--section-row': sectionIdx + 2, '--section-col': charIdx + 1 } as CSSProperties}
-        >
-          {section.title && <h3 className="text-xl min-[1020px]:text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
-          <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
-        </div>
-      ))}
+      {sections.map((section, sectionIdx) => {
+        row += 1
+        const sectionCell = (
+          <div
+            key={section.id}
+            className={`description-section-cell rounded pr-6 pt-5 pb-5 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
+            style={{ '--section-row': row, '--section-col': charIdx + 1 } as CSSProperties}
+          >
+            {section.title && <h3 className="text-xl min-[1020px]:text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
+            <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
+          </div>
+        )
+        // One divider row after every section except the last — nothing
+        // to sit "between" past the final one.
+        if (!dividerUrl || sectionIdx === sections.length - 1) return sectionCell
+        row += 1
+        return (
+          <Fragment key={`${section.id}-divider`}>
+            {sectionCell}
+            <div
+              className={`description-section-cell flex justify-center pr-6 py-4 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
+              style={{ '--section-row': row, '--section-col': charIdx + 1 } as CSSProperties}
+            >
+              <Image src={dividerUrl} alt="" width={64} height={64} className="object-contain" />
+            </div>
+          </Fragment>
+        )
+      })}
     </>
   )
 }
@@ -302,19 +322,16 @@ export function CharacterPairDetail({
                   className="grow"
                   style={{
                     // `to top` — 0% is the box's own bottom edge, 100% is
-                    // its top. Was a straight two-stop fade (full CC/~80%
-                    // strength right at 0%, sheer 00 by 90%), which read
-                    // as the color only ever reaching real strength in a
-                    // thin band hugging the very bottom, reported
-                    // directly. FF (full 100%, not CC) now holds flat
-                    // from 0% up through 85% (raised again from an
-                    // initial 45%, both reported directly) — full color
-                    // for nearly the entire height, fading out only over
-                    // the last narrow stretch up to 90%, still leaving the
-                    // top 10% clear.
+                    // its top. Solid (FF) now holds from the bottom up
+                    // through 20% (was 85%) — i.e. the solid area now
+                    // starts 80% down the screen instead of 90% — and the
+                    // fade above that runs the rest of the way to a real
+                    // 0% opacity right at the box's own top edge (100%,
+                    // was a 90% stop with a flat fully-transparent gap
+                    // from there to the top), both reported directly.
                     background: [char1, char2]
                       .filter(c => (c.description_sections?.length ?? 0) > 0)
-                      .map(c => `linear-gradient(to top, ${c.description_color}FF 0%, ${c.description_color}FF 85%, ${c.description_color}00 90%)`)
+                      .map(c => `linear-gradient(to top, ${c.description_color}FF 0%, ${c.description_color}FF 20%, ${c.description_color}00 100%)`)
                       .join(', ') || undefined,
                   }}
                 >

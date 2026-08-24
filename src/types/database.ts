@@ -116,6 +116,7 @@ export type ProfileCharacter = {
   job: string | null
   stats_color: string
   stats_font: string
+  description_divider_url: string | null
   created_at: string
   updated_at: string
   description_sections?: DescriptionSection[]
@@ -322,7 +323,7 @@ export type Database = {
       profile_characters: {
         Row: Omit<ProfileCharacter, 'description_sections'>
         Insert: Omit<ProfileCharacter, 'id' | 'created_at' | 'updated_at' | 'description_sections'>
-        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y' | 'age' | 'height' | 'weight' | 'job' | 'stats_color' | 'stats_font'>>
+        Update: Partial<Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'name_underline_color' | 'profile_image_url' | 'catchphrase' | 'catchphrase_color' | 'catchphrase_font' | 'quote' | 'quote_color' | 'quote_font' | 'keyword_1' | 'keyword_2' | 'keyword_3' | 'keyword_font' | 'keyword_color' | 'description_color' | 'caption_shadow_color' | 'caption_shadow_strength' | 'caption_offset_y' | 'age' | 'height' | 'weight' | 'job' | 'stats_color' | 'stats_font' | 'description_divider_url'>>
         Relationships: []
       }
       description_sections: {
@@ -372,6 +373,16 @@ export type Database = {
       get_public_pair_grid: {
         Args: Record<string, never>
         Returns: Record<string, unknown>[]
+      }
+      // Transactional wholesale-replace RPC (migration 076) — see that
+      // migration and saveProfiles' own comment in lib/actions/characters.ts
+      // for why this exists instead of a sequence of separate insert/delete
+      // calls. p_profiles is the exact row-shaped payload saveProfiles
+      // builds; loosely typed here since its real shape only matters to
+      // that one caller.
+      save_pair_profiles: {
+        Args: { p_pair_id: string; p_profiles: unknown }
+        Returns: undefined
       }
     }
   }

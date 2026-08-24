@@ -97,12 +97,16 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
             className="drop-shadow"
             style={{
               fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color,
-              fontSize: 11, letterSpacing: '1.4em', textShadow,
+              fontSize: 14, letterSpacing: '1.4em', textShadow,
               marginRight: align === 'right' ? '-1.4em' : undefined,
+              paddingBottom: 2,
             }}
           >{character.catchphrase}</p>
         )}
-        <h3 className="text-xl min-[1020px]:text-2xl drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
+        {/* 1.25x the previous text-xl/text-2xl (20px/24px) — 25px/30px,
+            not a step up to the next Tailwind size (2xl/3xl), which would
+            overshoot the exact ratio asked for. */}
+        <h3 className="text-[25px] min-[1020px]:text-[30px] drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
         {/* Per-character color, not the catchphrase divider's old fixed
             bg-white/60 — always shown (not gated on catchphrase like that
             one was), since this reads as the name's own underline now,
