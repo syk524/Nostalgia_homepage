@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { pairFontFamily } from '@/lib/fonts'
 
 // June 22, 2026 — the fixed reference date the "D+NN" count runs from,
@@ -41,7 +42,7 @@ export function DayCounterDockIcon({ size, photoUrl, font, textColor }: {
       className="relative rounded-lg overflow-hidden select-none"
       style={{ width: size, height: size, background: '#282625' }}
     >
-      {photoUrl && <img src={photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+      {photoUrl && <Image src={photoUrl} alt="" fill sizes={`${size}px`} className="object-cover" />}
       {/* Same dark scrim the widget's own display face uses over its
           photo, so white text stays legible regardless of the image. */}
       <div className="absolute inset-0 bg-black/30" />

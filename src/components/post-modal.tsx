@@ -1,5 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate } from '@/lib/format'
@@ -263,13 +264,22 @@ export function PostModal({
               it at 70% opacity once loaded; before that, or wherever it
               doesn't reach, this is just the page behind the modal now). */}
           {backdrop && (
-            <img
+            <Image
               src={backdrop}
               alt=""
               aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover blur-3xl scale-110 opacity-70"
+              fill
+              sizes="100vw"
+              className="object-cover blur-3xl scale-110 opacity-70"
             />
           )}
+          {/* The images themselves stay plain <img> — their box is sized
+              to CONTENT (max-w-full w-auto, capped by max-h), not the
+              other way around: next/image's fill mode needs a
+              pre-determined box to fill, and its non-fill mode needs a
+              real width/height, neither of which we have per-image
+              (no stored dimensions), so there's nothing to hand it that
+              wouldn't distort or mis-size the box. */}
           {/* Each image is capped well under full height when there's more
               than one, so the next image's top edge peeks in at the bottom
               of the viewport as a scroll affordance instead of being fully

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Plus } from 'lucide-react'
 import { pairFontFamily } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
@@ -62,9 +63,21 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             <div
               className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t h-10 min-[371px]:h-[95px] min-[520px]:h-[135px] min-[1020px]:h-[140px]"
             >
-              <img src={primaryProfile.background_url} alt="" className="w-full h-full object-cover" />
+              <Image
+                src={primaryProfile.background_url}
+                alt=""
+                fill
+                sizes="(min-width: 1020px) 50vw, 100vw"
+                className="object-cover"
+              />
             </div>
           )}
+          {/* Stays a plain <img>, not next/image — its height is `auto`,
+              driven by the image's own natural aspect ratio (cropped by
+              the parent box below it, not stretched to fill one), and
+              nothing here stores that ratio ahead of render the way
+              next/image's required width/height (or a fill parent with a
+              known aspect) would need. */}
           <img
             src={primaryProfile.pair_image_url}
             alt=""

@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import { X, Plus, Loader2, Images } from 'lucide-react'
 import { usePersistentDraggable } from '@/lib/use-persistent-draggable'
 import { uploadImage } from '@/lib/upload'
@@ -106,12 +107,14 @@ export function StickerGalleryModal({ images, ownerId, canManage, onClose, onIma
 
           {images.map(img => (
             <div key={img.id} className="group relative aspect-square rounded-lg border border-scroll-300 bg-scroll-100 overflow-hidden">
-              <img
+              <Image
                 src={img.image_url}
                 alt=""
+                fill
+                sizes="(min-width: 640px) 120px, 30vw"
                 draggable
                 onDragStart={e => e.dataTransfer.setData('text/sticker-gallery-id', img.id)}
-                className="w-full h-full object-contain p-2 cursor-grab active:cursor-grabbing select-none"
+                className="object-contain p-2 cursor-grab active:cursor-grabbing select-none"
               />
               {canManage && (
                 <button

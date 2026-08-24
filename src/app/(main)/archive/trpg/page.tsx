@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { ArchiveSectionTabs } from '@/components/archive-side-nav'
@@ -31,9 +32,9 @@ function AddSessionCard() {
 function SessionCard({ session, clickable }: { session: ListedSession; clickable: boolean }) {
   const inner = (
     <>
-      <div className={`w-full aspect-[3/4] transition-all duration-200 overflow-hidden rounded bg-scroll-100 ${clickable ? 'group-hover:-translate-y-1' : ''}`}>
+      <div className={`relative w-full aspect-[3/4] transition-all duration-200 overflow-hidden rounded bg-scroll-100 ${clickable ? 'group-hover:-translate-y-1' : ''}`}>
         {session.cover_url ? (
-          <img src={session.cover_url} alt="" className="w-full h-full object-cover" />
+          <Image src={session.cover_url} alt="" fill sizes="(min-width: 1020px) 25vw, 50vw" className="object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-scroll-300 text-scroll-400 text-3xl">◯</div>
         )}

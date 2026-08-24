@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { pairFontFamily } from '@/lib/fonts'
 import type { PairProfile, ProfileCharacter } from '@/types/database'
 
@@ -11,10 +12,12 @@ function ThoughtAvatar({ character, thought }: { character: ProfileCharacter; th
   return (
     <span className="thought-tt-wrap">
       {character.profile_image_url ? (
-        <img
+        <Image
           tabIndex={0}
           src={character.profile_image_url}
           alt={character.name}
+          width={28}
+          height={28}
           className="thought-tt-trigger w-7 h-7 rounded-full object-cover border cursor-default select-none"
           style={{ borderColor: `${character.name_color}55` }}
         />

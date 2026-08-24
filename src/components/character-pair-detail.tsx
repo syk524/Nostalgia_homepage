@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { CSSProperties } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { DeleteCharacterPairButton } from '@/app/(main)/profile/[slug]/delete-button'
@@ -186,10 +187,13 @@ export function CharacterPairDetail({
                   visibly shift it) — blur strength is user-selected 1-100%,
                   mapped linearly onto a 0-40px radius; scale-105 hides the
                   softened edge the blur pushes just past the image's bounds. */}
-              <img
+              <Image
                 src={activeProfile.background_url}
                 alt=""
-                className="w-full h-full object-cover scale-105"
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover scale-105"
                 style={{ filter: `blur(${(activeProfile.background_blur / 100) * 40}px)` }}
               />
             </div>

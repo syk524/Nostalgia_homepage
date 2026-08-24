@@ -1,6 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { Settings as SettingsIcon } from 'lucide-react'
+import wordmark from '../../public/images/nostalgio-wordmark.webp'
 import { useDraggable } from '@/lib/use-draggable'
 import { Stickers } from '@/components/stickers'
 import { StickerGalleryModal } from '@/components/sticker-gallery-modal'
@@ -376,7 +378,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             className="absolute left-1/2 top-1/2 w-[42%] max-w-[640px] pointer-events-none"
             style={{ transform: `translate(${canvas.offset.x}px, ${canvas.offset.y}px) translate(-50%, -50%)` }}
           >
-            <img src="/images/nostalgio-wordmark.webp" alt="Nustalgio" className="w-full select-none" draggable={false} />
+            <Image src={wordmark} alt="Nustalgio" priority className="w-full h-auto select-none" draggable={false} />
           </div>
         )}
 

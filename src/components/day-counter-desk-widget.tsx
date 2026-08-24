@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { X, Pencil, Loader2, Hourglass } from 'lucide-react'
 import { usePersistentDraggable } from '@/lib/use-persistent-draggable'
 import { DayCounterDockIcon, dayCount } from './day-counter-dock-icon'
@@ -228,7 +229,7 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
       style={{ background: '#282625' }}
     >
       {dayCounter.photo_url && (
-        <img src={dayCounter.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <Image src={dayCounter.photo_url} alt="" fill sizes={`${PANEL_WIDTH}px`} className="object-cover" />
       )}
       <div className="absolute inset-0 bg-black/30" />
 

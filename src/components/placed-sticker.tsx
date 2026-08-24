@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useRef, useState } from 'react'
+import Image from 'next/image'
 import { X, RotateCw } from 'lucide-react'
 import type { UserBackgroundSticker } from '@/types/database'
 
@@ -106,17 +107,26 @@ export function PlacedSticker({ sticker, panX, panY, selected, justPlaced, onSel
         zIndex: selected ? 30 : 10 + sticker.z,
       }}
     >
-      <img
-        src={sticker.gallery?.image_url}
-        alt=""
-        onPointerDown={beginMove}
-        onPointerMove={onPointerMove}
-        onPointerUp={endGesture}
-        onPointerCancel={endGesture}
-        draggable={false}
-        className={`block select-none pointer-events-auto ${mode === 'move' ? 'cursor-grabbing' : 'cursor-grab'} ${justPlaced ? 'animate-sticker-drop' : ''}`}
-        style={{ width: SIZE, height: SIZE, objectFit: 'contain' }}
-      />
+      {/* Guarded on the join actually resolving — unlike a plain <img>,
+          next/image's `src` can't be undefined (its optimizer needs a
+          real URL up front), which a plain <img src={undefined}> never
+          required. Only reachable if the placed sticker's own gallery
+          image was deleted out from under it. */}
+      {sticker.gallery?.image_url && (
+        <Image
+          src={sticker.gallery.image_url}
+          alt=""
+          width={SIZE}
+          height={SIZE}
+          onPointerDown={beginMove}
+          onPointerMove={onPointerMove}
+          onPointerUp={endGesture}
+          onPointerCancel={endGesture}
+          draggable={false}
+          className={`block select-none pointer-events-auto ${mode === 'move' ? 'cursor-grabbing' : 'cursor-grab'} ${justPlaced ? 'animate-sticker-drop' : ''}`}
+          style={{ width: SIZE, height: SIZE, objectFit: 'contain' }}
+        />
+      )}
 
       {selected && (
         <div className="absolute inset-0 pointer-events-none">

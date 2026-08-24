@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -40,10 +41,13 @@ export default async function TrpgSessionPage({ params }: { params: Promise<{ sl
           stored blur strength mapped linearly onto a 0-40px radius. */}
       {typedSession.background_url && (
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-          <img
+          <Image
             src={typedSession.background_url}
             alt=""
-            className="w-full h-full object-cover scale-105"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover scale-105"
             style={{ filter: `blur(${(typedSession.background_blur / 100) * 40}px)` }}
           />
         </div>

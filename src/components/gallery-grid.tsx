@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import placeholderThumbnail from '../../public/placeholder-thumbnail.png'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -24,14 +26,18 @@ function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.
     <div className="group relative rounded overflow-hidden">
       <Link href={`/gallery/${post.id}`} className="block">
         {thumb
-          ? <img
-              src={thumb.image_url}
-              alt=""
-              className="w-full aspect-video object-cover block group-hover:scale-[1.02] transition-transform duration-300"
-              style={{ objectPosition: `${thumb.focal_x}% ${thumb.focal_y}%` }}
-            />
+          ? <div className="relative w-full aspect-video overflow-hidden">
+              <Image
+                src={thumb.image_url}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                style={{ objectPosition: `${thumb.focal_x}% ${thumb.focal_y}%` }}
+              />
+            </div>
           : <div className="w-full aspect-video flex items-center justify-center bg-scroll-200">
-              <img src="/placeholder-thumbnail.png" alt="" className="max-w-[60%] max-h-[60%] object-contain opacity-70" />
+              <Image src={placeholderThumbnail} alt="" className="max-w-[60%] max-h-[60%] object-contain opacity-70" />
             </div>
         }
         <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
