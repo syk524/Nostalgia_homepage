@@ -28,8 +28,13 @@ export default async function EditCharacterPairPage({ params }: { params: Promis
   if (!pair) notFound()
 
   return (
-    <div className="animate-fade-up max-w-[1400px] space-y-6 mx-auto">
-      <h2 className="text-3xl text-ink">페어 편집</h2>
+    <div className="max-w-2xl space-y-6 mx-auto">
+      {/* Not animate-fade-up on this wrapper — see profile/new/page.tsx's
+          matching comment: its `to` keyframe leaves a permanent
+          transform: translateY(0), which breaks CharacterPairForm's own
+          fixed-position SectionNav by making this div its containing
+          block instead of the viewport. */}
+      <h2 className="text-3xl text-ink noir-accent-color animate-fade-up">페어 편집</h2>
       <CharacterPairForm initialData={{ pair }} />
     </div>
   )

@@ -22,8 +22,16 @@ export default async function NewCharacterPairPage() {
   }
 
   return (
-    <div className="animate-fade-up max-w-[1400px] space-y-6 mx-auto">
-      <h2 className="text-3xl text-ink">New Pair</h2>
+    <div className="max-w-2xl space-y-6 mx-auto">
+      {/* Not animate-fade-up on this wrapper — its `to` keyframe leaves a
+          permanent transform: translateY(0), which makes this div a
+          containing block for any position:fixed descendant (CSS spec),
+          silently breaking CharacterPairForm's own fixed SectionNav (it'd
+          resolve against this narrow max-w-2xl box instead of the
+          viewport) — same class of bug character-pair-detail.tsx hit with
+          its own side nav. animate-fade-up moves down onto the pieces
+          that actually need to animate instead. */}
+      <h2 className="text-3xl text-ink animate-fade-up">새 페어 만들기</h2>
       <CharacterPairForm />
     </div>
   )

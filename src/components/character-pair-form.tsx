@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -8,7 +8,6 @@ import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } fro
 import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
 import { ColorSwatch } from '@/components/color-swatch'
 import { PairDescriptionEditor } from '@/components/pair-description-editor'
-import { PairProfilePreview } from '@/components/pair-profile-preview'
 import type { CharacterPairWithProfiles, PairProfileWithContent } from '@/lib/character-pair-queries'
 import type { ProfileCharacter } from '@/types/database'
 
@@ -32,8 +31,15 @@ function sectionsFor(pageType: 'template' | 'custom_html'): NavSection[] {
 // Scroll-spy nav for the long per-profile form below — plain
 // IntersectionObserver against each section's own heading, re-subscribed
 // whenever the active profile's section list changes (switching profiles
-// or toggling page type changes which ids exist in the DOM).
-function SectionNav({ sections }: { sections: NavSection[] }) {
+// or toggling page type changes which ids exist in the DOM). Takes
+// pageType (not a precomputed sections array) and derives the list itself
+// via useMemo — sectionsFor's return is a fresh array on every call, and
+// building it inline at the call site (as this used to) meant the effect
+// below reran (recreating the observer and resetting activeId back to the
+// first section) on every render of the whole form, i.e. every keystroke
+// anywhere in it, not just on an actual pageType/profile change.
+function SectionNav({ pageType }: { pageType: 'template' | 'custom_html' }) {
+  const sections = useMemo(() => sectionsFor(pageType), [pageType])
   const [activeId, setActiveId] = useState(sections[0]?.id)
 
   useEffect(() => {
@@ -52,18 +58,40 @@ function SectionNav({ sections }: { sections: NavSection[] }) {
     return () => observer.disconnect()
   }, [sections])
 
+  // Fixed at the same left-[2.6%]/z-[60] position the rest of the site's
+  // side navs use (PairProfileSideNav, Nav's own gallery category rail) —
+  // not a grid column — so this reads as the same "side nav" affordance
+  // rather than a one-off layout for just this page. Color comes from
+  // --theme-accent (same var/color-mix treatment as Nav's own category
+  // rail), not a fixed text-ink/text-ink-400 pair — those default to a
+  // dark ink shade that's invisible against Noir's near-black page.
   return (
-    <nav className="hidden min-[1280px]:flex flex-col gap-1 sticky top-24 text-xs font-mono uppercase tracking-wide">
-      {sections.map(s => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className={`text-left px-2 py-1.5 rounded transition-colors ${s.id === activeId ? 'bg-ink text-scroll-100' : 'text-ink-400 hover:text-ink hover:bg-ink/5'}`}
-        >
-          {s.label}
-        </button>
-      ))}
+    <nav className="hidden min-[1020px]:flex flex-col items-start gap-3 font-mono fixed left-[2.6%] top-1/2 -translate-y-1/2 z-[60] text-[14px] uppercase tracking-tight">
+      {sections.map((s, i) => {
+        const active = s.id === activeId
+        // The first section's heading already sits at (or very near) the
+        // top of the scrollable content, so scrollIntoView often computes
+        // to little or no actual movement there — clicking it looked like
+        // it did nothing. Scrolling the window straight to 0 instead gives
+        // it the same definitive, obviously-working jump every other
+        // section already has.
+        function jump() {
+          if (i === 0) { window.scrollTo({ top: 0, behavior: 'smooth' }); return }
+          document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={jump}
+            className={`flex items-center gap-2 ${active ? 'font-medium' : ''}`}
+            style={{ color: active ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
+          >
+            <span>{s.label}</span>
+            {active && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
+          </button>
+        )
+      })}
     </nav>
   )
 }
@@ -430,10 +458,10 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
   const activeProfile = profiles[activeIndex]
 
   return (
-    <div className="grid grid-cols-1 min-[1280px]:grid-cols-[160px_minmax(0,600px)_minmax(0,1fr)] gap-6 items-start">
-      <SectionNav sections={sectionsFor(activeProfile.pageType)} />
+    <>
+      <SectionNav pageType={activeProfile.pageType} />
 
-      <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+      <form onSubmit={handleSubmit} className="animate-fade-up space-y-6">
         {draftBanner && (
           <div className="rounded border border-scroll-300 bg-scroll-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
             <span className="text-ink-500">
@@ -492,14 +520,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
           </div>
         </div>
       </form>
-
-      {activeProfile.pageType !== 'custom_html' && (
-        <div className="hidden min-[1280px]:block sticky top-24">
-          <p className="label mb-2">실시간 미리보기</p>
-          <PairProfilePreview profile={activeProfile} />
-        </div>
-      )}
-    </div>
+    </>
   )
 }
 
