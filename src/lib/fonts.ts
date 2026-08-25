@@ -18,6 +18,15 @@ export const PAIR_FONTS = {
   hotra: { label: 'Hotra (Eng)', family: 'var(--font-hotra), sans-serif' },
   popstar: { label: 'Popstar (Eng)', family: 'var(--font-popstar), sans-serif' },
   anomale: { label: 'Anomale (Eng)', family: 'var(--font-anomale), sans-serif' },
+  migikataAgari: { label: 'Migikata Agari (JP)', family: 'var(--font-migikata-agari), sans-serif' },
+  tokAngle: { label: 'Tok Angle (JP)', family: 'var(--font-tok-angle), sans-serif' },
+  // Not self-hosted like the others — loaded from Adobe Fonts (Typekit
+  // kit 'dan3fpf', see the <Script> in app/layout.tsx), so there's no
+  // --font-* CSS variable here, just the family name the kit itself
+  // registers. Confirmed live via document.fonts after the kit script
+  // loads (kit-generated names aren't predictable from the display name
+  // alone) — it's 'sictake-shigure', not 'shigure'.
+  shigure: { label: 'Shigure (JP)', family: "'sictake-shigure', sans-serif" },
 } as const
 
 export type PairFontKey = keyof typeof PAIR_FONTS
