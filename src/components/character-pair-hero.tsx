@@ -187,10 +187,11 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
 // why the image sits in its own inner wrapper while the overlay is
 // positioned against the outer, full-width one.
 export function CharacterPairHero({
-  imageUrl, illustrationSource, illustrationSourceFont, illustrationSourceColor,
+  imageUrl, characterBackdropUrl, illustrationSource, illustrationSourceFont, illustrationSourceColor,
   title, titleFont, titleColor, titleSize, linkText, linkUrl, linkFont, linkColor, hasMusic, char1, char2,
 }: {
   imageUrl: string
+  characterBackdropUrl: string | null
   illustrationSource: string | null
   illustrationSourceFont: string
   illustrationSourceColor: string
@@ -309,7 +310,29 @@ export function CharacterPairHero({
             a comparatively small centered strip with dead space on either
             side. min-[1020px]:w-[60vw] keeps desktop exactly as it was. */}
         <div className="w-full min-[1020px]:w-[60vw] mx-auto">
-          <img src={imageUrl} alt="" className="w-full h-auto block rounded" />
+          {/* characterBackdropUrl sits behind the character art, sized to
+              the character image's own box (not the wrapper below, which
+              also includes the illustration-source caption) — this inner
+              div matches that box exactly since it holds nothing but the
+              character img itself. The backdrop is absolutely positioned
+              (out of flow, so it doesn't affect the box's size) and
+              centered via inset-0 + m-auto; max-w/h-full with w/h-auto
+              caps it to that box without upscaling smaller images, per
+              spec ("resized, keep ratio, only if bigger"). The character
+              img needs its own stacking context (relative) to paint above
+              the absolutely-positioned backdrop despite coming later in
+              DOM order — an out-of-flow sibling otherwise stacks above a
+              plain static one regardless of source order. */}
+          <div className="relative">
+            {characterBackdropUrl && (
+              <img
+                src={characterBackdropUrl}
+                alt=""
+                className="absolute inset-0 m-auto max-w-full max-h-full w-auto h-auto pointer-events-none"
+              />
+            )}
+            <img src={imageUrl} alt="" className="relative w-full h-auto block rounded" />
+          </div>
           {illustrationSource && (
             <p className="text-center text-sm mt-3" style={{ fontFamily: pairFontFamily(illustrationSourceFont), color: illustrationSourceColor }}>
               ©{illustrationSource}

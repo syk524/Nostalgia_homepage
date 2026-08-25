@@ -168,6 +168,7 @@ export type PairProfile = {
   page_type: PageType
   custom_html_url: string | null
   pair_image_url: string | null
+  character_backdrop_url: string | null
   illustration_source: string | null
   illustration_source_font: string
   illustration_source_color: string
@@ -323,7 +324,7 @@ export type Database = {
       pair_profiles: {
         Row: Omit<PairProfile, 'profile_characters' | 'timeline_entries'>
         Insert: Omit<PairProfile, 'id' | 'created_at' | 'updated_at' | 'profile_characters' | 'timeline_entries'>
-        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'illustration_source' | 'illustration_source_font' | 'illustration_source_color' | 'background_url' | 'background_blur' | 'background_overlay_color' | 'background_overlay_opacity' | 'particle_effect' | 'particle_color' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
+        Update: Partial<Pick<PairProfile, 'profile_slug' | 'title' | 'profile_title' | 'title_font' | 'title_color' | 'title_size' | 'icon_color' | 'link_text' | 'link_url' | 'link_font' | 'link_color' | 'has_music' | 'is_primary' | 'page_type' | 'custom_html_url' | 'pair_image_url' | 'character_backdrop_url' | 'illustration_source' | 'illustration_source_font' | 'illustration_source_color' | 'background_url' | 'background_blur' | 'background_overlay_color' | 'background_overlay_opacity' | 'particle_effect' | 'particle_color' | 'timeline_subtitle_font' | 'timeline_title_font' | 'timeline_text_color' | 'timeline_dot_color' | 'timeline_line_color' | 'timeline_shadow' | 'position'>>
         Relationships: []
       }
       profile_characters: {

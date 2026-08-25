@@ -273,6 +273,7 @@ export function CharacterPairDetail({
               <div className="px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0 pt-4 space-y-8">
                 <CharacterPairHero
                   imageUrl={pairImageUrl}
+                  characterBackdropUrl={activeProfile.character_backdrop_url}
                   // Only credit a real illustrator for a real uploaded
                   // image — showing "©[someone]" under the placeholder
                   // wordmark would be attributing art that isn't theirs.

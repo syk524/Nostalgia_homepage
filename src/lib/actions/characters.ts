@@ -26,6 +26,7 @@ type ProfileInput = {
   linkText: string; linkUrl: string; linkFont: string; linkColor: string; hasMusic: boolean
   isPrimary: boolean; pageType: 'template' | 'custom_html'; customHtmlUrl: string | null
   pairImageUrl: string | null
+  characterBackdropUrl: string | null
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
@@ -142,7 +143,7 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
   // though the underlying FK genuinely exists.
   const { data: oldProfiles } = await supabase
     .from('pair_profiles')
-    .select('id, pair_image_url, background_url')
+    .select('id, pair_image_url, character_backdrop_url, background_url')
     .eq('pair_id', pairId)
   const oldProfileIds = (oldProfiles ?? []).map(p => p.id)
   const { data: oldChars } = oldProfileIds.length
@@ -152,7 +153,7 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
     ? await supabase.from('timeline_entries').select('image_url').in('profile_id', oldProfileIds)
     : { data: [] as { image_url: string | null }[] }
   const oldImageUrls = [
-    ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.background_url]),
+    ...(oldProfiles ?? []).flatMap(p => [p.pair_image_url, p.character_backdrop_url, p.background_url]),
     ...(oldChars ?? []).flatMap(c => [c.profile_image_url, c.description_divider_url, c.caption_image_url]),
     ...(oldEntries ?? []).map(e => e.image_url),
   ]
@@ -162,6 +163,7 @@ export async function updateCharacterPair(pairId: string, input: CharacterPairIn
 
   const newImageUrls = input.profiles.flatMap(p => [
     p.pairImageUrl,
+    p.characterBackdropUrl,
     p.backgroundUrl,
     p.characters[0].profileImageUrl,
     p.characters[1].profileImageUrl,
@@ -208,7 +210,7 @@ async function saveProfiles(
     title_font: p.titleFont, title_color: p.titleColor, title_size: p.titleSize, icon_color: p.iconColor,
     link_text: p.linkText.trim() || null, link_url: p.linkUrl.trim() || null, link_font: p.linkFont, link_color: p.linkColor, has_music: p.hasMusic,
     is_primary: p.isPrimary, page_type: p.pageType, custom_html_url: p.pageType === 'custom_html' ? p.customHtmlUrl : null,
-    pair_image_url: p.pairImageUrl,
+    pair_image_url: p.pairImageUrl, character_backdrop_url: p.characterBackdropUrl,
     // Stripped of any leading © the editor typed themselves — the app
     // always adds its own at render time, so a pasted one would double up.
     illustration_source: p.illustrationSource.trim().replace(/^©\s*/, '') || null,

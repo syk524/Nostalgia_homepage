@@ -203,6 +203,7 @@ type ProfileState = {
   pageType: 'template' | 'custom_html'
   customHtmlUrl: string | null; customHtmlFile: File | null; customHtmlFileName: string; uploadingCustomHtml: boolean
   pairImageUrl: string | null; pairImageFile: File | null; pairImagePreview: string; uploadingPairImage: boolean
+  characterBackdropUrl: string | null; characterBackdropFile: File | null; characterBackdropPreview: string; uploadingCharacterBackdrop: boolean
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
@@ -240,6 +241,10 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     pairImageFile: null,
     pairImagePreview: existing?.pair_image_url ?? '',
     uploadingPairImage: false,
+    characterBackdropUrl: existing?.character_backdrop_url ?? null,
+    characterBackdropFile: null,
+    characterBackdropPreview: existing?.character_backdrop_url ?? '',
+    uploadingCharacterBackdrop: false,
     illustrationSource: existing?.illustration_source ?? '',
     illustrationSourceFont: existing?.illustration_source_font ?? 'default',
     illustrationSourceColor: existing?.illustration_source_color ?? '#2f2f2e',
@@ -338,6 +343,13 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         finalPairImageUrl = url
       }
 
+      let finalCharacterBackdropUrl = p.characterBackdropUrl
+      if (p.characterBackdropFile) {
+        const { url, error: err } = await uploadImage(p.characterBackdropFile, user.id, 'gallery-images')
+        if (err) { setError(err); setSubmitting(false); return }
+        finalCharacterBackdropUrl = url
+      }
+
       let finalBackgroundUrl = p.backgroundUrl
       if (p.backgroundFile) {
         const { url, error: err } = await uploadImage(p.backgroundFile, user.id, 'gallery-images')
@@ -397,7 +409,7 @@ export function CharacterPairForm({ initialData }: { initialData?: { pair: Chara
         title: p.title, profileTitle: p.profileTitle, titleFont: p.titleFont, titleColor: p.titleColor, titleSize: p.titleSize, iconColor: p.iconColor,
         linkText: p.linkText, linkUrl: p.linkUrl, linkFont: p.linkFont, linkColor: p.linkColor, hasMusic: p.hasMusic,
         isPrimary: p.isPrimary, pageType: p.pageType, customHtmlUrl: p.pageType === 'custom_html' ? finalCustomHtmlUrl : null,
-        pairImageUrl: finalPairImageUrl,
+        pairImageUrl: finalPairImageUrl, characterBackdropUrl: finalCharacterBackdropUrl,
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         backgroundOverlayColor: p.backgroundOverlayColor, backgroundOverlayOpacity: p.backgroundOverlayOpacity,
@@ -593,6 +605,11 @@ function ProfileFieldset({
     if (!file) return
     onPatch({ pairImageFile: file, pairImagePreview: URL.createObjectURL(file) })
   }
+  function handleCharacterBackdropChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ characterBackdropFile: file, characterBackdropPreview: URL.createObjectURL(file) })
+  }
   function handleBackgroundChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -710,6 +727,34 @@ function ProfileFieldset({
                 {profile.uploadingPairImage ? '업로드 중…' : '이미지 선택'}
                 <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
               </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">캐릭터 뒷배경 이미지</label>
+            <p className="text-xs text-ink-400 mb-2">페어 이미지 뒤, 전체 배경 앞에 페어 이미지와 같은 중심으로 표시됩니다. 페어 이미지보다 크면 비율을 유지한 채 줄어들고, 작으면 원본 크기 그대로 유지됩니다.</p>
+            <div className="flex items-center gap-4">
+              <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                {profile.characterBackdropPreview
+                  ? <img src={profile.characterBackdropPreview} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-2xl text-scroll-400">◯</span>
+                }
+              </div>
+              <div className="flex flex-col gap-2 items-start">
+                <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingCharacterBackdrop}>
+                  {profile.uploadingCharacterBackdrop ? '업로드 중…' : '이미지 선택'}
+                  <input type="file" accept="image/*" onChange={handleCharacterBackdropChange} className="sr-only" disabled={profile.uploadingCharacterBackdrop} />
+                </label>
+                {profile.characterBackdropPreview && (
+                  <button
+                    type="button"
+                    onClick={() => onPatch({ characterBackdropUrl: null, characterBackdropFile: null, characterBackdropPreview: '' })}
+                    className="text-xs text-ink-400 hover:text-ember"
+                  >
+                    제거
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
