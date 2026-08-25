@@ -9,6 +9,7 @@ export const PARTICLE_EFFECTS = [
   { value: 'rain', label: 'Rain' },
   { value: 'stars', label: 'Stars' },
   { value: 'vapor', label: 'Vapor' },
+  { value: 'notes', label: 'Notes' },
 ] as const
 
 type EffectValue = typeof PARTICLE_EFFECTS[number]['value']
@@ -25,6 +26,7 @@ export const DEFAULT_PARTICLE_COLORS: Record<EffectValue, string> = {
   rain: '#ffffff',
   stars: '#ffffff',
   vapor: '#08080a',
+  notes: '#ffffff',
 }
 
 // Canvas fillStyle/strokeStyle both accept a plain hex string directly,
@@ -132,6 +134,39 @@ function randomCloud(width: number, height: number, layer: 'far' | 'near'): Clou
   }
 }
 
+// Falling music notes — same silhouette as a classic CSS snowfall effect
+// (each particle drifts straight down at its own speed while swaying
+// side to side on a sine wave, wraps back to the top once it's fully
+// off the bottom, no cursor interaction), just with a randomized note
+// glyph standing in for the snowflake. Sway is continuous (driven by
+// elapsed time, not per-frame accumulation), so it stays perfectly
+// periodic no matter how long the animation has been running, unlike
+// nudging x by a per-frame delta.
+const NOTE_CHARS = ['♫', '♪', '♭', '♩'] as const
+type Note = {
+  x: number; y: number; char: string; size: number; speed: number
+  swayAmp: number; swayFreq: number; swayPhase: number
+  opacity: number; rotation: number; rotationSpeed: number
+}
+
+function randomNote(width: number, height: number, atRandomHeight: boolean): Note {
+  return {
+    x: Math.random() * width,
+    y: atRandomHeight ? Math.random() * height : -30,
+    char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
+    size: 14 + Math.random() * 14,
+    // Roughly a quarter of the original 0.6-1.7 range — reported directly
+    // as too fast for a lazy, drifting fall.
+    speed: 0.15 + Math.random() * 0.28,
+    swayAmp: 15 + Math.random() * 25,
+    swayFreq: 0.0006 + Math.random() * 0.0008,
+    swayPhase: Math.random() * Math.PI * 2,
+    opacity: 0.35 + Math.random() * 0.45,
+    rotation: (Math.random() - 0.5) * 0.6,
+    rotationSpeed: (Math.random() - 0.5) * 0.0008,
+  }
+}
+
 // Layered between the session's fixed background image (z-0) and its log
 // card ([slug]/page.tsx gives that card's wrapper an explicit z-10 so it
 // always stacks above this regardless of DOM order) — a full-viewport
@@ -156,6 +191,7 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     let stars: Star[] = []
     let farClouds: Cloud[] = []
     let nearClouds: Cloud[] = []
+    let notes: Note[] = []
 
     function resize() {
       width = canvas!.width = window.innerWidth
@@ -169,6 +205,12 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         const area = width * height
         farClouds = Array.from({ length: Math.max(3, Math.round(area / 420000)) }, () => randomCloud(width, height, 'far'))
         nearClouds = Array.from({ length: Math.max(4, Math.round(area / 280000)) }, () => randomCloud(width, height, 'near'))
+      } else if (effect === 'notes') {
+        // Sparser than rain's drops — each glyph reads as its own shape
+        // at this size, so a rain-level density would just look cluttered.
+        // Pulled back further still (14000 → 28000 divisor) since even
+        // that read as too many, reported directly.
+        notes = Array.from({ length: Math.round((width * height) / 28000) }, () => randomNote(width, height, true))
       } else {
         stars = Array.from({ length: Math.round((width * height) / 6000) }, () => randomStar(width, height))
       }
@@ -237,10 +279,28 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.filter = 'none'
     }
 
+    function drawNotes(time: number) {
+      ctx!.textAlign = 'center'
+      ctx!.textBaseline = 'middle'
+      ctx!.fillStyle = resolvedColor
+      for (const note of notes) {
+        const swayX = note.x + Math.sin(time * note.swayFreq + note.swayPhase) * note.swayAmp
+        ctx!.globalAlpha = note.opacity
+        ctx!.font = `${note.size}px sans-serif`
+        ctx!.save()
+        ctx!.translate(swayX, note.y)
+        ctx!.rotate(note.rotation)
+        ctx!.fillText(note.char, 0, 0)
+        ctx!.restore()
+      }
+      ctx!.globalAlpha = 1
+    }
+
     function draw(time: number) {
       ctx!.clearRect(0, 0, width, height)
       if (effect === 'rain') drawRain()
       else if (effect === 'vapor') drawVapor()
+      else if (effect === 'notes') drawNotes(time)
       else drawStars(time)
     }
 
@@ -264,6 +324,15 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           // whichever direction it's drifting, not just left-to-right.
           if (cloud.x - cloud.extent > width) cloud.x = -cloud.extent
           else if (cloud.x + cloud.extent < 0) cloud.x = width + cloud.extent
+        }
+      } else if (effect === 'notes') {
+        for (const note of notes) {
+          note.y += note.speed
+          note.rotation += note.rotationSpeed
+          // Sway itself is computed straight from elapsed time in
+          // drawNotes, not accumulated here — x only needs to carry the
+          // note's own center for that sine wave to swing around.
+          if (note.y - note.size > height) Object.assign(note, randomNote(width, height, false))
         }
       }
       draw(time)
