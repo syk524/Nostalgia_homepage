@@ -11,7 +11,7 @@ import { PairDescriptionView } from '@/components/pair-description-editor'
 import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
 import { PairProfileSideNav } from '@/components/pair-profile-side-nav'
 import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
 // Same wordmark asset the homepage itself uses (draggable-home-scene.tsx)
@@ -39,7 +39,7 @@ function CharacterStatsLine({ character }: { character: ProfileCharacter }) {
   const stats = characterStats(character)
   if (!stats.length) return null
   return (
-    <p className="text-sm" style={{ color: character.stats_color, fontFamily: pairFontFamily(character.stats_font) }}>
+    <p className="text-sm" style={{ color: character.stats_color, fontFamily: pairFontFamily(character.stats_font), fontWeight: pairFontWeight(character.stats_font) }}>
       {stats.map((stat, i) => (
         <span key={i}>
           {i > 0 && <span className="px-2" aria-hidden="true">•</span>}
@@ -97,7 +97,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           className={`description-section-cell rounded pr-6 pt-6 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
           style={{ '--section-row': 1, '--section-col': charIdx + 1 } as CSSProperties}
         >
-          <h3 className="text-xl min-[1020px]:text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font) }}>{character.name}</h3>
+          <h3 className="text-xl min-[1020px]:text-2xl mb-1" style={{ color: character.name_color, fontFamily: pairFontFamily(character.name_font), fontWeight: pairFontWeight(character.name_font) }}>{character.name}</h3>
           <CharacterStatsLine character={character} />
         </div>
       )}
@@ -109,7 +109,7 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
             className={`description-section-cell rounded pr-6 pt-5 pb-5 min-[1020px]:w-4/5 min-[1020px]:max-w-[650px] ${alignClass}`}
             style={{ '--section-row': row, '--section-col': charIdx + 1 } as CSSProperties}
           >
-            {section.title && <h3 className="text-xl min-[1020px]:text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font) }}>{section.title}</h3>}
+            {section.title && <h3 className="text-xl min-[1020px]:text-2xl mb-2" style={{ color: section.title_color, fontFamily: pairFontFamily(section.title_font), fontWeight: pairFontWeight(section.title_font) }}>{section.title}</h3>}
             <PairDescriptionView content={section.description} className="text-sm" style={{ color: section.text_color }} />
           </div>
         )

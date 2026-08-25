@@ -7,7 +7,7 @@ import { DayCounterDockIcon, dayCount } from './day-counter-dock-icon'
 import { updateDayCounter } from '@/lib/actions/day-counter'
 import { uploadImage } from '@/lib/upload'
 import { createClient } from '@/lib/supabase/client'
-import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
+import { PAIR_FONTS, pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { DayCounter } from '@/types/database'
 
 const ICON_SIZE = 44
@@ -204,10 +204,10 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
             className="input"
             value={font}
             onChange={e => setFont(e.target.value)}
-            style={{ fontFamily: pairFontFamily(font) }}
+            style={{ fontFamily: pairFontFamily(font), fontWeight: pairFontWeight(font) }}
           >
             {Object.entries(PAIR_FONTS).map(([key, { label, family }]) => (
-              <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
+              <option key={key} value={key} style={{ fontFamily: family, fontWeight: pairFontWeight(key) }}>{label}</option>
             ))}
           </select>
         </div>
@@ -235,7 +235,7 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
 
       <div className="relative h-full flex flex-col justify-between p-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0" style={{ fontFamily: pairFontFamily(dayCounter.font) }}>
+          <div className="min-w-0" style={{ fontFamily: pairFontFamily(dayCounter.font), fontWeight: pairFontWeight(dayCounter.font) }}>
             <p className="text-3xl font-bold leading-none" style={{ color: dayCounter.text_color }}>
               D+{n}
             </p>

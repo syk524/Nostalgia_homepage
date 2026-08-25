@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Plus } from 'lucide-react'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
 // Everything the grid needs comes from the primary profile — title,
@@ -171,9 +171,9 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
           Tailwind's generated output" lesson as the sticker z-index/
           shrink-to-fit issues earlier this session, just once more). */}
       <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
-        <span className="tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
-        <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font), color: 'var(--theme-accent)' }}>{primaryProfile?.title}</span>
-        <span className="text-right tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
+        <span className="tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char1?.name_font), fontWeight: pairFontWeight(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
+        <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font), fontWeight: pairFontWeight(primaryProfile?.title_font), color: 'var(--theme-accent)' }}>{primaryProfile?.title}</span>
+        <span className="text-right tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char2?.name_font), fontWeight: pairFontWeight(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
       </div>
     </Link>
   )

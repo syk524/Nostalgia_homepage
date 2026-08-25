@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { PairLink } from '@/components/pair-link'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { ProfileCharacter } from '@/types/database'
 
 // Catchphrase as plain text (no pill), then name, then the quote — each with
@@ -119,7 +119,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
           <p
             className="drop-shadow"
             style={{
-              fontFamily: pairFontFamily(character.catchphrase_font), color: character.catchphrase_color,
+              fontFamily: pairFontFamily(character.catchphrase_font), fontWeight: pairFontWeight(character.catchphrase_font), color: character.catchphrase_color,
               fontSize: 14, letterSpacing: '1.4em', textShadow,
               marginRight: align === 'right' ? '-1.4em' : undefined,
               paddingBottom: 2,
@@ -129,7 +129,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
         {/* 1.25x the previous text-xl/text-2xl (20px/24px) — 25px/30px,
             not a step up to the next Tailwind size (2xl/3xl), which would
             overshoot the exact ratio asked for. */}
-        <h3 className="text-[25px] min-[1020px]:text-[30px] drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
+        <h3 className="text-[25px] min-[1020px]:text-[30px] drop-shadow-md leading-tight" style={{ fontFamily: pairFontFamily(character.name_font), fontWeight: pairFontWeight(character.name_font), color: character.name_color, textShadow }}>{character.name}</h3>
         {/* Per-character color, not the catchphrase divider's old fixed
             bg-white/60 — always shown (not gated on catchphrase like that
             one was), since this reads as the name's own underline now,
@@ -141,7 +141,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
           // edge flush with the wider name/catchphrase when right-aligned,
           // instead of the shrunk box just sitting left-anchored inside the
           // wider container.
-          <p className={`text-xl min-[1020px]:text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
+          <p className={`text-xl min-[1020px]:text-2xl drop-shadow mt-1 max-w-[350px] ${align === 'right' ? 'ml-auto' : ''}`} style={{ fontFamily: pairFontFamily(character.quote_font), fontWeight: pairFontWeight(character.quote_font), color: character.quote_color, textShadow }}>“{character.quote}”</p>
         )}
         {(character.keyword_1 || character.keyword_2 || character.keyword_3) && (
           // One shared font/color for all three keywords (not per-keyword),
@@ -159,7 +159,7 @@ function CharacterCaption({ character, align, isOpen, isClosing, onToggle }: {
           // coincidentally lined up.
           <div
             className={`drop-shadow mt-1 flex flex-wrap gap-3 text-sm ${align === 'right' ? 'justify-end' : ''}`}
-            style={{ fontFamily: pairFontFamily(character.keyword_font), color: character.keyword_color, textShadow }}
+            style={{ fontFamily: pairFontFamily(character.keyword_font), fontWeight: pairFontWeight(character.keyword_font), color: character.keyword_color, textShadow }}
           >
             {[character.keyword_1, character.keyword_2, character.keyword_3].filter(Boolean).map((k, i) => (
               <span key={i}>#{k}</span>
@@ -299,7 +299,7 @@ export function CharacterPairHero({
             no-op at desktop widths — once 9vw grows past the user's own
             size, clamp caps back to exactly what they set, unchanged from
             before this fix. */}
-        <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), color: titleColor, fontSize: `clamp(28px, 9vw, ${titleSize}px)` }}>{title}</h1>
+        <h1 className="text-center" style={{ fontFamily: pairFontFamily(titleFont), fontWeight: pairFontWeight(titleFont), color: titleColor, fontSize: `clamp(28px, 9vw, ${titleSize}px)` }}>{title}</h1>
         <PairLink text={linkText} url={linkUrl} font={linkFont} color={linkColor} hasMusic={hasMusic} centered />
       </div>
 
@@ -334,7 +334,7 @@ export function CharacterPairHero({
             <img src={imageUrl} alt="" className="relative w-full h-auto block rounded" />
           </div>
           {illustrationSource && (
-            <p className="text-center text-sm mt-3" style={{ fontFamily: pairFontFamily(illustrationSourceFont), color: illustrationSourceColor }}>
+            <p className="text-center text-sm mt-3" style={{ fontFamily: pairFontFamily(illustrationSourceFont), fontWeight: pairFontWeight(illustrationSourceFont), color: illustrationSourceColor }}>
               ©{illustrationSource}
             </p>
           )}

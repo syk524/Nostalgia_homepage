@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Star, X } from 'lucide
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage, uploadHtmlPage } from '@/lib/upload'
 import { createCharacterPair, updateCharacterPair, type TimelineEntryInput } from '@/lib/actions/characters'
-import { PAIR_FONTS, pairFontFamily } from '@/lib/fonts'
+import { PAIR_FONTS, pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import { ColorSwatch } from '@/components/color-swatch'
 import { PairDescriptionEditor } from '@/components/pair-description-editor'
 import { PARTICLE_EFFECTS, DEFAULT_PARTICLE_COLORS } from '@/components/particle-effects'
@@ -552,10 +552,10 @@ function FontSelect({ value, onChange }: { value: string; onChange: (value: stri
       className="input"
       value={value}
       onChange={e => onChange(e.target.value)}
-      style={{ fontFamily: pairFontFamily(value) }}
+      style={{ fontFamily: pairFontFamily(value), fontWeight: pairFontWeight(value) }}
     >
       {Object.entries(PAIR_FONTS).map(([key, { label, family }]) => (
-        <option key={key} value={key} style={{ fontFamily: family }}>{label}</option>
+        <option key={key} value={key} style={{ fontFamily: family, fontWeight: pairFontWeight(key) }}>{label}</option>
       ))}
     </select>
   )
@@ -586,7 +586,7 @@ function StyledTextRow({
           onChange={e => onValueChange(e.target.value)}
           placeholder={placeholder}
           required={required}
-          style={{ fontFamily: pairFontFamily(font) }}
+          style={{ fontFamily: pairFontFamily(font), fontWeight: pairFontWeight(font) }}
         />
         <div className="w-36">
           <FontSelect value={font} onChange={onFontChange} />
@@ -705,7 +705,7 @@ function ProfileFieldset({
                 value={profile.linkText}
                 onChange={e => onPatch({ linkText: e.target.value })}
                 placeholder="링크 텍스트"
-                style={{ fontFamily: pairFontFamily(profile.linkFont) }}
+                style={{ fontFamily: pairFontFamily(profile.linkFont), fontWeight: pairFontWeight(profile.linkFont) }}
               />
               <div className="w-36">
                 <FontSelect value={profile.linkFont} onChange={v => onPatch({ linkFont: v })} />
@@ -796,7 +796,7 @@ function ProfileFieldset({
               <div className="relative flex-1 min-w-[140px]">
                 <span
                   className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-ink/50"
-                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont) }}
+                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont), fontWeight: pairFontWeight(profile.illustrationSourceFont) }}
                 >
                   ©
                 </span>
@@ -805,7 +805,7 @@ function ProfileFieldset({
                   value={profile.illustrationSource}
                   onChange={e => onPatch({ illustrationSource: e.target.value })}
                   placeholder="예: 부때"
-                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont) }}
+                  style={{ fontFamily: pairFontFamily(profile.illustrationSourceFont), fontWeight: pairFontWeight(profile.illustrationSourceFont) }}
                 />
               </div>
               <div className="w-36">
@@ -1086,7 +1086,7 @@ function CharacterFieldset({
                   value={state[key]}
                   onChange={e => onPatch({ [key]: e.target.value })}
                   placeholder={`키워드 ${i + 1}`}
-                  style={{ fontFamily: pairFontFamily(state.keywordFont) }}
+                  style={{ fontFamily: pairFontFamily(state.keywordFont), fontWeight: pairFontWeight(state.keywordFont) }}
                 />
               ))}
               <div className="w-36">
@@ -1407,7 +1407,7 @@ function SectionsEditor({ sections, onChange }: { sections: SectionState[]; onCh
               value={section.title}
               onChange={e => patch(i, { title: e.target.value })}
               placeholder="섹션 제목 (선택)"
-              style={{ fontFamily: pairFontFamily(section.titleFont) }}
+              style={{ fontFamily: pairFontFamily(section.titleFont), fontWeight: pairFontWeight(section.titleFont) }}
             />
             <div className="w-32 shrink-0">
               <FontSelect value={section.titleFont} onChange={v => patch(i, { titleFont: v })} />

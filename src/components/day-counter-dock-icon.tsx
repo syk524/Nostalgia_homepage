@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 
 // June 22, 2026 — the fixed reference date the "D+NN" count runs from,
 // kept here (not in the day_counter table) since the user asked for a
@@ -48,7 +48,7 @@ export function DayCounterDockIcon({ size, photoUrl, font, textColor }: {
       <div className="absolute inset-0 bg-black/30" />
       <div
         className="relative w-full h-full flex flex-col items-center justify-center"
-        style={{ fontFamily: pairFontFamily(font) }}
+        style={{ fontFamily: pairFontFamily(font), fontWeight: pairFontWeight(font) }}
       >
         {/* Same optical-centering nudge as calendar-dock-icon.tsx. */}
         <div className="flex flex-col items-center -translate-y-px">

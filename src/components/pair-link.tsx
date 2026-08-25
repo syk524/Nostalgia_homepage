@@ -1,5 +1,5 @@
 import { Music } from 'lucide-react'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 
 // Optional link rendered right below the pair title — 8px gap (mt-2),
 // same font size as a character's catchphrase (11px), user-selectable
@@ -29,7 +29,7 @@ export function PairLink({
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 tracking-normal hover:tracking-[0.05em] transition-[letter-spacing] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        style={{ fontFamily: pairFontFamily(font), color, fontSize: 11 }}
+        style={{ fontFamily: pairFontFamily(font), fontWeight: pairFontWeight(font), color, fontSize: 11 }}
       >
         {hasMusic && <Music size={11} />}
         <span>{text}</span>

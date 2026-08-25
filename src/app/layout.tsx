@@ -117,12 +117,6 @@ const anomale = localFont({
   display: 'swap',
 })
 
-const migikataAgari = localFont({
-  src: './fonts/MigikataAgari.ttf',
-  variable: '--font-migikata-agari',
-  display: 'swap',
-})
-
 // A variable font (its own "Angle" axis, per the source filename) — no
 // weight/style variants declared here since PAIR_FONTS only ever renders
 // it at the browser's own default instance rather than picking a
@@ -149,7 +143,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${migikataAgari.variable} ${tokAngle.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { pairFontFamily } from '@/lib/fonts'
+import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { PairProfile, ProfileCharacter } from '@/types/database'
 
 // One shared avatar-icon trigger for a character's thought on a given
@@ -30,6 +30,7 @@ function ThoughtAvatar({ character, thought }: { character: ProfileCharacter; th
             borderColor: `${character.name_color}55`,
             background: `${character.name_color}1a`,
             fontFamily: pairFontFamily(character.name_font),
+            fontWeight: pairFontWeight(character.name_font),
           }}
           aria-label={`${character.name}’s thought`}
         >
@@ -95,12 +96,12 @@ export function CharacterPairTimeline({ profile, char1, char2 }: { profile: Pair
             </div>
             <div className="flex-1 min-w-0 pb-8">
               {entry.subtitle && (
-                <p style={{ fontFamily: pairFontFamily(profile.timeline_subtitle_font), color: entry.subtitle_color, fontSize: 13, letterSpacing: '0.3em' }}>
+                <p style={{ fontFamily: pairFontFamily(profile.timeline_subtitle_font), fontWeight: pairFontWeight(profile.timeline_subtitle_font), color: entry.subtitle_color, fontSize: 13, letterSpacing: '0.3em' }}>
                   {entry.subtitle}
                 </p>
               )}
               {entry.title && (
-                <h4 className="text-lg min-[1020px]:text-xl font-semibold mt-1" style={{ fontFamily: pairFontFamily(profile.timeline_title_font), color: entry.title_color }}>
+                <h4 className="text-lg min-[1020px]:text-xl font-semibold mt-1" style={{ fontFamily: pairFontFamily(profile.timeline_title_font), fontWeight: pairFontWeight(profile.timeline_title_font), color: entry.title_color }}>
                   {entry.title}
                 </h4>
               )}
