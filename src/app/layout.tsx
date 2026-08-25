@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue, Playfair_Display } from '
 import localFont from 'next/font/local'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
 import { CustomCursor } from '@/components/custom-cursor'
+import { ThemeProvider } from '@/components/theme-provider'
 import { getUserTheme } from '@/lib/get-user-theme'
 import './globals.css'
 
@@ -134,7 +135,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} font-sans`}
         suppressHydrationWarning
       >
-        {children}
+        <ThemeProvider initialTheme={theme.key}>
+          {children}
+        </ThemeProvider>
         <SoundPlayer />
         <CustomCursor />
       </body>

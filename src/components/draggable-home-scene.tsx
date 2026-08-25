@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTheme } from '@/components/theme-provider'
 import Image from 'next/image'
 import { Settings as SettingsIcon } from 'lucide-react'
 import wordmark from '../../public/images/nostalgio-wordmark.webp'
@@ -14,7 +15,6 @@ import { DayCounterDeskWidget } from '@/components/day-counter-desk-widget'
 import { SettingsPanel } from '@/components/settings-panel'
 import { NoirBackground } from '@/components/noir-background'
 import { DOCK_APPS } from '@/lib/dock-apps'
-import { THEMES, type ThemeKey } from '@/lib/themes'
 import { savePlacement, removePlacement } from '@/lib/actions/stickers'
 import type { StickerGalleryImage, UserBackgroundSticker, CalendarEvent, DayCounter } from '@/types/database'
 
@@ -148,7 +148,7 @@ const PANEL_MARGIN = 16
 // reload, just not synced anywhere for a guest. Nav stays genuinely
 // position:fixed throughout, since none of this pan/drag machinery
 // lives on an ancestor of Nav.
-export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryImages, initialPlacements, initialEvents, initialDayCounter, initialTheme }: {
+export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryImages, initialPlacements, initialEvents, initialDayCounter }: {
   canEdit: boolean
   isAdmin: boolean
   userId: string | null
@@ -156,7 +156,6 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   initialPlacements: UserBackgroundSticker[]
   initialEvents: CalendarEvent[]
   initialDayCounter: DayCounter | null
-  initialTheme: ThemeKey
 }) {
   const canvas = useDraggable()
   const sceneRef = useRef<HTMLDivElement>(null)
@@ -170,32 +169,23 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   // nothing else would ever touch them. See renormalizePlacements below.
   const [placements, setPlacements] = useState(() => renormalizePlacements(initialPlacements, NO_TOP_ID))
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [theme, setTheme] = useState<ThemeKey>(initialTheme)
-
-  // Same imperative-DOM pattern as nav-icon-color-setter.tsx, since these
-  // vars/attribute are read by CSS across the whole document (nav, this
-  // page's own background, [data-theme="noir"] overrides in globals.css),
-  // not just this component's own React tree. Runs on every mount too
-  // (not just on an explicit theme change) — reported directly: switch to
-  // Noir, navigate to /profile and back, and the desk came back as a bare
-  // black screen with the wordmark/grid/stickers gone but the DB-correct
-  // theme otherwise intact. Root cause is that <html>'s own data-theme/
-  // --theme-* values come from the ROOT layout's server render
-  // (layout.tsx), a segment shared with every other route and cached
-  // separately from this page's own leaf — updateTheme's
-  // revalidatePath('/') reliably refreshes this page's own initialTheme
-  // prop (confirmed: this component's theme state itself was correct),
-  // but not necessarily that shared layout segment, so <html> could still
-  // reflect Whatever theme was current the last time the ROOT layout
-  // itself happened to re-render, not the latest one. Re-asserting here
-  // on every mount makes this component the source of truth for the DOM,
-  // independent of whether the layout's own SSR output is stale.
-  useEffect(() => {
-    const t = THEMES[theme]
-    document.documentElement.style.setProperty('--theme-accent', t.pointColor)
-    document.documentElement.style.setProperty('--theme-bg', t.background)
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+  // Owned by ThemeProvider (theme-provider.tsx), not local state here —
+  // this component only exists on the '/' route and is torn down and
+  // recreated on every navigation away and back, so local state here
+  // couldn't survive that round trip. It used to, seeded fresh from a
+  // server-provided initialTheme prop each remount, plus an effect that
+  // re-applied it to <html> on every mount to patch a *different* staleness
+  // bug (the shared root layout not always re-rendering on navigation) —
+  // but that fix broke the opposite way: the prop itself could ALSO be
+  // stale (Next's client Router Cache reusing '/'  's pre-switch RSC
+  // payload on a quick round trip), so a correct Noir choice got
+  // overwritten back to Default instead of preserved, reported directly.
+  // ThemeProvider sidesteps both failure modes at once — it lives in the
+  // ROOT layout, which survives client-side navigation between routes
+  // without unmounting, so its state (and the <html> sync effect that
+  // used to live here) never needs to be reconstructed from a
+  // navigation-provided prop that might be behind the live client state.
+  const { theme, setTheme } = useTheme()
 
   // Ephemeral — deliberately not persisted, matching "show collapsed as
   // default" for the dock. Only meaningful on a non-default theme;
