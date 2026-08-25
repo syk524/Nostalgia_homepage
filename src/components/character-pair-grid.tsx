@@ -111,10 +111,15 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // noir, f1f1f1 on default" per direct request, and it stays
             // correct automatically if a third theme is ever added.
             <span
-              className="absolute inset-x-0 bottom-4 z-20 text-center truncate px-4 text-[10.8px] pointer-events-none noir-accent-color tracking-normal opacity-0 group-hover:!tracking-[0.4em] group-hover:opacity-100 transition-[letter-spacing,opacity] duration-200"
+              className="absolute inset-x-0 bottom-4 z-20 text-center truncate px-4 text-[12.96px] pointer-events-none noir-accent-color tracking-normal opacity-0 group-hover:!tracking-[0.4em] group-hover:opacity-100 transition-[letter-spacing,opacity] duration-200"
               style={{
                 fontFamily: pairFontFamily('serifBold'), color: '#5B574E',
-                textShadow: '0 0 2px var(--theme-bg), 0 0 2px var(--theme-bg), 0 0 3px var(--theme-bg), 0 0 4px var(--theme-bg), 0 0 4px var(--theme-bg)',
+                // Both scaled 1.2x alongside the font size (10.8px→12.96px,
+                // 2/2/3/4/4px→2.4/2.4/3.6/4.8/4.8px) so the halo keeps the
+                // same proportion to the letterforms rather than getting
+                // comparatively thinner as the text grows, per direct
+                // request.
+                textShadow: '0 0 2.4px var(--theme-bg), 0 0 2.4px var(--theme-bg), 0 0 3.6px var(--theme-bg), 0 0 4.8px var(--theme-bg), 0 0 4.8px var(--theme-bg)',
               }}
             >
               {primaryProfile.world}
