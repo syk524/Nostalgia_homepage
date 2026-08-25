@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchPairWithProfiles } from '@/lib/character-pair-queries'
 import { CharacterPairForm } from '@/components/character-pair-form'
 
-export default async function EditCharacterPairPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EditCharacterPairPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ profile?: string }> }) {
   const { slug } = await params
+  const { profile: activeProfileSlug } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const profile = user
@@ -35,7 +36,7 @@ export default async function EditCharacterPairPage({ params }: { params: Promis
           fixed-position SectionNav by making this div its containing
           block instead of the viewport. */}
       <h2 className="text-3xl text-ink noir-accent-color animate-fade-up">페어 편집</h2>
-      <CharacterPairForm initialData={{ pair }} />
+      <CharacterPairForm initialData={{ pair }} initialActiveProfileSlug={activeProfileSlug} />
     </div>
   )
 }

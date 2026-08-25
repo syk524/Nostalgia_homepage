@@ -274,18 +274,36 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
   }
 }
 
-export function CharacterPairForm({ initialData }: { initialData?: { pair: CharacterPairWithProfiles } }) {
+export function CharacterPairForm({ initialData, initialActiveProfileSlug }: { initialData?: { pair: CharacterPairWithProfiles }; initialActiveProfileSlug?: string }) {
   const router = useRouter()
   const isEdit = !!initialData
 
+  // Sorted once up front and reused for both initializers below, so the
+  // activeIndex lookup walks the exact same order the profiles state
+  // itself is built in — otherwise the tab a "정보/편집" link opened
+  // straight to a specific profile page from could resolve to the wrong
+  // index here.
+  const sortedInitialProfiles = initialData?.pair.pair_profiles.length
+    ? [...initialData.pair.pair_profiles].sort((a, b) => a.position - b.position)
+    : null
+
   const [profiles, setProfiles] = useState<ProfileState[]>(() =>
-    initialData?.pair.pair_profiles.length
-      ? [...initialData.pair.pair_profiles].sort((a, b) => a.position - b.position).map(p => emptyProfile(p))
+    sortedInitialProfiles
+      ? sortedInitialProfiles.map(p => emptyProfile(p))
       // A new pair starts with one empty, starred profile rather than
       // none — every pair created through this form needs at least one.
       : [{ ...emptyProfile(undefined), isPrimary: true }]
   )
-  const [activeIndex, setActiveIndex] = useState(0)
+  // Opens on whichever tab the editor was actually viewing (passed in via
+  // the edit page's own ?profile= query param) instead of always
+  // defaulting to the first one — reported directly, since a pair with
+  // several tabs otherwise always dropped an editor back on tab 1
+  // regardless of which page's Edit button they clicked.
+  const [activeIndex, setActiveIndex] = useState(() => {
+    if (!sortedInitialProfiles || !initialActiveProfileSlug) return 0
+    const idx = sortedInitialProfiles.findIndex(p => p.profile_slug === initialActiveProfileSlug)
+    return idx === -1 ? 0 : idx
+  })
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')

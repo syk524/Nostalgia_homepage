@@ -183,7 +183,7 @@ export function CharacterPairDetail({
               this is the one case that still needs them floating. */}
           {canEdit && (
             <div className="fixed bottom-[3%] right-[2.6%] z-[60] flex gap-2">
-              <Link href={`/profile/${pair.slug}/edit`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
+              <Link href={`/profile/${pair.slug}/edit?profile=${activeProfile.profile_slug}`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
               <DeleteCharacterPairButton pairId={pair.id} />
             </div>
           )}
@@ -399,7 +399,7 @@ export function CharacterPairDetail({
                             `color`. Delete stays on its own established
                             red/ember styling — that's a deliberate danger
                             signal, not part of this theming. */}
-                        <Link href={`/profile/${pair.slug}/edit`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
+                        <Link href={`/profile/${pair.slug}/edit?profile=${activeProfile.profile_slug}`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
                         <DeleteCharacterPairButton pairId={pair.id} />
                       </div>
                     )}

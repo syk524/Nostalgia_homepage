@@ -69,31 +69,66 @@ function randomStar(width: number, height: number): Star {
   }
 }
 
-// A continuous drifting fog bank, not individual specks like rain/stars
-// and not the separated soft circles an earlier version of this drew —
-// each puff is still a radial gradient (transparent at the edge, same
-// technique as before), but two overlapping layers at different sizes/
-// speeds/opacities, dense enough that neighboring puffs blend into a
-// seamless cloud instead of reading as discrete blobs, are what actually
-// gets a continuous vapor look. "Far" is the bigger, slower, fainter
-// layer underneath; "near" is smaller, a little faster, and a little
-// stronger, layered on top for some depth/texture variation rather than
-// one perfectly flat haze. Both drift slowly sideways with a gentle
-// vertical bob and wrap back in on the opposite edge once fully
-// off-screen — no cursor interaction, reported directly.
-type Puff = { x: number; y: number; radius: number; vx: number; vy: number; opacity: number; bobPhase: number; bobAmp: number }
+// Individual puffy cloud formations, not a uniform haze. Each cloud is a
+// cluster of several overlapping lobe-circles laid out along a rounded
+// hump (tall and bunched in the middle, tapering at the ends, like a
+// classic cumulus silhouette) rather than one soft radial blob, so it
+// reads as a distinct puffy shape with a bumpy edge instead of a flat
+// smudge. Two depth layers as before — "far" smaller/fainter/further
+// back, "near" bigger/stronger/in front — but now with real gaps of
+// clear background between clusters rather than dense overlap building
+// up into one continuous bank, matching the reference's scattered
+// individual clouds. Movement is deliberately slow — reported directly
+// — and there is no cursor interaction, ever.
+type CloudLobe = { dx: number; dy: number; r: number }
+type Cloud = {
+  x: number; y: number
+  vx: number; vy: number
+  bobPhase: number; bobAmp: number
+  opacity: number
+  extent: number // bounding radius, for the off-screen wrap check
+  lobes: CloudLobe[]
+}
 
-function randomPuff(width: number, height: number, layer: 'far' | 'near'): Puff {
+function randomCloud(width: number, height: number, layer: 'far' | 'near'): Cloud {
   const isFar = layer === 'far'
+  const baseSize = isFar ? 70 + Math.random() * 60 : 120 + Math.random() * 90
+  const lobeCount = 6 + Math.floor(Math.random() * 4)
+  const lobes: CloudLobe[] = []
+  for (let i = 0; i < lobeCount; i++) {
+    const t = i / (lobeCount - 1)
+    // Humped envelope: 0 at both ends, 1 in the middle — taller/bigger
+    // lobes cluster near the center, small ones taper off at the edges.
+    const envelope = Math.sin(t * Math.PI)
+    lobes.push({
+      dx: (t - 0.5) * baseSize * 1.9,
+      dy: -envelope * baseSize * 0.45 + (Math.random() - 0.5) * baseSize * 0.15,
+      r: baseSize * (0.3 + envelope * 0.35) * (0.8 + Math.random() * 0.4),
+    })
+  }
+  // A couple of extra top bumps off-center — a plain hump of same-size
+  // lobes reads as a loaf, not a cloud; these break that symmetry.
+  for (let i = 0; i < 2; i++) {
+    const t = 0.3 + Math.random() * 0.4
+    lobes.push({
+      dx: (t - 0.5) * baseSize * 1.9,
+      dy: -baseSize * (0.5 + Math.random() * 0.25),
+      r: baseSize * (0.22 + Math.random() * 0.18),
+    })
+  }
+
   return {
     x: Math.random() * width,
     y: Math.random() * height,
-    radius: isFar ? 160 + Math.random() * 140 : 90 + Math.random() * 110,
-    vx: (isFar ? 0.03 + Math.random() * 0.07 : 0.07 + Math.random() * 0.13) * (Math.random() < 0.5 ? -1 : 1),
-    vy: (Math.random() - 0.5) * 0.03,
-    opacity: isFar ? 0.045 + Math.random() * 0.04 : 0.07 + Math.random() * 0.07,
+    // Slow, ambient drift — noticeably slower than an earlier pass,
+    // reported directly.
+    vx: (isFar ? 0.006 + Math.random() * 0.012 : 0.012 + Math.random() * 0.02) * (Math.random() < 0.5 ? -1 : 1),
+    vy: (Math.random() - 0.5) * 0.006,
     bobPhase: Math.random() * Math.PI * 2,
-    bobAmp: 8 + Math.random() * 14,
+    bobAmp: 4 + Math.random() * 8,
+    opacity: isFar ? 0.16 + Math.random() * 0.1 : 0.26 + Math.random() * 0.14,
+    extent: baseSize * 1.6,
+    lobes,
   }
 }
 
@@ -119,8 +154,8 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     let height = 0
     let drops: Drop[] = []
     let stars: Star[] = []
-    let farPuffs: Puff[] = []
-    let nearPuffs: Puff[] = []
+    let farClouds: Cloud[] = []
+    let nearClouds: Cloud[] = []
 
     function resize() {
       width = canvas!.width = window.innerWidth
@@ -128,12 +163,12 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       if (effect === 'rain') {
         drops = Array.from({ length: Math.round((width * height) / 9000) }, () => randomDrop(width, height, true))
       } else if (effect === 'vapor') {
-        // Dense enough on both layers that neighboring puffs overlap —
-        // see the Puff type's own comment for why that's what actually
-        // reads as continuous fog instead of separated blobs.
+        // A handful of distinct clusters, not dozens of overlapping
+        // puffs — matches the reference's scattered individual clouds
+        // with real gaps of background between them.
         const area = width * height
-        farPuffs = Array.from({ length: Math.max(10, Math.round(area / 55000)) }, () => randomPuff(width, height, 'far'))
-        nearPuffs = Array.from({ length: Math.max(14, Math.round(area / 32000)) }, () => randomPuff(width, height, 'near'))
+        farClouds = Array.from({ length: Math.max(3, Math.round(area / 420000)) }, () => randomCloud(width, height, 'far'))
+        nearClouds = Array.from({ length: Math.max(4, Math.round(area / 280000)) }, () => randomCloud(width, height, 'near'))
       } else {
         stars = Array.from({ length: Math.round((width * height) / 6000) }, () => randomStar(width, height))
       }
@@ -166,30 +201,40 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.globalAlpha = 1
     }
 
-    function drawPuffs(puffs: Puff[]) {
-      for (const puff of puffs) {
-        const gradient = ctx!.createRadialGradient(puff.x, puff.y, 0, puff.x, puff.y, puff.radius)
-        // A solid-color core fading to fully transparent at the edge —
-        // the gradient itself is what makes this soft rather than the
-        // flat, hard-edged fill every other effect here uses. Each
-        // puff's own opacity is low enough on its own that it's the
-        // overlap between many of them (see resize's own density) that
-        // builds up a continuous haze rather than visible circles.
-        gradient.addColorStop(0, `rgba(${vaporR}, ${vaporG}, ${vaporB}, ${puff.opacity})`)
-        gradient.addColorStop(1, `rgba(${vaporR}, ${vaporG}, ${vaporB}, 0)`)
-        ctx!.fillStyle = gradient
-        ctx!.beginPath()
-        ctx!.arc(puff.x, puff.y, puff.radius, 0, Math.PI * 2)
-        ctx!.fill()
+    function drawClouds(clouds: Cloud[]) {
+      for (const cloud of clouds) {
+        for (const lobe of cloud.lobes) {
+          const cx = cloud.x + lobe.dx
+          const cy = cloud.y + lobe.dy
+          const gradient = ctx!.createRadialGradient(cx, cy, 0, cx, cy, lobe.r)
+          // A continuous center-to-edge fade, not a flat solid core out to
+          // some fraction of the radius — a flat plateau's own boundary is
+          // a real edge (full opacity right up to it, then falling away)
+          // and a large lobe's plateau is wider than the blur in drawVapor
+          // can soften, so it showed through as a visible solid-white disc
+          // with a hard rim, reported directly. A true gradient has no
+          // such boundary anywhere in it for a blur to fail to hide.
+          gradient.addColorStop(0, `rgba(${vaporR}, ${vaporG}, ${vaporB}, ${cloud.opacity})`)
+          gradient.addColorStop(1, `rgba(${vaporR}, ${vaporG}, ${vaporB}, 0)`)
+          ctx!.fillStyle = gradient
+          ctx!.beginPath()
+          ctx!.arc(cx, cy, lobe.r, 0, Math.PI * 2)
+          ctx!.fill()
+        }
       }
     }
 
     function drawVapor() {
-      // Far layer first, near layer on top — matches the draw order a
-      // real depth-sorted fog bank would use, though since both are
-      // semi-transparent the visual difference is subtle either way.
-      drawPuffs(farPuffs)
-      drawPuffs(nearPuffs)
+      // A modest canvas-level blur melts each cloud's individual lobes
+      // together into one puffy body instead of a bunch of visibly
+      // separate circles — lighter than a flat haze would need, since
+      // too much blur here would smear away the bumpy cumulus silhouette
+      // that's the whole point of lobed clusters over a single blob.
+      ctx!.filter = 'blur(9px)'
+      // Far layer first, near layer on top, for some depth.
+      drawClouds(farClouds)
+      drawClouds(nearClouds)
+      ctx!.filter = 'none'
     }
 
     function draw(time: number) {
@@ -212,13 +257,13 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           if (drop.y - drop.length > height) Object.assign(drop, randomDrop(width, height, false))
         }
       } else if (effect === 'vapor') {
-        for (const puff of [...farPuffs, ...nearPuffs]) {
-          puff.x += puff.vx
-          puff.y += puff.vy + Math.sin(time * 0.0003 + puff.bobPhase) * (puff.bobAmp / 250)
+        for (const cloud of [...farClouds, ...nearClouds]) {
+          cloud.x += cloud.vx
+          cloud.y += cloud.vy + Math.sin(time * 0.0003 + cloud.bobPhase) * (cloud.bobAmp / 250)
           // Wraps back in from the opposite edge once fully off-screen —
           // whichever direction it's drifting, not just left-to-right.
-          if (puff.x - puff.radius > width) puff.x = -puff.radius
-          else if (puff.x + puff.radius < 0) puff.x = width + puff.radius
+          if (cloud.x - cloud.extent > width) cloud.x = -cloud.extent
+          else if (cloud.x + cloud.extent < 0) cloud.x = width + cloud.extent
         }
       }
       draw(time)
