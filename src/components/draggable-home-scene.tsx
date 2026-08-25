@@ -172,20 +172,30 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeKey>(initialTheme)
 
-  // Instant, no-reload recolor when the Settings dropdown changes theme —
-  // same imperative-DOM pattern as nav-icon-color-setter.tsx, since these
-  // vars are read by CSS across the whole document (nav, this page's own
-  // background), not just this component's own React tree.
-  function handleThemeChange(next: ThemeKey) {
-    setTheme(next)
-    const t = THEMES[next]
+  // Same imperative-DOM pattern as nav-icon-color-setter.tsx, since these
+  // vars/attribute are read by CSS across the whole document (nav, this
+  // page's own background, [data-theme="noir"] overrides in globals.css),
+  // not just this component's own React tree. Runs on every mount too
+  // (not just on an explicit theme change) — reported directly: switch to
+  // Noir, navigate to /profile and back, and the desk came back as a bare
+  // black screen with the wordmark/grid/stickers gone but the DB-correct
+  // theme otherwise intact. Root cause is that <html>'s own data-theme/
+  // --theme-* values come from the ROOT layout's server render
+  // (layout.tsx), a segment shared with every other route and cached
+  // separately from this page's own leaf — updateTheme's
+  // revalidatePath('/') reliably refreshes this page's own initialTheme
+  // prop (confirmed: this component's theme state itself was correct),
+  // but not necessarily that shared layout segment, so <html> could still
+  // reflect Whatever theme was current the last time the ROOT layout
+  // itself happened to re-render, not the latest one. Re-asserting here
+  // on every mount makes this component the source of truth for the DOM,
+  // independent of whether the layout's own SSR output is stale.
+  useEffect(() => {
+    const t = THEMES[theme]
     document.documentElement.style.setProperty('--theme-accent', t.pointColor)
     document.documentElement.style.setProperty('--theme-bg', t.background)
-    // Some overrides (button hovers, panel backgrounds — see globals.css's
-    // [data-theme="noir"] rules) can't be expressed as a CSS variable
-    // value swap alone; they need a real selector to hook into.
-    document.documentElement.setAttribute('data-theme', next)
-  }
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   // Ephemeral — deliberately not persisted, matching "show collapsed as
   // default" for the dock. Only meaningful on a non-default theme;
@@ -471,7 +481,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             onFocus={() => focusApp(id)}
             onClose={() => closeApp(id)}
           >
-            {app.id === 'settings' && <SettingsPanel theme={theme} onThemeChange={handleThemeChange} />}
+            {app.id === 'settings' && <SettingsPanel theme={theme} onThemeChange={setTheme} />}
           </DockAppWindow>
         )
       })}
