@@ -7,7 +7,7 @@ import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/datab
 // Everything the grid needs comes from the primary profile — title,
 // thumbnail image/background, and both characters' names — since nothing
 // is shared at the pair level any more.
-type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'background_url'> & {
+type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'world' | 'background_url'> & {
   profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[]
 }
 type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSummary[] }
@@ -83,6 +83,43 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             alt=""
             className="absolute left-1/2 top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
           />
+          {primaryProfile.world && (
+            // Centered near the box's own bottom edge, overlaid directly
+            // on the art — a deliberate reveal now, not a permanently
+            // visible label, so it only needs to read clearly for the
+            // moment it's shown, reported directly. tracking-normal +
+            // opacity-0 at rest, both animating together on hover: the
+            // reveal is "fade in while tracking out," not just a fade —
+            // 0.4em matches this session's own "(N-1)em added to the
+            // resting 0 tracking" convention for an asked-for "Nx"
+            // tracking (character-pair-hero.tsx's catchphrase is the one
+            // exception, using its own em value directly rather than a
+            // delta, since that's a big display quote and this is a small
+            // label like the char-name hover effect below). The ! is
+            // load-bearing on the tracking override, same specificity gap
+            // as that same char-name hover two blocks down. Overlaid
+            // directly on the art brings back the exact legibility problem
+            // solved once already this feature (the credit's own
+            // low-contrast color goes fully invisible against dark/busy
+            // art) — confirmed again live (computed opacity/letter-spacing
+            // both correct on hover, just unreadable), so a halo comes
+            // back too, this time load-bearing rather than optional, since
+            // a reveal nobody can read doesn't do its job. Colored with
+            // --theme-bg (set on <html> in layout.tsx from getUserTheme())
+            // rather than a fixed black — that var is already #f1f1f1 on
+            // default and #010101 on noir, i.e. already exactly "black on
+            // noir, f1f1f1 on default" per direct request, and it stays
+            // correct automatically if a third theme is ever added.
+            <span
+              className="absolute inset-x-0 bottom-4 z-20 text-center truncate px-4 text-[10.8px] pointer-events-none noir-accent-color tracking-normal opacity-0 group-hover:!tracking-[0.4em] group-hover:opacity-100 transition-[letter-spacing,opacity] duration-200"
+              style={{
+                fontFamily: pairFontFamily('serifBold'), color: '#5B574E',
+                textShadow: '0 0 2px var(--theme-bg), 0 0 2px var(--theme-bg), 0 0 3px var(--theme-bg), 0 0 4px var(--theme-bg), 0 0 4px var(--theme-bg)',
+              }}
+            >
+              {primaryProfile.world}
+            </span>
+          )}
           {primaryProfile.illustration_source && (
             // Always this exact font/color/size regardless of what's
             // picked for the detail page — the thumbnail is a fixed,

@@ -28,6 +28,7 @@ type ProfileInput = {
   pairImageUrl: string | null
   characterBackdropUrl: string | null
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
+  world: string
   backgroundUrl: string | null; backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
   particleEffect: string | null
@@ -215,6 +216,7 @@ async function saveProfiles(
     // always adds its own at render time, so a pasted one would double up.
     illustration_source: p.illustrationSource.trim().replace(/^©\s*/, '') || null,
     illustration_source_font: p.illustrationSourceFont, illustration_source_color: p.illustrationSourceColor,
+    world: p.world.trim() || null,
     background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
     background_overlay_color: p.backgroundOverlayColor, background_overlay_opacity: p.backgroundOverlayOpacity,
     particle_effect: p.particleEffect, particle_color: p.particleColor,

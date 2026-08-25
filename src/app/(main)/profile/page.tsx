@@ -21,7 +21,7 @@ export default async function CharacterArchivePage() {
   // matches PrimaryProfileSummary exactly, so nothing downstream
   // (CharacterPairGrid) needs to change.
   const { data: rawPairs } = await supabase.rpc('get_public_pair_grid')
-  type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'background_url'> & { profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[] }
+  type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'world' | 'background_url'> & { profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[] }
   const pairs = rawPairs as unknown as (CharacterPair & { pair_profiles: PrimaryProfileSummary[] })[] | null
 
   return (

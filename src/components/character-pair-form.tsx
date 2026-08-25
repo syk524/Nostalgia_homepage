@@ -205,6 +205,7 @@ type ProfileState = {
   pairImageUrl: string | null; pairImageFile: File | null; pairImagePreview: string; uploadingPairImage: boolean
   characterBackdropUrl: string | null; characterBackdropFile: File | null; characterBackdropPreview: string; uploadingCharacterBackdrop: boolean
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
+  world: string
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
@@ -248,6 +249,7 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     illustrationSource: existing?.illustration_source ?? '',
     illustrationSourceFont: existing?.illustration_source_font ?? 'default',
     illustrationSourceColor: existing?.illustration_source_color ?? '#2f2f2e',
+    world: existing?.world ?? '',
     backgroundUrl: existing?.background_url ?? null,
     backgroundFile: null,
     backgroundPreview: existing?.background_url ?? '',
@@ -429,6 +431,7 @@ export function CharacterPairForm({ initialData, initialActiveProfileSlug }: { i
         isPrimary: p.isPrimary, pageType: p.pageType, customHtmlUrl: p.pageType === 'custom_html' ? finalCustomHtmlUrl : null,
         pairImageUrl: finalPairImageUrl, characterBackdropUrl: finalCharacterBackdropUrl,
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
+        world: p.world,
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         backgroundOverlayColor: p.backgroundOverlayColor, backgroundOverlayOpacity: p.backgroundOverlayOpacity,
         particleEffect: p.particleEffect,
@@ -662,6 +665,17 @@ function ProfileFieldset({
           onChange={e => onPatch({ profileTitle: e.target.value })}
           placeholder="예: 데뷔 시절"
           required
+        />
+      </div>
+
+      <div>
+        <label className="label">세계관 (선택)</label>
+        <p className="text-xs text-ink-400 mb-2">페어 목록의 썸네일 좌측 상단에 일러스트 출처와 같은 스타일로 표시됩니다. 페어 상세 페이지에는 표시되지 않습니다.</p>
+        <input
+          className="input"
+          value={profile.world}
+          onChange={e => onPatch({ world: e.target.value })}
+          placeholder="예: 현대 판타지"
         />
       </div>
 
