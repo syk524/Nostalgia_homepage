@@ -29,6 +29,7 @@ type ProfileInput = {
   characterBackdropUrl: string | null
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   world: string
+  swapThumbnailNames: boolean
   backgroundUrl: string | null; backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
   particleEffect: string | null
@@ -217,6 +218,7 @@ async function saveProfiles(
     illustration_source: p.illustrationSource.trim().replace(/^©\s*/, '') || null,
     illustration_source_font: p.illustrationSourceFont, illustration_source_color: p.illustrationSourceColor,
     world: p.world.trim() || null,
+    swap_thumbnail_names: p.swapThumbnailNames,
     background_url: p.backgroundUrl, background_blur: p.backgroundBlur,
     background_overlay_color: p.backgroundOverlayColor, background_overlay_opacity: p.backgroundOverlayOpacity,
     particle_effect: p.particleEffect, particle_color: p.particleColor,

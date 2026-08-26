@@ -7,7 +7,7 @@ import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/datab
 // Everything the grid needs comes from the primary profile — title,
 // thumbnail image/background, and both characters' names — since nothing
 // is shared at the pair level any more.
-type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'world' | 'background_url'> & {
+type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'world' | 'swap_thumbnail_names' | 'background_url'> & {
   profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[]
 }
 type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSummary[] }
@@ -35,6 +35,10 @@ const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/2] max-h-[320px]'
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   const primaryProfile = pair.pair_profiles[0]
   const [char1, char2] = [...(primaryProfile?.profile_characters ?? [])].sort((a, b) => a.slot - b.slot)
+  // Thumbnail-only — the detail page's own caption layout
+  // (character-pair-hero.tsx) always follows char1/char2 slot order
+  // regardless of this, per direct request.
+  const [leftChar, rightChar] = primaryProfile?.swap_thumbnail_names ? [char2, char1] : [char1, char2]
 
   return (
     <Link href={`/profile/${pair.slug}`} className="group block">
@@ -104,22 +108,22 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
             // art) — confirmed again live (computed opacity/letter-spacing
             // both correct on hover, just unreadable), so a halo comes
             // back too, this time load-bearing rather than optional, since
-            // a reveal nobody can read doesn't do its job. Colored with
-            // --theme-bg (set on <html> in layout.tsx from getUserTheme())
-            // rather than a fixed black — that var is already #f1f1f1 on
-            // default and #010101 on noir, i.e. already exactly "black on
-            // noir, f1f1f1 on default" per direct request, and it stays
-            // correct automatically if a third theme is ever added.
+            // a reveal nobody can read doesn't do its job. Both the text
+            // color and the halo are pinned to the noir combo (#f1f1f1
+            // text, #010101 halo) always, on every theme including
+            // Sticker/default, per direct request — the credit's own
+            // gray (#5B574E, below) is untouched, this is scoped to the
+            // world tag only.
             <span
               className="absolute inset-x-0 bottom-4 z-20 text-center truncate px-4 text-[12.96px] pointer-events-none noir-accent-color tracking-normal opacity-0 group-hover:!tracking-[0.4em] group-hover:opacity-100 transition-[letter-spacing,opacity] duration-200"
               style={{
-                fontFamily: pairFontFamily('serifBold'), color: '#5B574E',
+                fontFamily: pairFontFamily('serifBold'), color: '#f1f1f1',
                 // Both scaled 1.2x alongside the font size (10.8px→12.96px,
                 // 2/2/3/4/4px→2.4/2.4/3.6/4.8/4.8px) so the halo keeps the
                 // same proportion to the letterforms rather than getting
                 // comparatively thinner as the text grows, per direct
                 // request.
-                textShadow: '0 0 2.4px var(--theme-bg), 0 0 2.4px var(--theme-bg), 0 0 3.6px var(--theme-bg), 0 0 4.8px var(--theme-bg), 0 0 4.8px var(--theme-bg)',
+                textShadow: '0 0 2.4px #010101, 0 0 2.4px #010101, 0 0 3.6px #010101, 0 0 4.8px #010101, 0 0 4.8px #010101',
               }}
             >
               {primaryProfile.world}
@@ -171,9 +175,9 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
           Tailwind's generated output" lesson as the sticker z-index/
           shrink-to-fit issues earlier this session, just once more). */}
       <div className="grid grid-cols-3 items-baseline gap-2 pt-3 text-sm">
-        <span className="tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char1?.name_font), fontWeight: pairFontWeight(char1?.name_font), color: 'var(--theme-accent)' }}>{char1?.name}</span>
+        <span className="tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(leftChar?.name_font), fontWeight: pairFontWeight(leftChar?.name_font), color: 'var(--theme-accent)' }}>{leftChar?.name}</span>
         <span className="font-medium text-center" style={{ fontSize: '1.5em', fontFamily: pairFontFamily(primaryProfile?.title_font), fontWeight: pairFontWeight(primaryProfile?.title_font), color: 'var(--theme-accent)' }}>{primaryProfile?.title}</span>
-        <span className="text-right tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(char2?.name_font), fontWeight: pairFontWeight(char2?.name_font), color: 'var(--theme-accent)' }}>{char2?.name}</span>
+        <span className="text-right tracking-normal group-hover:!tracking-[0.1em] transition-[letter-spacing] duration-200" style={{ fontFamily: pairFontFamily(rightChar?.name_font), fontWeight: pairFontWeight(rightChar?.name_font), color: 'var(--theme-accent)' }}>{rightChar?.name}</span>
       </div>
     </Link>
   )

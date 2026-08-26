@@ -206,6 +206,7 @@ type ProfileState = {
   characterBackdropUrl: string | null; characterBackdropFile: File | null; characterBackdropPreview: string; uploadingCharacterBackdrop: boolean
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   world: string
+  swapThumbnailNames: boolean
   backgroundUrl: string | null; backgroundFile: File | null; backgroundPreview: string; uploadingBackground: boolean
   backgroundBlur: number
   backgroundOverlayColor: string; backgroundOverlayOpacity: number
@@ -250,6 +251,7 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     illustrationSourceFont: existing?.illustration_source_font ?? 'default',
     illustrationSourceColor: existing?.illustration_source_color ?? '#2f2f2e',
     world: existing?.world ?? '',
+    swapThumbnailNames: existing?.swap_thumbnail_names ?? false,
     backgroundUrl: existing?.background_url ?? null,
     backgroundFile: null,
     backgroundPreview: existing?.background_url ?? '',
@@ -432,6 +434,7 @@ export function CharacterPairForm({ initialData, initialActiveProfileSlug }: { i
         pairImageUrl: finalPairImageUrl, characterBackdropUrl: finalCharacterBackdropUrl,
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
         world: p.world,
+        swapThumbnailNames: p.swapThumbnailNames,
         backgroundUrl: finalBackgroundUrl, backgroundBlur: p.backgroundBlur,
         backgroundOverlayColor: p.backgroundOverlayColor, backgroundOverlayOpacity: p.backgroundOverlayOpacity,
         particleEffect: p.particleEffect,
@@ -696,6 +699,16 @@ function ProfileFieldset({
             onColorChange={v => onPatch({ titleColor: v })}
             onSizeChange={v => onPatch({ titleSize: v })}
           />
+
+          <label className="flex items-center gap-2 text-xs text-ink-500 normal-case tracking-normal">
+            <input
+              type="checkbox"
+              checked={profile.swapThumbnailNames}
+              onChange={e => onPatch({ swapThumbnailNames: e.target.checked })}
+              className="cursor-pointer"
+            />
+            페어 목록 썸네일에서 캐릭터 이름 좌우 위치 전환 (캐릭터 2를 왼쪽에 표시)
+          </label>
 
           <div>
             <label className="label">링크 (선택)</label>

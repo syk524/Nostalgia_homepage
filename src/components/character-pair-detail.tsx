@@ -35,6 +35,17 @@ function characterStats(character: ProfileCharacter): string[] {
   ].filter((s): s is string => !!s)
 }
 
+// A brand-new section (or one an editor cleared back out) still has its
+// own row in description_sections — no title, and the rich-text editor's
+// own empty state ("<p></p>"), not a null/empty string — so checking
+// sections.length alone treated "an empty section exists" the same as
+// "there's something to read here." Strips tags first so a description
+// that's just empty markup doesn't count as real content either.
+function hasSectionContent(section: { title: string | null; description: string | null }): boolean {
+  if (section.title?.trim()) return true
+  return !!section.description?.replace(/<[^>]*>/g, '').trim()
+}
+
 function CharacterStatsLine({ character }: { character: ProfileCharacter }) {
   const stats = characterStats(character)
   if (!stats.length) return null
@@ -67,7 +78,11 @@ function CharacterStatsLine({ character }: { character: ProfileCharacter }) {
 // area. The background glow itself is NOT rendered here any more — see
 // the glow wrapper in CharacterPairDetail below for why.
 function CharacterDescriptionSections({ character, charIdx }: { character: ProfileCharacter; charIdx: number }) {
-  const sections = character.description_sections ?? []
+  // Sections with nothing actually filled in (see hasSectionContent) are
+  // dropped entirely, not just skipped when deciding whether to show the
+  // name — an empty one left in the list would still render as a bare,
+  // content-less cell.
+  const sections = (character.description_sections ?? []).filter(hasSectionContent)
   // 1020px, not Tailwind's default sm: (640px) — this page's own
   // breakpoint (reported directly), matching the hero's caption dots and
   // the side-nav's own min-[1020px]:flex above it.
@@ -84,12 +99,16 @@ function CharacterDescriptionSections({ character, charIdx }: { character: Profi
           alignment with the hero content directly above it. No bottom
           padding either — the grid's own gap-6 between rows is already
           enough separation under a single line of stats, reported
-          separately. Gated on sections.length — reported directly: with
-          no description sections below it, this was showing as a lone
-          name (and maybe stats) heading a description column with
-          nothing under it. This is specifically the name re-shown down
-          here for the stats line to sit under (see this function's own
-          top comment) — the hero's own catchphrase/name/quote overlay
+          separately. Gated on sections.length (already filtered down to
+          sections with real content, see this function's own top line)
+          — reported directly: with nothing actually filled in below it,
+          this was showing as a lone name (and maybe stats) heading a
+          description column with nothing real under it, including the
+          case where a section row exists but was left blank (title-less,
+          and the rich-text editor's own empty "<p></p>", not truly
+          empty). This is specifically the name re-shown down here for
+          the stats line to sit under (see this function's own top
+          comment) — the hero's own catchphrase/name/quote overlay
           above the image is untouched by this and always shows
           regardless. */}
       {sections.length > 0 && (
