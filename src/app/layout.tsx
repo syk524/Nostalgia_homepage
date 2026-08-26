@@ -129,7 +129,15 @@ const tokAngle = localFont({
 
 export const metadata: Metadata = {
   title: 'Nustalgio',
-  description: 'A place to keep and share what matters',
+  description: '이제껏 받아 온 친애를 셀 수 없는 미지라고 생각했다.',
+  // Most link-unfurling clients (Slack, Discord, KakaoTalk, iMessage)
+  // read og:description specifically rather than falling back to the
+  // plain <meta name="description"> above — without this the share
+  // preview wouldn't reliably pick up the text at all.
+  openGraph: {
+    title: 'Nustalgio',
+    description: '이제껏 받아 온 친애를 셀 수 없는 미지라고 생각했다.',
+  },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

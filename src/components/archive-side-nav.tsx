@@ -9,6 +9,7 @@ import { ScrambleText } from '@/components/scramble-text'
 export const ARCHIVE_SECTIONS = [
   { href: '/archive/trpg', label: 'TRPG' },
   { href: '/archive/links', label: 'Links' },
+  { href: '/archive/memo', label: 'Memo' },
 ]
 
 // Only shown on a section's own root list page (/archive/trpg,
