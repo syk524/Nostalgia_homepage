@@ -164,7 +164,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             })(document);
           `}
         </Script>
-        <ThemeProvider initialTheme={theme.key}>
+        <ThemeProvider initialTheme={theme.key} isGuest={theme.isGuest}>
           {children}
         </ThemeProvider>
         <SoundPlayer />

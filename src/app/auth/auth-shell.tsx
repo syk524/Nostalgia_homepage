@@ -22,7 +22,7 @@ export function AuthShell({ tagline, children }: { tagline?: string; children: R
 
       <div className="relative w-full max-w-md animate-fade-up">
         <div className="text-center mb-8">
-          <Link href="/" className="font-mono text-2xl uppercase tracking-tight text-ink">
+          <Link href="/" className="font-mono text-2xl uppercase tracking-tight" style={{ color: 'var(--theme-accent)' }}>
             Nustalgio
           </Link>
           {tagline && <p className="text-ink-500 text-sm mt-2">{tagline}</p>}

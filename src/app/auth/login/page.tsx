@@ -9,19 +9,19 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
-      <h2 className="text-xl mb-6" style={{ color: 'var(--theme-accent)' }}>Log In</h2>
+      <h2 className="text-xl mb-6 text-ink">Log In</h2>
 
       <form action={action} className="space-y-4">
         <div>
-          <label className="label" htmlFor="username" style={{ color: 'color-mix(in srgb, var(--theme-accent) 50%, transparent)' }}>Username</label>
+          <label className="label" htmlFor="username">Username</label>
           <input id="username" name="username" type="text" required
-            className="input" style={{ color: 'var(--theme-accent)' }} placeholder="username" autoComplete="username" />
+            className="input" placeholder="username" autoComplete="username" />
         </div>
 
         <div>
-          <label className="label" htmlFor="password" style={{ color: 'color-mix(in srgb, var(--theme-accent) 50%, transparent)' }}>Password</label>
+          <label className="label" htmlFor="password">Password</label>
           <input id="password" name="password" type="password" required
-            autoComplete="current-password" className="input" style={{ color: 'var(--theme-accent)' }} placeholder="••••••••" />
+            autoComplete="current-password" className="input" placeholder="••••••••" />
         </div>
 
         {state?.error && (

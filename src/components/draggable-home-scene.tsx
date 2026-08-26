@@ -96,9 +96,17 @@ function persistZChanges(prevList: UserBackgroundSticker[], nextList: UserBackgr
 // sticker (right-[8%]) before a visitor drags them anywhere else.
 // Calendar and Day Counter aren't here — they're rendered separately
 // (calendar-desk-widget.tsx, day-counter-desk-widget.tsx) with their own
-// persisted positions, defaulted in those components.
+// persisted positions, defaulted in those components — but this icon's
+// own default still has to steer clear of theirs, since a first-time
+// visitor sees both widgets already open (560px and 360px wide) by
+// default. The original left-46% put it inside Calendar's open box
+// (fixed at x:420-980px) at basically every normal desktop width, since
+// 46% of anything from ~950px to ~2100px wide lands in that same range
+// — reported directly. left-10% stays clear of that fixed-pixel zone up
+// to about a 4200px-wide screen, and (at bottom-9%) clear of the
+// nav's own bottom-left login/profile chip (left-2.6%, bottom-3%) too.
 const APP_ICON_POSITION: Record<string, string> = {
-  settings: 'left-[46%] bottom-[9%]',
+  settings: 'left-[10%] bottom-[9%]',
 }
 
 // On a non-default theme, Settings/Calendar/DayCounter dock as three

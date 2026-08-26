@@ -54,9 +54,15 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
   // by the parent relative to Calendar's own open state).
   docked?: { open: boolean; dockTop: string; panelTop: string; onOpenChange: (open: boolean) => void }
 }) {
-  // Offset well clear of the calendar widget's own default (420, -140)
-  // so the two don't land stacked on first load.
-  const drag = usePersistentDraggable('day-counter-desk-widget', { x: 560, y: -140 })
+  // Offset clear of the calendar widget's own default open box (420,
+  // -140, 560×400 when expanded) — a visitor with nothing stored yet
+  // gets both widgets open by default (see readStoredOpen-equivalent
+  // logic below), and the previous default here (560, -140) put this
+  // widget's own open box (360×120) almost entirely inside calendar's,
+  // confirmed by measuring both boxes' actual rects on a fresh load —
+  // reported directly. 1020 clears calendar's right edge (420+560) with
+  // a 40px gap, same y so they still read as one row of desk items.
+  const drag = usePersistentDraggable('day-counter-desk-widget', { x: 1020, y: -140 })
   const [open, setOpen] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   const downPos = useRef<{ x: number; y: number } | null>(null)

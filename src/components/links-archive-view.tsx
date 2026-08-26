@@ -529,7 +529,7 @@ export function LinksArchiveView({ links: initialLinks }: { links: ArchiveLink[]
                   is already mounted and loading underneath by the time the
                   loader fades out — no extra round trip after onLoad fires. */}
               {iframeLoading && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#F1F1F1] px-8 text-center">
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8 text-center" style={{ backgroundColor: 'var(--theme-bg)' }}>
                   <DotMatrixLoader size={28} busyCursor={false} />
                   {showSlowNotice && (
                     <p className="max-w-[240px] text-xs text-ink-400">
