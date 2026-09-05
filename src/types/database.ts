@@ -246,6 +246,32 @@ export type Memo = {
   updated_at: string
 }
 
+// One line of dialogue within an RpPost's own conversation log — not a
+// separate table (see 097's own migration comment): a whole log is
+// authored/imported as one unit, so it's stored as a plain array on the
+// post row rather than normalized rows queried independently. html, not
+// plain text — the imported source log has a couple of messages with an
+// inline image alongside the dialogue text.
+export type RpMessage = {
+  name: string
+  handle: string
+  avatar_url: string
+  html: string
+}
+
+// One archived RP conversation log (Archive > RP) — editor/admin
+// authored/imported, shared across every editor/admin like Memo, not
+// per-account.
+export type RpPost = {
+  id: string
+  title: string
+  messages: RpMessage[]
+  cover_url: string | null
+  author_id: string
+  created_at: string
+  updated_at: string
+}
+
 export type EventVisibility = 'public' | 'members' | 'private'
 
 export type CalendarEvent = {
@@ -378,6 +404,12 @@ export type Database = {
         Row: Memo
         Insert: Omit<Memo, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Pick<Memo, 'content' | 'image_url' | 'storage_path' | 'position'>>
+        Relationships: []
+      }
+      rp_posts: {
+        Row: RpPost
+        Insert: Omit<RpPost, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Pick<RpPost, 'title' | 'messages' | 'cover_url'>>
         Relationships: []
       }
       calendar_events: {
