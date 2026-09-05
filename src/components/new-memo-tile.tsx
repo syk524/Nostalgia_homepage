@@ -7,7 +7,7 @@ import type { Memo } from '@/types/database'
 
 // Always-present first tile in the grid (memo-board.tsx) — an editable
 // draft memo rather than a separate "+" button/modal, per direct
-// request: it shows the same square/image-then-text shape a real
+// request: it shows the same tile shape (4:5, image-then-text) a real
 // MemoCard has, so it previews as the memo it's about to become instead
 // of opening a disconnected form. Committing is an explicit Save text
 // CTA (bottom-right, no pill/background) that only appears once there's
@@ -66,7 +66,7 @@ export function NewMemoTile({ userId, onCreated }: { userId: string; onCreated: 
   const hasContent = !!(content.trim() || file)
 
   return (
-    <div className="relative aspect-square">
+    <div className="relative aspect-[4/5]">
       <div className="card noir-panel-bg noir-border overflow-hidden h-full flex flex-col select-none">
         {/* Same h-5 height as MemoCard's own grip-handle strip — this tile
             has nothing to drag, but a real memo's first line of text sits

@@ -1,17 +1,44 @@
 'use client'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import { GripHorizontal, X } from 'lucide-react'
 import type { Memo } from '@/types/database'
 
-// One tile on the shared grid (memo-board.tsx) — a fixed 1:1 square,
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+
+// Splits read-only display text on bare URLs and renders each as a real
+// link — reported directly (a memo pasted as a Notion share link read as
+// dead text otherwise). Only applies to the read-only <p> below, not the
+// editing <textarea>: a textarea can't render an inline anchor, so
+// clicking into edit mode always shows the plain underlying text, same
+// as any other markdown-ish display/edit split.
+function linkify(text: string): ReactNode[] {
+  return text.split(URL_PATTERN).map((part, i) =>
+    /^https?:\/\//.test(part)
+      ? (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          className="underline decoration-1 underline-offset-2 hover:opacity-70"
+        >
+          {part}
+        </a>
+      )
+      : part
+  )
+}
+
+// One tile on the shared grid (memo-board.tsx) — a fixed 4:5 aspect
+// ratio (taller than the square it started as, per direct request),
 // reorderable by dragging but never freely positioned (see 095/096 for
-// why: a grid, not a corkboard). Text is read-only (line-clamp'd,
-// truncated with an ellipsis rather than scrolling) until clicked, since
-// a live <textarea> can't itself truncate overflow with an ellipsis the
-// way plain clamped text can — swapping to an actual textarea only while
-// editing keeps both: a clean truncated tile at rest, full editing on
-// click.
+// why: a grid, not a corkboard). Text is read-only until clicked, since
+// a live <textarea> can't render a clickable link inline the way plain
+// text can — swapping to an actual textarea only while editing keeps
+// both: clickable links and truncation at rest, full plain-text editing
+// on click.
 //
 // Reordering uses the native HTML5 Drag and Drop API, not this app's
 // usual pointer-events free-drag (use-draggable.ts, placed-sticker.tsx)
@@ -54,7 +81,7 @@ export function MemoCard({
 
   return (
     <div
-      className={`group relative aspect-square transition-opacity ${dragging ? 'opacity-40' : ''} ${justAdded ? 'animate-memo-add' : ''}`}
+      className={`group relative aspect-[4/5] transition-opacity ${dragging ? 'opacity-40' : ''} ${justAdded ? 'animate-memo-add' : ''}`}
       onDragOver={e => e.preventDefault()}
       onDragEnter={onDragEnter}
       onDrop={e => e.preventDefault()}
@@ -95,11 +122,26 @@ export function MemoCard({
                 className="w-full h-full resize-none bg-transparent border-0 focus:outline-none text-sm text-ink noir-accent-color noir-placeholder-accent placeholder:text-ink/30"
               />
             ) : (
+              // overflow-hidden, not line-clamp-N — line-clamp caps at a
+              // fixed line count regardless of the tile's actual height,
+              // which on this responsive grid (column width, and so tile
+              // height, varies by breakpoint) cut text off early and left
+              // real empty space below it, reported directly. Plain
+              // overflow-hidden instead fills exactly the box it's given.
+              // The bottom-fade mask always applies once there's content —
+              // it doesn't check whether this particular memo actually
+              // overflows (that would need measuring the rendered text
+              // against the box, e.g. a ref + ResizeObserver), so a short
+              // memo's own last line reads very slightly dimmed even
+              // though nothing is cut off. Cheap trade for not needing
+              // that measurement; revisit if the dimming reads as a bug
+              // rather than a static hint.
               <p
                 onClick={e => { e.stopPropagation(); setEditing(true) }}
-                className={`w-full h-full text-sm cursor-text whitespace-pre-wrap line-clamp-4 noir-accent-color ${content ? 'text-ink' : 'text-ink/30'}`}
+                className={`w-full h-full text-sm cursor-text whitespace-pre-wrap overflow-hidden noir-accent-color ${content ? 'text-ink' : 'text-ink/30'}`}
+                style={content ? { maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)' } : undefined}
               >
-                {content || 'Write a memo…'}
+                {content ? linkify(content) : 'Write a memo…'}
               </p>
             )}
           </div>
