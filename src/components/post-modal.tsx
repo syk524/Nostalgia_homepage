@@ -7,6 +7,8 @@ import { formatDate } from '@/lib/format'
 import { DeletePostButton } from '@/app/(main)/gallery/[id]/delete-button'
 import { getLastListView } from '@/lib/list-view-tracker'
 import { fetchPostDetail } from '@/lib/actions/gallery'
+import { useTheme } from '@/components/theme-provider'
+import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 type FullPost = Post & { author: Profile; images: PostImage[]; category: Category }
@@ -20,6 +22,7 @@ export function PostModal({
   nextId?: string | null
 }) {
   const router = useRouter()
+  const { theme } = useTheme()
   const [closing, setClosing] = useState(false)
   // Prev/next used to be plain <Link>s — a real Next.js navigation to a
   // new /gallery/[id]. That's an intercepted parallel route
@@ -99,6 +102,29 @@ export function PostModal({
     return () => document.removeEventListener('keydown', onKey)
   }, [prevId, nextId, navigating])
 
+  // This modal sits on top of the still-mounted /gallery grid page (a
+  // parallel-route intercept, not a real navigation away from it), and
+  // that page scrolls at the real body level with nothing else locking it.
+  // A wheel/trackpad scroll over a pane here that's shorter than its own
+  // box (e.g. a short-metadata post) had nowhere to go, so the browser's
+  // normal scroll-chaining walked past this modal's own overflow-hidden
+  // root and scrolled the hidden gallery grid behind it instead — reported
+  // directly as "scroll follows the gallery list, not the open photo."
+  // Locking body scroll removes that fallback target entirely. Keyed on
+  // `closing`, not a mount-only empty array — close() (above) never
+  // actually unmounts this component, it just flips `closing` and renders
+  // null (see that function's own comment on why), so a plain
+  // unmount-cleanup would never run and this lock would stay stuck on
+  // every /gallery visit after the first post view. Re-running the effect
+  // when `closing` flips to true fires last render's cleanup (restoring
+  // the original value) and then bails out before relocking.
+  useEffect(() => {
+    if (closing) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [closing])
+
   // After every hook above — an early return before them would call a
   // different number of hooks between the open and closing renders,
   // which is exactly the "Rendered fewer hooks than expected" crash
@@ -106,22 +132,19 @@ export function PostModal({
   if (closing) return null
 
   return (
-    // calc(2.6vw+159px) clears Nav's floating category links (left-2.6%,
-    // ~99px wide at their widest label) with a steady 60px gap — see
-    // gallery/page.tsx for why vw, not %. Nav is mounted once at the
-    // root layout, sits above this modal's z-50 via its own z-[60], and
-    // never remounts between posts, so it's the same nav everywhere rather
-    // than something owned by this modal.
-    //
-    // Transparent, not bg-scroll-100 — reported directly, matching
-    // links-archive-view.tsx's own root wrapper. Unlike that one, this
-    // modal is a true parallel-route intercept (@modal/(.)[id]) sitting
-    // on top of the real, still-mounted gallery grid page — bg-scroll-100
-    // was added here specifically because an earlier transparent version
-    // let those grid thumbnails show through and clip messily against
-    // the modal edge and Nav's category links. Reintroducing that
-    // tradeoff was a deliberate choice, not an oversight — revisit if it
-    // turns out to look wrong in practice.
+    // Solid, not transparent — this modal is a true parallel-route
+    // intercept (@modal/(.)[id]) sitting on top of the real, still-mounted
+    // gallery grid page (or, right after publishing, the create form), so
+    // a transparent root let that content show through and clip messily
+    // against the modal edge and Nav's category links, reported directly.
+    // var(--theme-bg), not a fixed bg-scroll-100 — also reported directly:
+    // a fixed light fill here read as a stray light panel against Noir's
+    // near-black page, even though it did stop the grid/form leak. Tracking
+    // the site's own background gets both at once — solid either way,
+    // correctly dark on Noir instead of a mismatched light patch.
+    // The old pl-[calc(2.6vw+159px)] gutter reservation moved into its own
+    // flex child below (the "category gutter" div) instead of living here
+    // as padding — it needs its own box now to host the particle layer.
     // Below 1020px, the whole modal is one scrolling page (root itself
     // overflow-y-auto, sidebar and image area both in normal flow) instead
     // of the sidebar and image each owning a separate clipped scroll pane —
@@ -133,18 +156,36 @@ export function PostModal({
     // so it now extends the full length of the image instead of cutting
     // off partway down. Desktop (min-[1020px]:) keeps the original
     // independently-scrolling side-by-side panes, unchanged.
-    // bg-scroll-100 here, not var(--theme-bg) — a post's own detail view
-    // deliberately keeps its normal light background regardless of the
-    // viewer's site theme (e.g. Noir's #010101), so it doesn't need its
-    // own explicit background on every other page that opens it.
-    <div className="fixed inset-0 z-50 min-[1020px]:pl-[calc(2.6vw+159px)] flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up bg-scroll-100 noir-modal-bg-transparent">
+    <div
+      className="fixed inset-0 z-50 flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up"
+      style={{ backgroundColor: 'var(--theme-bg)' }}
+    >
+      {/* Category gutter — clears Nav's floating category links (left-2.6%,
+          ~99px wide at their widest label) with a steady 60px gap — see
+          gallery/page.tsx for why vw, not %. Nav is mounted once at the
+          root layout, sits above this modal's z-50 via its own z-[60], and
+          never remounts between posts, so it's the same nav everywhere
+          rather than something owned by this modal. This div carries no
+          background of its own — it just sits on top of the root's own
+          solid fill above — so on Noir the particle canvas draws directly
+          onto that black, visible behind Nav's floating links; on Default
+          it's the same plain bg-scroll-100-colored gutter as before, now
+          with an explicit box instead of bare padding. Hidden below
+          1020px since nothing (gutter or Nav's rail) occupies that space
+          at that breakpoint either. */}
+      <div aria-hidden="true" className="hidden min-[1020px]:block shrink-0 w-[calc(2.6vw+159px)] relative overflow-hidden">
+        {theme === 'noir' && <NoirFloatingParticles />}
+      </div>
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width
           instead of leaving an empty placeholder pane next to it. 1020px,
           this site's own mobile/desktop breakpoint (not Tailwind's default
           sm:), matching gallery/page.tsx and nav.tsx's own category rail.
           No max-h/overflow-y-auto of its own below 1020px — it's part of
-          the single root-level scroll there instead (see comment above). */}
+          the single root-level scroll there instead (see comment above).
+          Stays solidly opaque on every theme, including Noir — the
+          particle effect belongs in the gutter above, not behind this
+          panel's own readable text, reported directly. */}
       <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 noir-border bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
         {/* Same rounded (not rounded-full) + hover:bg-[#EFEFEF] treatment
             as the link bar's own collapse/expand toggle

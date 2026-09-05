@@ -586,16 +586,6 @@
 [data-theme="noir"] .noir-edit-border {
   border-color: var(--theme-accent);
 }
-/* post-modal.tsx's root wrapper carries a solid bg-scroll-100 fill
-   (a deliberate, theme-independent fix on Default — see that file's own
-   comment on why: an earlier transparent version let gallery grid
-   thumbnails clip messily against the modal edge/Nav's category rail) —
-   but that fixed light gray never follows Noir's own near-black
-   --theme-bg, so it shows as a stray light column behind Nav's category
-   rail on the left. Scoped to Noir only; Default keeps the original fill. */
-[data-theme="noir"] .noir-modal-bg-transparent {
-  background-color: transparent;
-}
 /* .pill-active's own border-ink (globals.css's .pill-active rule above)
    sits close enough in tone to its own bg-ink fill to read as borderless
    on Default — but against Noir's near-black page background, that same
