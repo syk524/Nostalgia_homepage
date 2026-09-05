@@ -231,6 +231,21 @@ export type UserBackgroundSticker = {
   gallery?: StickerGalleryImage
 }
 
+// One tile on the shared Archive > Memo grid — text plus an optional
+// attached image. Shared across every editor/admin (unlike
+// UserBackgroundSticker's per-account placements). position is a manual
+// drag-to-reorder order within the grid, independent of created_at.
+export type Memo = {
+  id: string
+  author_id: string
+  content: string
+  image_url: string | null
+  storage_path: string | null
+  position: number
+  created_at: string
+  updated_at: string
+}
+
 export type EventVisibility = 'public' | 'members' | 'private'
 
 export type CalendarEvent = {
@@ -357,6 +372,12 @@ export type Database = {
         Row: Omit<UserBackgroundSticker, 'gallery'>
         Insert: Omit<UserBackgroundSticker, 'id' | 'created_at' | 'updated_at' | 'gallery'>
         Update: Partial<Pick<UserBackgroundSticker, 'pos_x' | 'pos_y' | 'scale' | 'rotation' | 'z'>>
+        Relationships: []
+      }
+      memos: {
+        Row: Memo
+        Insert: Omit<Memo, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Pick<Memo, 'content' | 'image_url' | 'storage_path' | 'position'>>
         Relationships: []
       }
       calendar_events: {

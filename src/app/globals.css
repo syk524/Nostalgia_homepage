@@ -481,6 +481,25 @@
   .animate-sticker-drop { animation: none !important; }
 }
 
+/* A newly-added memo's own entrance (memo-card.tsx) — scale up from
+   nothing plus a fade-in, a plain ease-out curve rather than
+   sticker-drop's overshoot bounce above (a different request, not meant
+   to match). On the tile's own outer wrapper, not nested a level down
+   the way sticker-drop is — that wrapper carries no transform of its own
+   to fight (memo tiles sit in normal grid flow now, not freely
+   positioned), so there's nothing to compose with. 180ms (was 300ms) and
+   this specific curve — steep at the start, tapering hard toward rest —
+   read as snappier/more natural than the plain ease-out timing function,
+   reported directly. */
+@keyframes memo-add {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-memo-add { animation: memo-add 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .animate-memo-add { animation: none !important; }
+}
+
 /* Noir-specific overrides that can't be expressed as a CSS variable
    value swap alone (unlike --theme-accent/--theme-bg elsewhere) — a
    button's default hover background is a genuinely different color on
@@ -578,6 +597,17 @@
    is the only way a class-based rule ever beats an inline style. */
 [data-theme="noir"] .noir-accent-color {
   color: var(--theme-accent) !important;
+}
+/* memo-card.tsx and new-memo-tile.tsx's own textareas keep the shared
+   placeholder:text-ink/30 for Default, but that's a dark gray at 30%
+   opacity — on Noir's near-black noir-panel-bg it read as almost
+   invisible, reported directly. noir-accent-color (above) can't fix this
+   itself: it targets the element's own `color`, not the separate
+   ::placeholder pseudo-element, which keeps its own explicit color
+   regardless. 40%, not the full accent — still meant to read as a
+   placeholder, just no longer illegible. */
+[data-theme="noir"] .noir-placeholder-accent::placeholder {
+  color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
 }
 /* .btn-ghost's own border-ink/20 (globals.css's .btn-ghost rule above)
    is too faint to read against the post modal's dark Noir sidebar —
