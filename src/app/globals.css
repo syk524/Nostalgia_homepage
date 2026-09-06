@@ -598,6 +598,37 @@
 [data-theme="noir"] .noir-accent-color {
   color: var(--theme-accent) !important;
 }
+/* RpPostcardPreview's card panel (rp-postcard-preview.tsx) is a cream
+   #FBFBF9 on Default — reads as a stark, out-of-place light rectangle
+   on Noir's near-black page, so it gets its own dark fill instead —
+   #191919, matching noir-panel-bg's own value (kept as a separate rule
+   rather than just applying that class directly, since this one needs
+   the min-[520px] gate below and noir-panel-bg doesn't: below that width
+   the card has no background at all — mobile shows only the bare stamp
+   image — and this rule shouldn't reintroduce one there). */
+@media (min-width: 520px) {
+  [data-theme="noir"] .noir-rp-postcard-bg {
+    background-color: #191919;
+  }
+}
+/* The postcard's own hairline dividers (header underline, caption's
+   dashed top rule, the vertical dashed rule beside the stamp, and the
+   stamp's own dashed frame) are all a dark rgba(30,26,20,*) tuned to
+   read as subtle against the Default panel's cream #FBFBF9 — against
+   noir-rp-postcard-bg's dark #191919 they're two close dark tones and
+   nearly invisible, reported directly. color-mix off --theme-accent
+   (near-white on Noir) at roughly the same alpha as each line's own
+   Default opacity keeps the same relative hairline-vs-frame contrast,
+   just visible against a dark ground instead of a light one. */
+[data-theme="noir"] .noir-rp-postcard-line-25 {
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, transparent);
+}
+[data-theme="noir"] .noir-rp-postcard-line-30 {
+  border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+}
+[data-theme="noir"] .noir-rp-postcard-line-40 {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
+}
 /* memo-card.tsx and new-memo-tile.tsx's own textareas keep the shared
    placeholder:text-ink/30 for Default, but that's a dark gray at 30%
    opacity — on Noir's near-black noir-panel-bg it read as almost

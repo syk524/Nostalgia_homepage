@@ -38,8 +38,13 @@ export function ProfileMenu({ profile }: { profile: Profile }) {
         {profile.display_name || profile.username}
       </button>
 
+      {/* noir-border pairs with noir-panel-bg here too now — reported
+          directly that .card's own border-scroll-300 still showed up as
+          a stray light ring on Noir; matching the border color to the
+          panel's own background (same trick memo-card.tsx/new-memo-tile.tsx
+          use) makes it blend away instead. */}
       {open && (
-        <div className="card absolute bottom-full left-0 mb-3 w-48 p-2 space-y-1 normal-case tracking-normal">
+        <div className="card noir-panel-bg noir-border absolute bottom-full left-0 mb-3 w-48 p-2 space-y-1 normal-case tracking-normal">
           <button
             onClick={() => { setOpen(false); setEditOpen(true) }}
             className="w-full text-left text-sm px-3 py-2 rounded hover:bg-scroll-100 transition-colors"

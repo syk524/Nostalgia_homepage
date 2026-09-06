@@ -37,13 +37,25 @@ export default async function ArchiveRpPage() {
         </div>
       )}
       <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
-        <div className="animate-fade-up space-y-8">
+        {/* Below 520px, RpPostcardDeck shows a bare stamp with a big gap
+            of empty page beneath it (the deck's own content is far
+            shorter than the mobile viewport) — reported directly. The
+            10rem in min-h matches <main>'s own pt-24 + pb-16 (layout.tsx),
+            so this column reserves the full visible height below the nav,
+            and flex-1 on the deck's wrapper lets it soak up the leftover
+            space and center itself in it, instead of sitting top-aligned
+            with everything else crammed underneath. Untouched at
+            min-[520px] and up — desktop's layout already reads fine
+            top-aligned. */}
+        <div className="animate-fade-up space-y-8 max-[519px]:flex max-[519px]:flex-col max-[519px]:min-h-[calc(100dvh-10rem)]">
           <ArchiveSectionTabs />
 
           {!posts?.length ? (
             <p className="text-sm text-ink-400 noir-accent-color">No RP logs yet.</p>
           ) : (
-            <RpDeck posts={posts} />
+            <div className="max-[519px]:flex-1 max-[519px]:flex max-[519px]:min-h-0 max-[519px]:items-center max-[519px]:justify-center">
+              <RpDeck posts={posts} />
+            </div>
           )}
         </div>
       </div>

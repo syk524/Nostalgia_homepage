@@ -17,7 +17,16 @@ export type ListedRpPost = Pick<RpPost, 'id' | 'title' | 'messages'>
 // its OWN content to fit this fixed box instead of the box growing for
 // the content.
 const CARD_WIDTH = 'clamp(340px, 94vw, 780px)'
-const CARD_HEIGHT = 'clamp(230px, 58vw, 440px)'
+// Height is set via the --rp-card-h custom property in the JSX below
+// (Tailwind's [--rp-card-h:...] arbitrary-property classes), not this
+// constant — Tailwind's static scanner can't see a class built from a
+// template literal, which is exactly what silently zeroed the deck's
+// height the first time this was tried (var(--rp-card-h) resolved to
+// nothing, collapsing every Link card to height 0 and hiding the stamp
+// entirely). Kept as a comment-only reference so the two values below
+// (mobile 320px fixed; min-[520px] clamp(230px,58vw,440px), unchanged
+// from the original desktop sizing) have one documented source of truth
+// even though they can't be threaded through this constant in code.
 const SWIPE_THRESHOLD = 60
 // See rp-deck.tsx's own copy of this constant for the full story on why
 // this isn't smaller — an overly tight threshold made ordinary click
@@ -92,8 +101,8 @@ export function RpPostcardDeck({ posts }: { posts: ListedRpPost[] }) {
   return (
     <div className="flex flex-col items-center gap-5">
       <div
-        className="relative flex items-center justify-center select-none touch-pan-y cursor-grab active:cursor-grabbing"
-        style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        className="relative flex items-center justify-center select-none touch-pan-y cursor-grab active:cursor-grabbing [--rp-card-h:320px] min-[520px]:[--rp-card-h:clamp(230px,58vw,440px)]"
+        style={{ width: CARD_WIDTH, height: 'var(--rp-card-h)' }}
         onPointerDown={onPointerDown}
       >
         {posts.map((post, i) => {

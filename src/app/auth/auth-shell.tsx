@@ -28,7 +28,11 @@ export function AuthShell({ tagline, children }: { tagline?: string; children: R
           {tagline && <p className="text-ink-500 text-sm mt-2">{tagline}</p>}
         </div>
 
-        <div className="card p-8">{children}</div>
+        {/* noir-panel-bg/noir-border: same pairing memo-card.tsx and
+            new-memo-tile.tsx already use to give a .card surface a
+            Noir-appropriate #191919 fill instead of its Default cream —
+            reported directly for this login/register card too. */}
+        <div className="card noir-panel-bg noir-border p-8">{children}</div>
       </div>
     </div>
   )

@@ -117,6 +117,22 @@ export function RpPostcardPreview({
   // letting anything spill past the edge.
   const [shownCount, setShownCount] = useState(excerpt.length)
   const [lastCap, setLastCap] = useState<number | null>(null)
+  // Tablet (520px–1020px, the same range where the card wears its full
+  // postcard layout but the desktop side rail hasn't appeared yet) skips
+  // the shrink effect's usual one-at-a-time step-down — reported
+  // directly: on overflow, jump straight to the first message alone
+  // instead of visibly settling through a "2 messages" state first.
+  // false on first render (deterministic for SSR/hydration, same
+  // reasoning as excerpt's own useState initializer above); the effect
+  // below sets the real value client-only, immediately after mount.
+  const [isTablet, setIsTablet] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 520px) and (max-width: 1019.98px)')
+    const update = () => setIsTablet(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   // Re-randomizes only when this post is *recalled* to the screen (an
   // inactive→active edge, including the very first time it's shown) —
@@ -141,7 +157,7 @@ export function RpPostcardPreview({
     if (!el || !lastVisible) return
     if (el.scrollHeight > el.clientHeight + 1) {
       if (shownCount > 1) {
-        setShownCount(c => c - 1)
+        setShownCount(isTablet ? 1 : c => c - 1)
         return
       }
       // Only one message left and it still overflows — start shrinking
@@ -151,7 +167,7 @@ export function RpPostcardPreview({
       if (currentLength > LINE_MIN_CHARS) setLastCap(Math.max(LINE_MIN_CHARS, currentLength - LINE_SHRINK_STEP))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible.length, lastCap, shownCount, lastVisible?.html])
+  }, [visible.length, lastCap, shownCount, lastVisible?.html, isTablet])
 
   const stamp = STAMP_IMAGES[index % STAMP_IMAGES.length]
 
@@ -165,16 +181,16 @@ export function RpPostcardPreview({
     // overflow-hidden is a backstop for the brief window before the
     // shrink-to-fit effect above settles, not the primary mechanism.
     <div
-      className="w-full h-full flex flex-col overflow-hidden p-0 min-[520px]:p-8 bg-transparent min-[520px]:bg-[#FBFBF9] border-0 min-[520px]:border min-[520px]:border-[rgba(30,26,20,0.18)] min-[520px]:shadow-[0_18px_40px_-16px_rgba(30,26,20,0.35)]"
+      className="noir-rp-postcard-bg w-full h-full flex flex-col overflow-hidden p-0 min-[520px]:p-8 bg-transparent min-[520px]:bg-[#FBFBF9] border-0 min-[520px]:border min-[520px]:border-[rgba(30,26,20,0.18)] min-[520px]:shadow-[0_18px_40px_-16px_rgba(30,26,20,0.35)]"
     >
       {/* Title row and the whole script column are hidden below 520px —
           per direct request ("on mobile view, remove the text and show
           the post stamp only") — leaving just the stamp, enlarged and
           centered, as the card's entire mobile content. */}
-      <div className="hidden min-[520px]:flex items-baseline gap-3 pb-3 border-b border-[rgba(30,26,20,0.25)]">
+      <div className="noir-rp-postcard-line-25 hidden min-[520px]:flex items-baseline gap-3 pb-3 border-b border-[rgba(30,26,20,0.25)]">
         <span className="flex-1" />
         <span
-          className="text-lg min-[520px]:text-xl italic"
+          className="noir-accent-color text-lg min-[520px]:text-xl italic"
           style={{ fontFamily: 'var(--font-chosun-nm), Georgia, serif', color: '#5c5240' }}
         >
           {title}
@@ -187,13 +203,13 @@ export function RpPostcardPreview({
             {visible.map((m, i) => (
               <div key={i} className="flex gap-3 items-baseline">
                 <span
-                  className="shrink-0 w-12 min-[520px]:w-14 text-[11px] min-[520px]:text-[13px] font-semibold tracking-wide"
+                  className="noir-accent-color shrink-0 w-12 min-[520px]:w-14 text-[11px] min-[520px]:text-[13px] font-semibold tracking-wide"
                   style={{ color: '#4a4030' }}
                 >
                   {m.name}
                 </span>
                 <span
-                  className="text-[12px] min-[520px]:text-[14px] leading-relaxed"
+                  className="noir-accent-color text-[12px] min-[520px]:text-[14px] leading-relaxed"
                   style={{ color: '#2e2a20' }}
                   dangerouslySetInnerHTML={{
                     __html: truncateForDisplay(stripImages(m.html), i === visible.length - 1 ? (lastCap ?? Infinity) : Infinity),
@@ -202,15 +218,27 @@ export function RpPostcardPreview({
               </div>
             ))}
           </div>
-          <p className="pt-3 mt-3 text-[10px] min-[520px]:text-xs tracking-[0.2em] text-[#8a7f6c] border-t border-dashed border-[rgba(30,26,20,0.25)]">
+          <p className="noir-accent-color noir-rp-postcard-line-25 pt-3 mt-3 text-[10px] min-[520px]:text-xs tracking-[0.2em] text-[#8a7f6c] border-t border-dashed border-[rgba(30,26,20,0.25)]">
             No. {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
           </p>
         </div>
 
-        <div className="w-full min-[520px]:w-28 min-[520px]:shrink-0 flex items-center justify-center min-[520px]:flex-col min-[520px]:border-l min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.3)] min-[520px]:pl-7">
-          <div className="relative w-40 min-[520px]:w-full aspect-[3/4] p-0 min-[520px]:border min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.4)] min-[520px]:p-1">
+        {/* justify-center is only for the mobile (row-mode, bare-stamp)
+            case — at min-[520px] this column switches to flex-col, where
+            justify-content runs the vertical axis, and centering there
+            put the stamp visibly below the card's true center (measured:
+            the flex-1 row it sits in only spans the space BELOW the
+            title, so its own vertical center sits lower than the whole
+            card's) — reported directly, confirmed theme-independent (same
+            offset with or without data-theme="noir"; only the excerpt's
+            own random length happened to look different post to post).
+            justify-start at that breakpoint anchors the stamp to the top
+            of the row instead, a fixed position regardless of theme or
+            how much script text is showing. */}
+        <div className="noir-rp-postcard-line-30 w-full min-[520px]:w-28 min-[520px]:shrink-0 flex items-center justify-center min-[520px]:flex-col min-[520px]:justify-start min-[520px]:border-l min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.3)] min-[520px]:pl-7">
+          <div className="noir-rp-postcard-line-40 relative w-56 min-[520px]:w-full aspect-[3/4] p-0 min-[520px]:border min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.4)] min-[520px]:p-1">
             <div className="relative w-full h-full overflow-hidden">
-              <Image src={stamp} alt="" fill sizes="160px" className="object-cover" />
+              <Image src={stamp} alt="" fill sizes="224px" className="object-cover" />
             </div>
           </div>
         </div>
