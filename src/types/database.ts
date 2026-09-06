@@ -252,7 +252,15 @@ export type Memo = {
 // post row rather than normalized rows queried independently. html, not
 // plain text — the imported source log has a couple of messages with an
 // inline image alongside the dialogue text.
+//
+// type: 'divider' is the one exception — a section title inline in the
+// array (name holds the title text, the other fields unused) rather than
+// a real line of dialogue, for a single post that's actually more than
+// one separate scene back to back (reported directly: "2차" combining
+// "협회" and "비" as two titled sections instead of two separate posts,
+// the way "0차"/"1차" were split apart instead).
 export type RpMessage = {
+  type?: 'divider'
   name: string
   handle: string
   avatar_url: string

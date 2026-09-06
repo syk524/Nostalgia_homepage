@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { RpConversation } from '@/components/rp-conversation'
+import { ScrollTimeline } from '@/components/scroll-timeline'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { getUserTheme } from '@/lib/get-user-theme'
 import type { RpPost } from '@/types/database'
@@ -43,8 +44,44 @@ export default async function RpPostPage({ params }: { params: Promise<{ id: str
         <ArrowLeft size={18} />
       </Link>
 
-      <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] pb-16">
-        <div className="animate-fade-up space-y-6 max-w-2xl mx-auto">
+      {/* Vertically centered in the same left rail as the back button
+          above (which sits near the top, top-[3%], so the two don't
+          overlap) — a scroll-progress timeline for the log, per direct
+          request (reference: section-timeline-preview.framer.website). */}
+      <ScrollTimeline containerId="rp-scroll-area" />
+
+      {/* h-screen/overflow-y-auto, not the page's normal document-flow
+          scroll — a 650+ message log runs to roughly 90,000px tall, and
+          letting the whole document grow to that height stretched the
+          shared background grid ((main)/layout.tsx, sized to its own
+          containing block) across — and scrolled it along with — that
+          entire span instead of it staying put behind the content,
+          reported directly (most visible on Sticker, where that grid
+          actually shows). Scrolling this one pane internally instead
+          keeps the outer page at exactly one viewport tall, so the grid
+          never grows past the viewport it was meant to tile in the first
+          place.
+
+          -mt-24/-mb-16 cancel *both* of <main>'s own paddings so this
+          pane's box spans the full viewport (top: 0 to bottom: 100vh),
+          not just the space between them. An earlier version sized the
+          box to only the gap between the paddings (h-[calc(100vh-96px)],
+          positioned after pt-24) — that box's own top edge sat fixed at
+          96px no matter how far the log was scrolled, so the topmost
+          message could never reach higher than that: reported directly
+          as the log looking clipped a fixed distance below the very top
+          of the screen even while scrolling. pt-24/pb-16 on the inner
+          content div below reproduce the same *initial* (scrollTop: 0)
+          appearance as before — first message still clears the nav by
+          the same margin — but because they now live on content inside a
+          full-height scrollable box instead of on the box's own
+          position, scrolling past them lets later content rise all the
+          way to the screen's true top edge instead of stopping short. */}
+      <div
+        id="rp-scroll-area"
+        className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] h-screen -mt-24 -mb-16 overflow-y-auto"
+      >
+        <div className="animate-fade-up space-y-6 max-w-2xl mx-auto pt-24 pb-16">
           <RpConversation messages={typedPost.messages} />
         </div>
       </div>

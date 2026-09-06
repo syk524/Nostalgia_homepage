@@ -8,14 +8,14 @@ import type { RpMessage } from '@/types/database'
 // same way a character pair's own custom colors aren't tied to the
 // site's theme system either. Used as the fallback for any speaker name
 // not in NAME_STYLE below, keyed by order of first appearance.
-const SPEAKER_COLORS = ['#C9BFEA', '#8FE3D0', '#F4C9A8', '#A8D4F0']
+export const SPEAKER_COLORS = ['#C9BFEA', '#8FE3D0', '#F4C9A8', '#A8D4F0']
 
 // Explicit per-character side/color, requested directly for this log's
 // two speakers (지오 right, 눌 left with a specific pink) rather than the
 // generic order-of-appearance default below. A name not listed here
 // still falls back to that default, so a future post with different
 // speakers isn't left unstyled.
-const NAME_STYLE: Record<string, { side: 'left' | 'right'; color: string }> = {
+export const NAME_STYLE: Record<string, { side: 'left' | 'right'; color: string }> = {
   지오: { side: 'right', color: SPEAKER_COLORS[0] },
   눌: { side: 'left', color: '#D2ADB9' },
 }
@@ -24,7 +24,7 @@ const NAME_STYLE: Record<string, { side: 'left' | 'right'; color: string }> = {
 // the RP convention this log already follows — from the dialogue around
 // them. Simple non-nesting match; confirmed against this log's actual
 // data first (every paren balanced, none nested) rather than assumed.
-function italicizeParens(html: string): string {
+export function italicizeParens(html: string): string {
   return html.replace(/\([^)]*\)/g, match => `<em>${match}</em>`)
 }
 
@@ -40,12 +40,29 @@ function italicizeParens(html: string): string {
 export function RpConversation({ messages }: { messages: RpMessage[] }) {
   const speakerOrder: string[] = []
   for (const m of messages) {
+    if (m.type === 'divider') continue
     if (!speakerOrder.includes(m.name)) speakerOrder.push(m.name)
   }
 
   return (
     <div className="flex flex-col gap-4">
       {messages.map((m, i) => {
+        // A section title, not a line of dialogue — a single post that's
+        // actually two separate scenes back to back, per direct request
+        // ("separate them with a title"), rather than splitting into two
+        // posts the way "0차"/"1차" were.
+        if (m.type === 'divider') {
+          return (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="flex-1 h-px bg-scroll-300" />
+              <span className="text-xs font-medium tracking-[0.15em] uppercase text-ink-400 noir-accent-color">
+                {m.name}
+              </span>
+              <div className="flex-1 h-px bg-scroll-300" />
+            </div>
+          )
+        }
+
         const speakerIndex = speakerOrder.indexOf(m.name)
         const style = NAME_STYLE[m.name]
         const isRight = style ? style.side === 'right' : speakerIndex % 2 === 1
