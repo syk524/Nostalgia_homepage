@@ -2,7 +2,12 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ArchiveSectionTabs } from '@/components/archive-side-nav'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
-import { RpDeck, type ListedRpPost } from '@/components/rp-deck'
+// The rolling-chat-log deck (rp-deck.tsx/rp-thumbnail-preview.tsx) is
+// kept in the codebase unused rather than deleted — per direct request,
+// in case the postcard version below doesn't work out. Swap this import
+// back to '@/components/rp-deck' (and ListedRpPost's own source with it)
+// to restore it.
+import { RpPostcardDeck as RpDeck, type ListedRpPost } from '@/components/rp-postcard-deck'
 import { getUserTheme } from '@/lib/get-user-theme'
 
 // Editor-or-admin-only to view at all, same notFound() gate as
