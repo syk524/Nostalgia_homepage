@@ -165,10 +165,13 @@ export function RpPostcardPreview({
     // overflow-hidden is a backstop for the brief window before the
     // shrink-to-fit effect above settles, not the primary mechanism.
     <div
-      className="w-full h-full flex flex-col overflow-hidden p-6 min-[520px]:p-8"
-      style={{ backgroundColor: '#FBFBF9', border: '1px solid rgba(30,26,20,0.18)', boxShadow: '0 18px 40px -16px rgba(30,26,20,0.35)' }}
+      className="w-full h-full flex flex-col overflow-hidden p-0 min-[520px]:p-8 bg-transparent min-[520px]:bg-[#FBFBF9] border-0 min-[520px]:border min-[520px]:border-[rgba(30,26,20,0.18)] min-[520px]:shadow-[0_18px_40px_-16px_rgba(30,26,20,0.35)]"
     >
-      <div className="flex items-baseline gap-3 pb-3 border-b border-[rgba(30,26,20,0.25)]">
+      {/* Title row and the whole script column are hidden below 520px —
+          per direct request ("on mobile view, remove the text and show
+          the post stamp only") — leaving just the stamp, enlarged and
+          centered, as the card's entire mobile content. */}
+      <div className="hidden min-[520px]:flex items-baseline gap-3 pb-3 border-b border-[rgba(30,26,20,0.25)]">
         <span className="flex-1" />
         <span
           className="text-lg min-[520px]:text-xl italic"
@@ -178,8 +181,8 @@ export function RpPostcardPreview({
         </span>
       </div>
 
-      <div className="flex-1 flex gap-5 min-[520px]:gap-7 pt-4 min-h-0">
-        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+      <div className="flex-1 flex gap-5 min-[520px]:gap-7 min-[520px]:pt-4 min-h-0">
+        <div className="hidden min-[520px]:flex flex-1 min-w-0 flex-col min-h-0">
           <div ref={scriptRef} className="flex-1 flex flex-col justify-center gap-3 min-[520px]:gap-4 overflow-hidden">
             {visible.map((m, i) => (
               <div key={i} className="flex gap-3 items-baseline">
@@ -204,10 +207,10 @@ export function RpPostcardPreview({
           </p>
         </div>
 
-        <div className="w-20 min-[520px]:w-28 shrink-0 flex flex-col items-center border-l border-dashed border-[rgba(30,26,20,0.3)] pl-5 min-[520px]:pl-7">
-          <div className="relative w-full aspect-[3/4] border border-dashed border-[rgba(30,26,20,0.4)] p-1">
+        <div className="w-full min-[520px]:w-28 min-[520px]:shrink-0 flex items-center justify-center min-[520px]:flex-col min-[520px]:border-l min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.3)] min-[520px]:pl-7">
+          <div className="relative w-40 min-[520px]:w-full aspect-[3/4] p-0 min-[520px]:border min-[520px]:border-dashed min-[520px]:border-[rgba(30,26,20,0.4)] min-[520px]:p-1">
             <div className="relative w-full h-full overflow-hidden">
-              <Image src={stamp} alt="" fill sizes="120px" className="object-cover" />
+              <Image src={stamp} alt="" fill sizes="160px" className="object-cover" />
             </div>
           </div>
         </div>
