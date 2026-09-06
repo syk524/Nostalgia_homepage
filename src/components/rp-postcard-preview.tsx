@@ -88,6 +88,7 @@ export function RpPostcardPreview({
 }) {
   const wasActive = useRef(false)
   const scriptRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   // Deterministic (first real messages, no Math.random()) on first
   // render so server and client agree — a client component still renders
   // once server-side, and picking a random excerpt there would almost
@@ -149,6 +150,29 @@ export function RpPostcardPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 
+  // The shrink-to-fit effect below only ever shrinks — it has no path
+  // back to more messages/less truncation once it's cut something,
+  // because its own deps (shownCount, lastCap, ...) never change on
+  // their own from a resize alone. Reported directly: shrinking the
+  // window past a breakpoint left an already-too-tall excerpt sitting
+  // there uncorrected, and growing it back out left the excerpt stuck at
+  // whatever it had shrunk down to instead of re-expanding into the new
+  // room. A ResizeObserver on the card's own box (not just the
+  // isTablet breakpoint above) resets shownCount/lastCap to "show
+  // everything" on every real size change, so the effect below always
+  // re-measures from a clean slate at the new size — shrinking again if
+  // it still doesn't fit, or simply not shrinking at all if it now does.
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      setShownCount(excerpt.length)
+      setLastCap(null)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [excerpt])
+
   const visible = excerpt.slice(0, shownCount)
   const lastVisible = visible[visible.length - 1]
 
@@ -181,6 +205,7 @@ export function RpPostcardPreview({
     // overflow-hidden is a backstop for the brief window before the
     // shrink-to-fit effect above settles, not the primary mechanism.
     <div
+      ref={rootRef}
       className="noir-rp-postcard-bg w-full h-full flex flex-col overflow-hidden p-0 min-[520px]:p-8 bg-transparent min-[520px]:bg-[#FBFBF9] border-0 min-[520px]:border min-[520px]:border-[rgba(30,26,20,0.18)] min-[520px]:shadow-[0_18px_40px_-16px_rgba(30,26,20,0.35)]"
     >
       {/* Title row and the whole script column are hidden below 520px —
