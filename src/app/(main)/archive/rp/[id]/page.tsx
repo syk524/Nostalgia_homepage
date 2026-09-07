@@ -19,6 +19,11 @@ export default async function RpPostPage({ params }: { params: Promise<{ id: str
     ? (await supabase.from('profiles').select('role').eq('id', user.id).single()).data
     : null
   if (profile?.role !== 'editor' && profile?.role !== 'admin') notFound()
+  // Always true here — this page's own gate above already requires
+  // editor/admin to view at all — but passed explicitly rather than
+  // hardcoding true in RpConversation, so it stays correct if that gate
+  // ever loosens later.
+  const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
   const { key: theme } = await getUserTheme()
   const { data: post } = await supabase.from('rp_posts').select('*').eq('id', id).single()
@@ -82,7 +87,7 @@ export default async function RpPostPage({ params }: { params: Promise<{ id: str
         className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] h-screen -mt-24 -mb-16 overflow-y-auto"
       >
         <div className="animate-fade-up space-y-6 max-w-2xl mx-auto pt-24 pb-16">
-          <RpConversation messages={typedPost.messages} />
+          <RpConversation messages={typedPost.messages} postId={typedPost.id} canEdit={canEdit} />
         </div>
       </div>
     </>

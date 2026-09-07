@@ -611,6 +611,21 @@
     background-color: #191919;
   }
 }
+/* Paper grain on the postcard panel itself — a baked low-alpha noise tile
+   (feTurbulence -> feColorMatrix collapses it to black dots at ~8-16%
+   alpha) layered as background-image on top of the fill color above, not
+   a separate element, so it never fights the content's own paint order
+   and needs no z-index. Same min-[520px] gate as the fill itself since
+   mobile shows no panel at all (bare stamp only). Reads fine over both
+   Default's cream fill and Noir's dark override via ordinary source-over
+   compositing — no blend-mode needed since the tile's own alpha already
+   does the blending. */
+@media (min-width: 520px) {
+  .noir-rp-postcard-bg {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0.08 0.08 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+}
 /* The postcard's own hairline dividers (header underline, caption's
    dashed top rule, the vertical dashed rule beside the stamp, and the
    stamp's own dashed frame) are all a dark rgba(30,26,20,*) tuned to
