@@ -273,6 +273,7 @@ export type RpMessage = {
 export type RpPost = {
   id: string
   title: string
+  slug: string
   messages: RpMessage[]
   cover_url: string | null
   author_id: string

@@ -64,7 +64,7 @@ function readStoredStyle(): ConversationStyle {
 // for "who's talking" than color alone.
 //
 // canEdit (editor/admin, same gate as the page itself — see
-// archive/rp/[id]/page.tsx's own notFound() check) reveals a per-bubble
+// archive/rp/[slug]/page.tsx's own notFound() check) reveals a per-bubble
 // (or, in script style, per-line) edit affordance on hover: clicking it
 // swaps that one message's rendered html for a plain textarea (raw
 // underlying text, not a rich editor — a couple of messages carry a
@@ -140,7 +140,7 @@ export function RpConversation({ messages, postId, canEdit }: { messages: RpMess
   return (
     <>
       {/* Portaled onto <body>, not rendered in place — this component
-          mounts inside archive/rp/[id]/page.tsx's own animate-fade-up
+          mounts inside archive/rp/[slug]/page.tsx's own animate-fade-up
           div, whose keyframes leave a permanent transform: translateY(0)
           on it even after the animation ends (same issue documented in
           ProfileEditModal's own portal comment). That turns it into the

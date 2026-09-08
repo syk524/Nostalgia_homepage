@@ -26,7 +26,7 @@ export default async function ArchiveRpPage() {
   const { key: theme } = await getUserTheme()
   const { data: posts } = await supabase
     .from('rp_posts')
-    .select('id, title, messages')
+    .select('id, title, slug, messages')
     .order('created_at', { ascending: true })
 
   return (
@@ -37,23 +37,25 @@ export default async function ArchiveRpPage() {
         </div>
       )}
       <div className="w-screen relative left-1/2 -translate-x-1/2 px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)]">
-        {/* Below 520px, RpPostcardDeck shows a bare stamp with a big gap
-            of empty page beneath it (the deck's own content is far
-            shorter than the mobile viewport) — reported directly. The
-            10rem in min-h matches <main>'s own pt-24 + pb-16 (layout.tsx),
-            so this column reserves the full visible height below the nav,
-            and flex-1 on the deck's wrapper lets it soak up the leftover
-            space and center itself in it, instead of sitting top-aligned
-            with everything else crammed underneath. Untouched at
-            min-[520px] and up — desktop's layout already reads fine
-            top-aligned. */}
-        <div className="animate-fade-up space-y-8 max-[519px]:flex max-[519px]:flex-col max-[519px]:min-h-[calc(100dvh-10rem)]">
+        {/* Reserves the full visible height below the nav (10rem matches
+            <main>'s own pt-24 + pb-16 in layout.tsx) and centers the deck
+            in whatever's left over, rather than sitting top-aligned with
+            a big gap of empty page beneath it on a tall viewport —
+            reported directly. Originally scoped to below-520px only (the
+            deck's own content is far shorter than a mobile viewport), but
+            the same gap shows up on any tall-enough desktop window too,
+            so this now applies at every width. Purely a floor, not a
+            cap — on a viewport short enough (or a log long enough) that
+            the deck's own content exceeds this height, flex just grows
+            the column past it and nothing visibly centers, same as
+            ordinary block stacking would. */}
+        <div className="animate-fade-up space-y-8 flex flex-col min-h-[calc(100dvh-10rem)]">
           <ArchiveSectionTabs />
 
           {!posts?.length ? (
             <p className="text-sm text-ink-400 noir-accent-color">No RP logs yet.</p>
           ) : (
-            <div className="max-[519px]:flex-1 max-[519px]:flex max-[519px]:min-h-0 max-[519px]:items-center max-[519px]:justify-center">
+            <div className="flex-1 flex min-h-0 items-center justify-center">
               <RpDeck posts={posts} />
             </div>
           )}

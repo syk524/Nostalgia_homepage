@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { RpPostcardPreview } from '@/components/rp-postcard-preview'
 import type { RpPost } from '@/types/database'
 
-export type ListedRpPost = Pick<RpPost, 'id' | 'title' | 'messages'>
+export type ListedRpPost = Pick<RpPost, 'id' | 'title' | 'slug' | 'messages'>
 
 // Postcard-shaped (landscape) rather than the portrait 3/4 card the
 // rolling-chat version used. Both dimensions are fixed here — not just
@@ -120,7 +120,7 @@ export function RpPostcardDeck({ posts }: { posts: ListedRpPost[] }) {
           return (
             <Link
               key={post.id}
-              href={`/archive/rp/${post.id}`}
+              href={`/archive/rp/${post.slug}`}
               onClick={onCardClick}
               tabIndex={isActive ? undefined : -1}
               className="absolute inset-0"

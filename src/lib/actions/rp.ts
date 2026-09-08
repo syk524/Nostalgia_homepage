@@ -29,7 +29,7 @@ export async function updateRpMessage(postId: string, index: number, html: strin
 
   const { data: post, error: fetchError } = await supabase
     .from('rp_posts')
-    .select('messages')
+    .select('messages, slug')
     .eq('id', postId)
     .single()
   if (fetchError || !post) return { error: fetchError?.message ?? 'Post not found.' }
@@ -41,6 +41,8 @@ export async function updateRpMessage(postId: string, index: number, html: strin
   const { error } = await supabase.from('rp_posts').update({ messages: updated }).eq('id', postId)
   if (error) return { error: error.message }
 
-  revalidatePath(`/archive/rp/${postId}`)
+  // Path is slug-based (archive/rp/[slug]/page.tsx), not this row's own
+  // id, hence fetching slug above alongside messages.
+  revalidatePath(`/archive/rp/${post.slug}`)
   return { error: null }
 }

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { RpThumbnailPreview } from '@/components/rp-thumbnail-preview'
 import type { RpPost } from '@/types/database'
 
-export type ListedRpPost = Pick<RpPost, 'id' | 'title' | 'messages'>
+export type ListedRpPost = Pick<RpPost, 'id' | 'title' | 'slug' | 'messages'>
 
 // Height in vh, not a fixed px constant — per direct request ("65% of
 // screen height", reference: phoneswitchmockup.framer.website), so the
@@ -170,7 +170,7 @@ export function RpDeck({ posts }: { posts: ListedRpPost[] }) {
           return (
             <Link
               key={post.id}
-              href={`/archive/rp/${post.id}`}
+              href={`/archive/rp/${post.slug}`}
               onClick={onCardClick}
               tabIndex={isActive ? undefined : -1}
               className="absolute"

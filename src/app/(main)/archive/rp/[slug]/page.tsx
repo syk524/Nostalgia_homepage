@@ -11,8 +11,8 @@ import type { RpPost } from '@/types/database'
 // Same editor-or-admin notFound() gate as the list page (archive/rp/
 // page.tsx) — a signed-out or non-editor visitor can't reach an
 // individual post directly by URL either, not just via the list.
-export default async function RpPostPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function RpPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const profile = user
@@ -26,7 +26,7 @@ export default async function RpPostPage({ params }: { params: Promise<{ id: str
   const canEdit = profile?.role === 'editor' || profile?.role === 'admin'
 
   const { key: theme } = await getUserTheme()
-  const { data: post } = await supabase.from('rp_posts').select('*').eq('id', id).single()
+  const { data: post } = await supabase.from('rp_posts').select('*').eq('slug', slug).single()
   if (!post) notFound()
   const typedPost = post as RpPost
 
