@@ -127,6 +127,18 @@ const tokAngle = localFont({
   display: 'swap',
 })
 
+const kopubMedium = localFont({
+  src: './fonts/KoPubWorldBatangMedium.ttf',
+  variable: '--font-kopub-medium',
+  display: 'swap',
+})
+
+const kopubLight = localFont({
+  src: './fonts/KoPubWorldBatangLight.ttf',
+  variable: '--font-kopub-light',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nustalgio',
   description: '이제껏 받아 온 친애를 셀 수 없는 미지라고 생각했다.',
@@ -151,7 +163,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} ${kopubMedium.variable} ${kopubLight.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike

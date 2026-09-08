@@ -202,7 +202,10 @@ export function RpConversation({ messages, postId, canEdit }: { messages: RpMess
           if (layout === 'script') {
             return (
               <div key={i} className="flex items-start gap-3">
-                <span className="shrink-0 w-16 text-xs font-semibold tracking-wide pt-2.5" style={{ color }}>
+                <span
+                  className="shrink-0 w-16 text-xs font-semibold tracking-wide pt-2.5"
+                  style={{ color, fontFamily: 'var(--font-kopub-light), Georgia, serif' }}
+                >
                   {m.name}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -225,6 +228,7 @@ export function RpConversation({ messages, postId, canEdit }: { messages: RpMess
                         onKeyDown={e => { if (e.key === 'Escape') cancelEdit() }}
                         rows={1}
                         className="textarea flex-1 min-w-0"
+                        style={{ fontFamily: 'var(--font-kopub-light), Georgia, serif' }}
                       />
                       <button
                         type="button"
@@ -257,6 +261,7 @@ export function RpConversation({ messages, postId, canEdit }: { messages: RpMess
                           accent) on Noir only; Default keeps text-ink. */}
                       <div
                         className="noir-accent-color text-sm leading-relaxed text-ink whitespace-pre-wrap pt-1 pr-8 [&_img]:mt-2 [&_img]:rounded-lg [&_img]:max-w-full"
+                        style={{ fontFamily: 'var(--font-kopub-light), Georgia, serif' }}
                         dangerouslySetInnerHTML={{ __html: italicizeParens(m.html) }}
                       />
                       {canEdit && (

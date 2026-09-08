@@ -19,6 +19,8 @@ export const PAIR_FONTS = {
   popstar: { label: 'Popstar (Eng)', family: 'var(--font-popstar), sans-serif' },
   anomale: { label: 'Anomale (Eng)', family: 'var(--font-anomale), sans-serif' },
   tokAngle: { label: 'Tok Angle (JP)', family: 'var(--font-tok-angle), sans-serif' },
+  kopubMedium: { label: 'Kopub Medium (KR)', family: 'var(--font-kopub-medium), Georgia, serif' },
+  kopubLight: { label: 'Kopub Light (KR)', family: 'var(--font-kopub-light), Georgia, serif' },
   // Not self-hosted like the others — loaded from Adobe Fonts (Typekit
   // kit 'dan3fpf', see the <Script> in app/layout.tsx), so there's no
   // --font-* CSS variable here, just the family name the kit itself
