@@ -151,6 +151,12 @@ const fantasyNarratives = localFont({
   display: 'swap',
 })
 
+const janeAust = localFont({
+  src: './fonts/JaneAust.ttf',
+  variable: '--font-jane-aust',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Nustalgio',
   description: '이제껏 받아 온 친애를 셀 수 없는 미지라고 생각했다.',
@@ -175,7 +181,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike
