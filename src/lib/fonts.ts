@@ -21,6 +21,8 @@ export const PAIR_FONTS = {
   tokAngle: { label: 'Tok Angle (JP)', family: 'var(--font-tok-angle), sans-serif' },
   kopubMedium: { label: 'Kopub Medium (KR)', family: 'var(--font-kopub-medium), Georgia, serif' },
   kopubLight: { label: 'Kopub Light (KR)', family: 'var(--font-kopub-light), Georgia, serif' },
+  moonscythe: { label: 'MOONSCYTHE (Eng)', family: 'var(--font-moonscythe), sans-serif' },
+  fantasyNarratives: { label: 'Fantasy Narratives (Eng)', family: 'var(--font-fantasy-narratives), cursive' },
   // Not self-hosted like the others — loaded from Adobe Fonts (Typekit
   // kit 'dan3fpf', see the <Script> in app/layout.tsx), so there's no
   // --font-* CSS variable here, just the family name the kit itself
