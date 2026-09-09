@@ -655,7 +655,20 @@ function TrpgImageView({ node, editor, getPos }: NodeViewProps) {
 
   return (
     <NodeViewWrapper as="span" className={isAvatar ? '' : 'relative inline-block group/cover'} draggable data-drag-handle>
-      <img ref={imgRef} src={node.attrs.src} alt={node.attrs.alt ?? ''} className={node.attrs.class || undefined} />
+      {/* loading="lazy"/decoding="async" — a long session log (one has
+          576 <img> tags in a single body, reported as laggy to open) was
+          asking the browser to fetch and decode every one of them
+          up front on mount; native lazy-loading defers the ones outside
+          the initial viewport instead, and async decoding keeps the ones
+          that do load from blocking the main thread while decoding. */}
+      <img
+        ref={imgRef}
+        src={node.attrs.src}
+        alt={node.attrs.alt ?? ''}
+        className={node.attrs.class || undefined}
+        loading="lazy"
+        decoding="async"
+      />
       {!isAvatar && editor.isEditable && (
         <button
           type="button"
@@ -1105,19 +1118,33 @@ export function TrpgSessionEditor({ content, onChange }: { content: string; onCh
   )
 }
 
-// Read-only render for the detail page — same extension set as the
-// editable form above, so whatever marks/nodes a paste or the toolbar
-// produced on the way in render back out identically, nothing silently
-// dropped on one side of the schema. No toolbar, no onUpdate.
+// Read-only render for the detail page — plain dangerouslySetInnerHTML
+// of the session's own stored body, not a second full Tiptap editor
+// instance. This used to mount a real (editable: false) editor here too,
+// on the reasoning that the same extension set would render marks/nodes
+// back out identically — true, but that meant parsing the whole body
+// into a ProseMirror doc AND mounting one React NodeView per <img>
+// (TrpgImageView above) purely to redisplay HTML that's already
+// editor.getHTML()'s own well-formed serialization (same well-formed-ness
+// this file's other HTML-handling already relies on — see extractImageUrls
+// in lib/actions/trpg.ts). A 576-image session parsed that way was
+// reported as visibly laggy just to open. Safe to skip: TrpgImageView's
+// only interactive bit (the cover-star button) is gated on
+// editor.isEditable, which this read-only mount always passed as false
+// anyway, so nothing it added was ever actually visible here — a plain
+// <img> renders pixel-identical. .trpg-content's own CSS (globals.css)
+// targets plain tag/class selectors throughout (h1, p, table, img, …),
+// none of it dependent on ProseMirror's own wrapper div, so styling is
+// unaffected; the one rule that WAS ProseMirror-specific
+// (.trpg-content .ProseMirror { outline-none }) only ever mattered for
+// a focusable contentEditable surface, which this was never rendering.
 export function TrpgSessionView({ content }: { content: string }) {
-  const editor = useEditor({
-    extensions: TRPG_EXTENSIONS,
-    content,
-    editable: false,
-    immediatelyRender: false,
-  })
-
-  if (!editor) return null
-
-  return <EditorContent editor={editor} className="trpg-content" />
+  // Stored HTML never carries loading/decoding attributes (TrpgImageView's
+  // NodeView render doesn't add them to the schema, and only mounts for a
+  // live/editable editor instance in the first place, which this no longer
+  // is) — added here instead so the same 576-image session doesn't ask the
+  // browser to fetch and decode every one of them up front on mount; only
+  // the ones actually scrolled into view load eagerly.
+  const lazyContent = content.replace(/<img /g, '<img loading="lazy" decoding="async" ')
+  return <div className="trpg-content" dangerouslySetInnerHTML={{ __html: lazyContent }} />
 }
