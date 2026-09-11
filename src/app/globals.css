@@ -897,6 +897,17 @@
   transition-timing-function: var(--tt-in-ease);
   transition-delay: var(--tt-delay);
 }
+/* Dark variant, only ever paired with .thought-tt itself (two classes,
+   so it wins over that rule's own background/color regardless of
+   stylesheet order) — used just by the wordmark's "T" X-handle CTA
+   (noir-background.tsx), to match the settings dock icon's own dark chip
+   (#282625) + light glyph (scroll-100, #f1f1f1) instead of the shared
+   light default every other thought-tt user (e.g. Settings' own hover
+   label) keeps. */
+.thought-tt.thought-tt-dark {
+  background: #282625;
+  color: #f1f1f1;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .thought-tt { transition: none !important; }

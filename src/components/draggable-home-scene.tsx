@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/components/theme-provider'
 import Image from 'next/image'
-import { Settings as SettingsIcon } from 'lucide-react'
+import { Settings as SettingsIcon, Link as LinkIcon } from 'lucide-react'
 import wordmark from '../../public/images/nostalgio-wordmark.webp'
 import illustThemeBg from '../../public/images/illust-theme-bg.webp'
+import xWidgetBg from '../../public/images/x-widget-bg.png'
 import { useDraggable } from '@/lib/use-draggable'
 import { Stickers } from '@/components/stickers'
 import { StickerGalleryModal } from '@/components/sticker-gallery-modal'
@@ -109,7 +110,19 @@ function persistZChanges(prevList: UserBackgroundSticker[], nextList: UserBackgr
 // nav's own bottom-left login/profile chip (left-2.6%, bottom-3%) too.
 const APP_ICON_POSITION: Record<string, string> = {
   settings: 'left-[10%] bottom-[9%]',
+  // Directly above Settings — the two read as one small cluster instead
+  // of a second icon dropped at an arbitrary, unrelated spot. Like every
+  // other desk icon, this is a starting position only, not persisted —
+  // dragging it elsewhere doesn't survive a reload (see the big comment
+  // below on the desk's own pan/drag machinery).
+  'x-handle': 'left-[10%] bottom-[18%]',
 }
+
+// The project's X (Twitter) account — the "T" in Noir/Illust's own
+// scattered wordmark (noir-background.tsx) already links here too; this
+// dock/desk icon is a second, more discoverable entry point to the same
+// place, per direct request.
+const X_HANDLE_URL = 'https://x.com/Nustalgio'
 
 // On a non-default theme, Settings/Calendar/DayCounter dock as three
 // plain, fixed trigger icons at the right edge, vertically centered,
@@ -130,10 +143,11 @@ const DOCK_CALENDAR_OPEN_HEIGHT = 400
 // (Previously had an extra leading gap baked in, which doubled the
 // Settings→Calendar spacing relative to Calendar→DayCounter.)
 const DOCK_ITEMS_TOP = DOCK_ICON_SIZE + DOCK_GAP
-// Vertically centers the default (3-icon, all-collapsed) dock at rest —
-// see the settings/Calendar/DayCounter dock icons below, which never
-// move once mounted, so this offset is a plain constant.
-const DOCK_ANCHOR_OFFSET = (DOCK_ICON_SIZE * 3 + DOCK_GAP * 2) / 2
+// Vertically centers the default (4-icon, all-collapsed) dock at rest —
+// see the Settings/Calendar/DayCounter/X-handle dock icons below, which
+// never move once mounted, so this offset is a plain constant. (4, not 3
+// — the X-handle icon added below Day Counter per direct request.)
+const DOCK_ANCHOR_OFFSET = (DOCK_ICON_SIZE * 4 + DOCK_GAP * 3) / 2
 const PANEL_MARGIN = 16
 // Matches the 400ms `top` transition both desk widgets' own docked panels
 // already use (calendar-desk-widget.tsx/day-counter-desk-widget.tsx) —
@@ -261,15 +275,16 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarOpen])
 
-  // The three dock icons never move — Settings sits at the top, Calendar
-  // and DayCounter fixed right below it, all right-aligned and centered
-  // as one group at rest (see DOCK_ANCHOR_OFFSET above). Positioned from
-  // the viewport's own vertical center (not a separate wrapper) since
-  // Calendar/DayCounter already render inside the scene div, which is
-  // itself full-viewport.
+  // The four dock icons never move — Settings sits at the top, Calendar,
+  // DayCounter, and the X-handle link fixed right below it in that order,
+  // all right-aligned and centered as one group at rest (see
+  // DOCK_ANCHOR_OFFSET above). Positioned from the viewport's own
+  // vertical center (not a separate wrapper) since Calendar/DayCounter
+  // already render inside the scene div, which is itself full-viewport.
   const dockTop = (offset: number) => `calc(50% - ${DOCK_ANCHOR_OFFSET}px + ${offset}px)`
   const calendarDockTop = dockTop(DOCK_ITEMS_TOP)
   const dayCounterDockTop = dockTop(DOCK_ITEMS_TOP + DOCK_ICON_SIZE + DOCK_GAP)
+  const xHandleDockTop = dockTop(DOCK_ITEMS_TOP + 2 * (DOCK_ICON_SIZE + DOCK_GAP))
 
   // The actual panels, opened separately at the top-left of the screen,
   // still reflow the way the dock icons used to: Calendar's panel is
@@ -557,6 +572,32 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           />
         ))}
 
+        {/* X-handle link — not one of DOCK_APPS/openApp's real "apps"
+            (there's no panel to open, DockAppWindow is never involved),
+            so it's a standalone DeskAppIcon call with its own inline
+            pseudo-app object instead of joining that list, per direct
+            request: a widget icon "like Settings" — draggable by the
+            same long-press-to-drag/short-press-to-open gesture
+            DeskAppIcon already gives every app for free (see its own
+            comment on the click-vs-drag distance threshold) — but a
+            single click opens the X profile in a new tab rather than an
+            app window. Its hover label ("@Nustalgio") uses the exact
+            same light thought-tt treatment as every other desk icon's
+            label (e.g. Settings' own "Settings") — no dark-variant
+            styling here, since that was specifically for the wordmark's
+            own "T" link sitting over Noir/Illust's dark backdrop
+            (noir-background.tsx), not this cream-desk icon. */}
+        {theme === 'default' && (
+          <DeskAppIcon
+            app={{ id: 'x-handle', label: '@Nustalgio' }}
+            panX={canvas.offset.x}
+            panY={canvas.offset.y}
+            className={APP_ICON_POSITION['x-handle']}
+            onOpen={() => window.open(X_HANDLE_URL, '_blank', 'noopener,noreferrer')}
+            iconBackgroundImage={xWidgetBg.src}
+          />
+        )}
+
         {theme !== 'default' && (
           <button
             type="button"
@@ -594,6 +635,44 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             onDayCounterChange={setDayCounter}
             docked={theme === 'default' ? undefined : { open: dayCounterOpen, dockTop: dayCounterDockTop, panelTop: dayCounterPanelTop, onOpenChange: setDayCounterOpen }}
           />
+        )}
+
+        {/* Fourth dock slot, right below DayCounter, per direct request
+            — plain link (not a button+window.open) so a real new-tab
+            navigation works exactly like any other link (middle-click,
+            ctrl/cmd-click, etc.), same reasoning as the wordmark's own
+            "T" link. No hover LABEL here — per direct request, unlike the
+            identical-looking Settings icon right above it, which
+            likewise has none (aria-label is enough on both). Glyph is a
+            plain chain-link mark (lucide's Link), not an X/Twitter brand
+            mark — swapped in per direct request; its own 0.3 overlay is
+            unchanged (an earlier pass hid the glyph until hover and
+            darkened further on hover — replaced outright by a direct
+            request before this one, not layered on top of it). Kept at
+            this fixed slot regardless of whether
+            `dayCounter` itself is null (the block just above is
+            conditional on it) — "below the day counter" describes this
+            icon's position in the dock's layout, not a runtime
+            dependency on that data existing. */}
+        {theme !== 'default' && (
+          <a
+            href={X_HANDLE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Nustalgio on X"
+            className="fixed flex items-center justify-center rounded-2xl"
+            style={{
+              top: xHandleDockTop, right: DOCK_GAP, width: DOCK_ICON_SIZE, height: DOCK_ICON_SIZE,
+              // Flat rgba(0,0,0,0.3) layered as a second background-image
+              // (a same-color-stop gradient, not an extra DOM element) —
+              // same technique as the sticker desk's own X icon
+              // (desk-app-icon.tsx), just its own 0.3 rather than that
+              // one's 0.2.
+              backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(${xWidgetBg.src})`, backgroundSize: 'cover', backgroundPosition: 'center',
+            }}
+          >
+            <LinkIcon size={16} className="text-scroll-100" />
+          </a>
         )}
       </div>
 
