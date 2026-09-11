@@ -9,6 +9,7 @@ import { getLastListView } from '@/lib/list-view-tracker'
 import { fetchPostDetail } from '@/lib/actions/gallery'
 import { useTheme } from '@/components/theme-provider'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
+import { IllustPageBg } from '@/components/illust-page-bg'
 import { isNoirLike } from '@/lib/themes'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
@@ -161,6 +162,20 @@ export function PostModal({
       className="fixed inset-0 z-50 flex flex-col min-[1020px]:flex-row overflow-y-auto min-[1020px]:overflow-hidden animate-fade-up"
       style={{ backgroundColor: 'var(--theme-bg)' }}
     >
+      {/* Illust's own blurred/dimmed landing-page illustration, standing
+          in for the plain black fill above — same backdrop every other
+          non-home page already shows ((main)/layout.tsx), reported
+          directly as this modal looking flat/plain against those pages'
+          own illustrated backdrop. CSS-gated ([data-theme="illust"]) and
+          rendered unconditionally rather than an `isNoirLike`/`theme`
+          check here, matching every other IllustPageBg call site — see
+          that component's own comment on why. -z-10 sits behind the
+          gutter/panel/image children below (plain stacking order, no
+          z-index of their own) but above this root's own solid
+          background-color, so it shows through the gutter's own
+          transparent background while staying hidden behind the
+          metadata panel's deliberately opaque fill. */}
+      <IllustPageBg />
       {/* Category gutter — clears Nav's floating category links (left-2.6%,
           ~99px wide at their widest label) with a steady 60px gap — see
           gallery/page.tsx for why vw, not %. Nav is mounted once at the

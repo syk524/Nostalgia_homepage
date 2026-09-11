@@ -204,11 +204,23 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
               scramble-text.tsx — an original small reimplementation of the
               "decode" effect, not the use-scramble package itself).
               hardNav only kicks in on a post-detail path — see
-              CategoryLink's own comment for why. */}
+              CategoryLink's own comment for why.
+              No noir-accent-color class here (removed) — that utility's
+              own !important rule (globals.css) forces color straight to
+              the full var(--theme-accent), which clobbered the selected/
+              unselected distinction the inline style below already
+              expresses correctly on every theme (full accent vs. a 60%
+              color-mix toward transparent). It was added for Noir contrast
+              in a past pass alongside several other elements on this page
+              that genuinely needed it, but these links never did — their
+              inline color already references --theme-accent directly —
+              and the side effect (every category reading as "selected")
+              only became obvious once Illust's post-detail backdrop
+              stopped being flat black, reported directly. */}
           <CategoryLink
             href="/gallery"
             hardNav={onPostDetail}
-            className={`flex items-center gap-2 ${!activeCategory ? 'font-medium' : ''} ${onPostDetail ? 'noir-accent-color' : ''}`}
+            className={`flex items-center gap-2 ${!activeCategory ? 'font-medium' : ''}`}
             style={{ color: !activeCategory ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
           >
             <span><ScrambleText text="All" /> ({totalPostCount})</span>
@@ -219,7 +231,7 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
               key={cat.id}
               href={`/gallery?category=${encodeURIComponent(cat.name)}`}
               hardNav={onPostDetail}
-              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'font-medium' : ''} ${onPostDetail ? 'noir-accent-color' : ''}`}
+              className={`flex items-center gap-2 ${activeCategory === cat.name ? 'font-medium' : ''}`}
               style={{ color: activeCategory === cat.name ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}
             >
               <span><ScrambleText text={cat.name} /> ({categoryPostCounts[cat.id] ?? 0})</span>
