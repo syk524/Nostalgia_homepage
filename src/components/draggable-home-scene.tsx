@@ -603,7 +603,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             type="button"
             onClick={() => openApp('settings')}
             aria-label="Open Settings"
-            className="fixed flex items-center justify-center rounded-2xl"
+            className="fixed flex items-center justify-center rounded-2xl transition-transform hover:scale-105"
             style={{ top: dockTop(0), right: DOCK_GAP, width: DOCK_ICON_SIZE, height: DOCK_ICON_SIZE, background: '#282625' }}
           >
             <SettingsIcon size={18} className="text-scroll-100" />
@@ -660,7 +660,7 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Nustalgio on X"
-            className="fixed flex items-center justify-center rounded-2xl"
+            className="fixed flex items-center justify-center rounded-2xl transition-transform hover:scale-105"
             style={{
               top: xHandleDockTop, right: DOCK_GAP, width: DOCK_ICON_SIZE, height: DOCK_ICON_SIZE,
               // Flat rgba(0,0,0,0.3) layered as a second background-image

@@ -357,7 +357,11 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
           type="button"
           onClick={() => docked.onOpenChange(!docked.open)}
           aria-label={docked.open ? 'Close Calendar' : 'Open Calendar'}
-          className="fixed flex items-center justify-center rounded-2xl overflow-hidden"
+          // hover:scale-105 — per direct request, a hover animation for
+          // every Noir/Illust dock icon (this one, Settings, DayCounter,
+          // and the link icon — all four share this exact treatment,
+          // draggable-home-scene.tsx/day-counter-desk-widget.tsx).
+          className="fixed flex items-center justify-center rounded-2xl overflow-hidden transition-transform hover:scale-105"
           style={{ top: docked.dockTop, right: 16, width: ICON_SIZE, height: ICON_SIZE, background: '#282625' }}
         >
           <CalendarDockIcon size={ICON_SIZE} />
