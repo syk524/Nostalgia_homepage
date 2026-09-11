@@ -9,8 +9,6 @@ export const PARTICLE_EFFECTS = [
   { value: 'rain', label: 'Rain' },
   { value: 'stars', label: 'Stars' },
   { value: 'shooting-stars', label: 'Shooting Stars' },
-  { value: 'vapor', label: 'Vapor' },
-  { value: 'notes', label: 'Notes' },
   { value: 'snow', label: 'Snow' },
   { value: 'light', label: 'Light' },
   { value: 'star-voyage', label: 'Star Voyage' },
@@ -31,8 +29,6 @@ export const DEFAULT_PARTICLE_COLORS: Record<EffectValue, string> = {
   rain: '#ffffff',
   stars: '#ffffff',
   'shooting-stars': '#ffffff',
-  vapor: '#08080a',
-  notes: '#ffffff',
   snow: '#ffffff',
   light: '#9fd0ff',
   'star-voyage': '#ffffff',
@@ -40,12 +36,12 @@ export const DEFAULT_PARTICLE_COLORS: Record<EffectValue, string> = {
 }
 
 // Canvas fillStyle/strokeStyle both accept a plain hex string directly,
-// but the vapor gradient needs its own alpha per stop (rgba(), not hex),
-// so this is only ever called from drawVapor. Falls back to the built-in
-// vapor default's own components on a malformed hex rather than throwing —
-// this only ever receives either that default or something the color
-// picker's own regex already validated, but a bad value here should
-// never crash the whole effect.
+// but a radial gradient needs its own alpha per stop (rgba(), not hex),
+// so this is only ever called from drawWater. Falls back to a neutral
+// dark default's own components on a malformed hex rather than throwing —
+// this only ever receives either a built-in default or something the
+// color picker's own regex already validated, but a bad value here
+// should never crash the whole effect.
 function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
   if (!m) return [8, 8, 10]
@@ -92,9 +88,9 @@ function randomStar(width: number, height: number): Star {
 // A rare bright streak crossing the sky, on top of the same ambient
 // twinkling field 'stars' already draws — reference:
 // innocent-aim-546625.framer.app. Ages in frames (framesAlive vs
-// lifespanFrames), same simple-per-frame-increment convention as
-// drops/notes above rather than real elapsed-ms, so it stays consistent
-// with the rest of this file. Diagonal, upper-left toward lower-right
+// lifespanFrames), same simple-per-frame-increment convention as drops
+// above rather than real elapsed-ms, so it stays consistent with the
+// rest of this file. Diagonal, upper-left toward lower-right
 // (a fixed narrow angle band, not fully random direction) — matches the
 // reference's own single consistent travel direction rather than
 // streaks crossing every which way.
@@ -127,105 +123,14 @@ function randomShootingStar(width: number, height: number): ShootingStar {
   }
 }
 
-// Individual puffy cloud formations, not a uniform haze. Each cloud is a
-// cluster of several overlapping lobe-circles laid out along a rounded
-// hump (tall and bunched in the middle, tapering at the ends, like a
-// classic cumulus silhouette) rather than one soft radial blob, so it
-// reads as a distinct puffy shape with a bumpy edge instead of a flat
-// smudge. Two depth layers as before — "far" smaller/fainter/further
-// back, "near" bigger/stronger/in front — but now with real gaps of
-// clear background between clusters rather than dense overlap building
-// up into one continuous bank, matching the reference's scattered
-// individual clouds. Movement is deliberately slow — reported directly
-// — and there is no cursor interaction, ever.
-type CloudLobe = { dx: number; dy: number; r: number }
-type Cloud = {
-  x: number; y: number
-  vx: number; vy: number
-  bobPhase: number; bobAmp: number
-  opacity: number
-  extent: number // bounding radius, for the off-screen wrap check
-  lobes: CloudLobe[]
-}
-
-function randomCloud(width: number, height: number, layer: 'far' | 'near'): Cloud {
-  const isFar = layer === 'far'
-  const baseSize = isFar ? 70 + Math.random() * 60 : 120 + Math.random() * 90
-  const lobeCount = 6 + Math.floor(Math.random() * 4)
-  const lobes: CloudLobe[] = []
-  for (let i = 0; i < lobeCount; i++) {
-    const t = i / (lobeCount - 1)
-    // Humped envelope: 0 at both ends, 1 in the middle — taller/bigger
-    // lobes cluster near the center, small ones taper off at the edges.
-    const envelope = Math.sin(t * Math.PI)
-    lobes.push({
-      dx: (t - 0.5) * baseSize * 1.9,
-      dy: -envelope * baseSize * 0.45 + (Math.random() - 0.5) * baseSize * 0.15,
-      r: baseSize * (0.3 + envelope * 0.35) * (0.8 + Math.random() * 0.4),
-    })
-  }
-  // A couple of extra top bumps off-center — a plain hump of same-size
-  // lobes reads as a loaf, not a cloud; these break that symmetry.
-  for (let i = 0; i < 2; i++) {
-    const t = 0.3 + Math.random() * 0.4
-    lobes.push({
-      dx: (t - 0.5) * baseSize * 1.9,
-      dy: -baseSize * (0.5 + Math.random() * 0.25),
-      r: baseSize * (0.22 + Math.random() * 0.18),
-    })
-  }
-
-  return {
-    x: Math.random() * width,
-    y: Math.random() * height,
-    // Slow, ambient drift — noticeably slower than an earlier pass,
-    // reported directly.
-    vx: (isFar ? 0.006 + Math.random() * 0.012 : 0.012 + Math.random() * 0.02) * (Math.random() < 0.5 ? -1 : 1),
-    vy: (Math.random() - 0.5) * 0.006,
-    bobPhase: Math.random() * Math.PI * 2,
-    bobAmp: 4 + Math.random() * 8,
-    opacity: isFar ? 0.16 + Math.random() * 0.1 : 0.26 + Math.random() * 0.14,
-    extent: baseSize * 1.6,
-    lobes,
-  }
-}
-
-// Falling music notes — same silhouette as a classic CSS snowfall effect
+// Same straight-down-plus-sway drift as a classic CSS snowfall effect
 // (each particle drifts straight down at its own speed while swaying
 // side to side on a sine wave, wraps back to the top once it's fully
-// off the bottom, no cursor interaction), just with a randomized note
-// glyph standing in for the snowflake. Sway is continuous (driven by
-// elapsed time, not per-frame accumulation), so it stays perfectly
-// periodic no matter how long the animation has been running, unlike
-// nudging x by a per-frame delta.
-const NOTE_CHARS = ['♫', '♪', '♭', '♩'] as const
-type Note = {
-  x: number; y: number; char: string; size: number; speed: number
-  swayAmp: number; swayFreq: number; swayPhase: number
-  opacity: number; rotation: number; rotationSpeed: number
-}
-
-function randomNote(width: number, height: number, atRandomHeight: boolean): Note {
-  return {
-    x: Math.random() * width,
-    y: atRandomHeight ? Math.random() * height : -30,
-    char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
-    size: 14 + Math.random() * 14,
-    // Roughly a quarter of the original 0.6-1.7 range — reported directly
-    // as too fast for a lazy, drifting fall.
-    speed: 0.15 + Math.random() * 0.28,
-    swayAmp: 15 + Math.random() * 25,
-    swayFreq: 0.0006 + Math.random() * 0.0008,
-    swayPhase: Math.random() * Math.PI * 2,
-    opacity: 0.35 + Math.random() * 0.45,
-    rotation: (Math.random() - 0.5) * 0.6,
-    rotationSpeed: (Math.random() - 0.5) * 0.0008,
-  }
-}
-
-// Same straight-down-plus-sway drift as notes, but a plain filled circle
-// instead of a glyph — denser and smaller, matching a real snowfall's look
-// rather than a handful of large drifting shapes.
+// off the bottom, no cursor interaction), rendered as a plain filled
+// circle rather than a glyph. Sway is continuous (driven by elapsed
+// time, not per-frame accumulation), so it stays perfectly periodic no
+// matter how long the animation has been running, unlike nudging x by a
+// per-frame delta.
 type Snowflake = {
   x: number; y: number; radius: number; speed: number
   swayAmp: number; swayFreq: number; swayPhase: number; opacity: number
@@ -293,8 +198,8 @@ function randomWaterGlow(width: number, height: number): WaterGlow {
 
 // A thin horizontal shimmer line, undulating via a sine wave sampled
 // across x — same "compute purely from elapsed time, don't accumulate a
-// per-frame offset" approach as the notes/snow sway, so it stays
-// perfectly periodic no matter how long the effect has been running.
+// per-frame offset" approach as the snow sway, so it stays perfectly
+// periodic no matter how long the effect has been running.
 type WaterRipple = {
   y: number; amplitude: number; frequency: number
   phase: number; speed: number; opacity: number
@@ -330,18 +235,14 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     if (!canvas || !ctx) return
 
     const resolvedColor = color || DEFAULT_PARTICLE_COLORS[effect]
-    // Shared by drawClouds (vapor) and drawWater's glow blobs — both need
-    // the resolved color as rgba() components for a radial gradient, not
-    // just a flat fillStyle string.
+    // drawWater's glow blobs need the resolved color as rgba() components
+    // for a radial gradient, not just a flat fillStyle string.
     const [colorR, colorG, colorB] = hexToRgb(resolvedColor)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let width = 0
     let height = 0
     let drops: Drop[] = []
     let stars: Star[] = []
-    let farClouds: Cloud[] = []
-    let nearClouds: Cloud[] = []
-    let notes: Note[] = []
     let snowflakes: Snowflake[] = []
     let warpStars: WarpStar[] = []
     let waterGlows: WaterGlow[] = []
@@ -357,19 +258,6 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       height = canvas!.height = window.innerHeight
       if (effect === 'rain') {
         drops = Array.from({ length: Math.round((width * height) / 9000) }, () => randomDrop(width, height, true))
-      } else if (effect === 'vapor') {
-        // A handful of distinct clusters, not dozens of overlapping
-        // puffs — matches the reference's scattered individual clouds
-        // with real gaps of background between them.
-        const area = width * height
-        farClouds = Array.from({ length: Math.max(3, Math.round(area / 420000)) }, () => randomCloud(width, height, 'far'))
-        nearClouds = Array.from({ length: Math.max(4, Math.round(area / 280000)) }, () => randomCloud(width, height, 'near'))
-      } else if (effect === 'notes') {
-        // Sparser than rain's drops — each glyph reads as its own shape
-        // at this size, so a rain-level density would just look cluttered.
-        // Pulled back further still (14000 → 28000 divisor) since even
-        // that read as too many, reported directly.
-        notes = Array.from({ length: Math.round((width * height) / 28000) }, () => randomNote(width, height, true))
       } else if (effect === 'snow') {
         snowflakes = Array.from({ length: Math.round((width * height) / 9000) }, () => randomSnowflake(width, height, true))
       } else if (effect === 'star-voyage') {
@@ -522,59 +410,6 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.globalAlpha = 1
     }
 
-    function drawClouds(clouds: Cloud[]) {
-      for (const cloud of clouds) {
-        for (const lobe of cloud.lobes) {
-          const cx = cloud.x + lobe.dx
-          const cy = cloud.y + lobe.dy
-          const gradient = ctx!.createRadialGradient(cx, cy, 0, cx, cy, lobe.r)
-          // A continuous center-to-edge fade, not a flat solid core out to
-          // some fraction of the radius — a flat plateau's own boundary is
-          // a real edge (full opacity right up to it, then falling away)
-          // and a large lobe's plateau is wider than the blur in drawVapor
-          // can soften, so it showed through as a visible solid-white disc
-          // with a hard rim, reported directly. A true gradient has no
-          // such boundary anywhere in it for a blur to fail to hide.
-          gradient.addColorStop(0, `rgba(${colorR}, ${colorG}, ${colorB}, ${cloud.opacity})`)
-          gradient.addColorStop(1, `rgba(${colorR}, ${colorG}, ${colorB}, 0)`)
-          ctx!.fillStyle = gradient
-          ctx!.beginPath()
-          ctx!.arc(cx, cy, lobe.r, 0, Math.PI * 2)
-          ctx!.fill()
-        }
-      }
-    }
-
-    function drawVapor() {
-      // A modest canvas-level blur melts each cloud's individual lobes
-      // together into one puffy body instead of a bunch of visibly
-      // separate circles — lighter than a flat haze would need, since
-      // too much blur here would smear away the bumpy cumulus silhouette
-      // that's the whole point of lobed clusters over a single blob.
-      ctx!.filter = 'blur(9px)'
-      // Far layer first, near layer on top, for some depth.
-      drawClouds(farClouds)
-      drawClouds(nearClouds)
-      ctx!.filter = 'none'
-    }
-
-    function drawNotes(time: number) {
-      ctx!.textAlign = 'center'
-      ctx!.textBaseline = 'middle'
-      ctx!.fillStyle = resolvedColor
-      for (const note of notes) {
-        const swayX = note.x + Math.sin(time * note.swayFreq + note.swayPhase) * note.swayAmp
-        ctx!.globalAlpha = note.opacity
-        ctx!.font = `${note.size}px sans-serif`
-        ctx!.save()
-        ctx!.translate(swayX, note.y)
-        ctx!.rotate(note.rotation)
-        ctx!.fillText(note.char, 0, 0)
-        ctx!.restore()
-      }
-      ctx!.globalAlpha = 1
-    }
-
     function drawSnow(time: number) {
       ctx!.fillStyle = resolvedColor
       for (const flake of snowflakes) {
@@ -623,8 +458,6 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     function draw(time: number) {
       ctx!.clearRect(0, 0, width, height)
       if (effect === 'rain') drawRain()
-      else if (effect === 'vapor') drawVapor()
-      else if (effect === 'notes') drawNotes(time)
       else if (effect === 'snow') drawSnow(time)
       else if (effect === 'water') drawWater(time)
       else if (effect === 'star-voyage') drawWarpStars()
@@ -646,24 +479,6 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         for (const drop of drops) {
           drop.y += drop.speed
           if (drop.y - drop.length > height) Object.assign(drop, randomDrop(width, height, false))
-        }
-      } else if (effect === 'vapor') {
-        for (const cloud of [...farClouds, ...nearClouds]) {
-          cloud.x += cloud.vx
-          cloud.y += cloud.vy + Math.sin(time * 0.0003 + cloud.bobPhase) * (cloud.bobAmp / 250)
-          // Wraps back in from the opposite edge once fully off-screen —
-          // whichever direction it's drifting, not just left-to-right.
-          if (cloud.x - cloud.extent > width) cloud.x = -cloud.extent
-          else if (cloud.x + cloud.extent < 0) cloud.x = width + cloud.extent
-        }
-      } else if (effect === 'notes') {
-        for (const note of notes) {
-          note.y += note.speed
-          note.rotation += note.rotationSpeed
-          // Sway itself is computed straight from elapsed time in
-          // drawNotes, not accumulated here — x only needs to carry the
-          // note's own center for that sine wave to swing around.
-          if (note.y - note.size > height) Object.assign(note, randomNote(width, height, false))
         }
       } else if (effect === 'snow') {
         for (const flake of snowflakes) {
@@ -687,7 +502,7 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         }
         // Ripples need no per-frame position update — their undulation is
         // computed straight from elapsed time in drawWater, same as the
-        // notes/snow sway above.
+        // snow sway above.
       } else if (effect === 'shooting-stars') {
         // Ambient stars need no per-frame update at all (their twinkle is
         // computed straight from time in drawStars) — only the rare
