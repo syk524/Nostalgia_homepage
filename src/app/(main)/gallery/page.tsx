@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { GalleryGrid } from '@/components/gallery-grid'
 import { TrackListView } from '@/components/track-list-view'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
-import { isThemeKey } from '@/lib/themes'
+import { isThemeKey, isNoirLike } from '@/lib/themes'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 // Reading `searchParams` already makes this dynamic on the server —
@@ -59,8 +59,15 @@ export default async function GalleryPage({
     postsQuery,
   ])
   const canEdit = (profile as Profile | null)?.role === 'editor' || (profile as Profile | null)?.role === 'admin'
-  const themeKey = (profile as Profile | null)?.theme
-  const theme = isThemeKey(themeKey ?? '') ? themeKey : 'default'
+  // Narrowed via `themeKey` itself, not a derived `themeKey ?? ''`
+  // expression — isThemeKey(x) only narrows the exact expression it's
+  // called on, so checking a transformed copy left `theme` typed as
+  // `string | undefined | 'default'` (still fine for a loose `===
+  // 'noir'` comparison, but not assignable to isNoirLike's plain
+  // `string` param — caught by that stricter signature, not a
+  // behavior change here).
+  const themeKey = (profile as Profile | null)?.theme ?? ''
+  const theme = isThemeKey(themeKey) ? themeKey : 'default'
 
   // Drag-reordering only makes sense on the unfiltered view — reordering a
   // filtered subset would leave the interleaving with other categories'
@@ -83,7 +90,7 @@ export default async function GalleryPage({
           reasoning as profile/page.tsx's own NoirFloatingParticles wrapper:
           that div's own -translate-x-1/2 transform would become this
           fixed layer's containing block otherwise. */}
-      {theme === 'noir' && (
+      {isNoirLike(theme) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <NoirFloatingParticles />
         </div>

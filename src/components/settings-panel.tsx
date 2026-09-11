@@ -1,6 +1,7 @@
 'use client'
 import { THEMES, type ThemeKey } from '@/lib/themes'
 import { updateTheme } from '@/lib/actions/theme'
+import illustThemeBg from '../../public/images/illust-theme-bg.webp'
 
 // A miniature of the actual landing page in each theme's own colors —
 // not a generic swatch — so picking a theme here previews what it
@@ -9,9 +10,13 @@ import { updateTheme } from '@/lib/actions/theme'
 // 0.05 opacity to something visible at this size; Noir gets a few
 // static specks standing in for its particle field (noir-background.tsx)
 // instead of the grid, matching that page's own "no grid on non-default
-// themes" rule. The centered "N." mark is a simplified stand-in for the
-// real multi-font wordmark image — full letter-by-letter reproduction
-// doesn't survive being shrunk this far anyway.
+// themes" rule. Illust gets its own real landing-page illustration
+// instead of either — per direct request, the generic speck pattern
+// (accurate for Noir's actual backdrop) didn't read as "similar to the
+// illustration" once Illust had a real picture behind it. The centered
+// "N." mark is a simplified stand-in for the real multi-font wordmark
+// image — full letter-by-letter reproduction doesn't survive being
+// shrunk this far anyway.
 function ThemeThumbnail({ themeKey }: { themeKey: ThemeKey }) {
   const t = THEMES[themeKey]
   const gridId = `theme-thumb-grid-${themeKey}`
@@ -27,6 +32,8 @@ function ThemeThumbnail({ themeKey }: { themeKey: ThemeKey }) {
           </defs>
           <rect width="120" height="90" fill={`url(#${gridId})`} opacity="0.16" />
         </>
+      ) : themeKey === 'illust' ? (
+        <image href={illustThemeBg.src} x="0" y="0" width="120" height="90" preserveAspectRatio="xMidYMid slice" />
       ) : (
         <g fill={t.pointColor} opacity="0.5">
           <circle cx="18" cy="20" r="0.8" />

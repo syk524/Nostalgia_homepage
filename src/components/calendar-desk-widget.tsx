@@ -87,7 +87,16 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
   // component's own localStorage-backed open state, so docking here
   // never touches the position/open-state the user set up for the
   // default theme.
-  docked?: { open: boolean; dockTop: string; panelTop: string; onOpenChange: (open: boolean) => void }
+  // open is the raw click intent (drives the dock icon's own aria-label
+  // and toggle); mounted/visible are the parent's own delayed derivation
+  // of it (draggable-home-scene.tsx), used to sequence this panel's
+  // fade against DayCounter's move when both are open at once — see
+  // that component's own comment. mounted keeps the panel in the DOM
+  // through its close fade-out instead of unmounting the instant `open`
+  // flips false; visible drives the actual opacity. With DayCounter
+  // closed the parent sets both equal to `open` with no delay, so this
+  // reduces to the previous plain show/hide behavior.
+  docked?: { open: boolean; mounted: boolean; visible: boolean; dockTop: string; panelTop: string; onOpenChange: (open: boolean) => void }
 }) {
   // Anchored from the desk's own bottom-left corner (see the wrapper's
   // left-0 bottom-0 below), so the default offset has to shift it well
@@ -354,10 +363,21 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
           <CalendarDockIcon size={ICON_SIZE} />
         </button>
 
-        {docked.open && (
+        {docked.mounted && (
+          // opacity, not animate-fade-up's mount-only keyframe — that
+          // only ever plays on entry, so closing while DayCounter also
+          // needs to move (see draggable-home-scene.tsx's own
+          // orchestration comment) would have unmounted this instantly
+          // with no fade at all. A plain opacity+transition instead
+          // animates both ways on an element that stays mounted through
+          // its own close, driven by `visible` rather than `mounted`.
           <div
-            className="fixed rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden flex flex-col animate-fade-up"
-            style={{ top: docked.panelTop, left: 16, width: PANEL_WIDTH, height: PANEL_HEIGHT, transition: 'top 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}
+            className={`fixed rounded-xl border border-scroll-300 bg-scroll-50 overflow-hidden flex flex-col ${docked.visible ? 'opacity-100' : 'opacity-0'}`}
+            // opacity kept faster (200ms) than the 400ms `top` move, per
+            // direct request — the move duration stays as-is (it's also
+            // what draggable-home-scene.tsx's TRANSITION_MS waits out
+            // before starting this fade), only the fade itself is quicker.
+            style={{ top: docked.panelTop, left: 16, width: PANEL_WIDTH, height: PANEL_HEIGHT, transition: 'top 400ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease' }}
           >
             {panelHeader}
             {panelBody}

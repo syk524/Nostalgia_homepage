@@ -54,6 +54,27 @@
     font-family: var(--font-roboto), var(--font-noto-sans-kr), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  /* The Illust theme's own landing-page illustration, crisp (no blur/
+     dim) here, painted on body itself rather than by any React-rendered
+     element — reported directly as a black flash between the root
+     loading.tsx's blurred backdrop (.illust-page-bg further down) and
+     the home page's own crisp illustration (draggable-home-scene.tsx):
+     that gap was app/page.tsx's own wrapper div, which used to paint a
+     flat solid `background-color: var(--theme-bg)` (i.e. black)
+     immediately on mount, one or more frames before its child Image had
+     actually decoded and painted over it. A body-level CSS background
+     has no such gap — it's resolved by the browser at first paint,
+     before hydration, before any component has mounted at all — so
+     something resembling the final picture is already there underneath
+     every other Illust layer (this one, the blurred one, or nothing
+     yet) for the entire lifetime of the page, and nothing ever
+     uncovers flat black. */
+  :where([data-theme="illust"]) body {
+    background-image: url('/images/illust-theme-bg.webp');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
 
   h1, h2, h3 {
     font-weight: 400;
@@ -504,17 +525,26 @@
    value swap alone (unlike --theme-accent/--theme-bg elsewhere) — a
    button's default hover background is a genuinely different color on
    Noir, not the same property resolving differently, so it needs a real
-   selector. data-theme is set server-side on <html> (layout.tsx) and
-   live by the Settings dropdown (draggable-home-scene.tsx). Specificity
+   selector. Every selector below also matches [data-theme="illust"], per
+   direct request: Illust (lib/themes.ts) is Noir duplicated into a third
+   theme, sharing 100% of Noir's styling except its own landing-page
+   background (draggable-home-scene.tsx) — so a future Noir tweak here
+   applies to Illust too rather than needing to be kept in sync by hand.
+   :where(...) keeps the combined selector at the exact same specificity
+   a single attribute selector already had, so nothing else in this
+   file's own cascade shifts. data-theme is set server-side on <html>
+   (layout.tsx) and live by the Settings dropdown (draggable-home-scene.tsx). Specificity
    here is deliberately bumped (attribute selector + class, vs. a plain
    Tailwind utility's single class) so these reliably beat the element's
    own default hover regardless of Tailwind's utility generation order —
    same class of bug as the sticker z-index / shrink-to-fit issues
    earlier this session, where "should win" on paper wasn't good enough. */
-[data-theme="noir"] .noir-hover:hover {
+[data-theme="noir"] .noir-hover:hover,
+[data-theme="illust"] .noir-hover:hover {
   background-color: #313131;
 }
-[data-theme="noir"] .group:hover .noir-group-hover {
+[data-theme="noir"] .group:hover .noir-group-hover,
+[data-theme="illust"] .group:hover .noir-group-hover {
   background-color: #313131;
 }
 /* Same accent regardless of resting vs. hover state (e.g. the "Add
@@ -522,10 +552,12 @@
    group-hover:text-ink-600 hovered — neither reads well on Noir) —
    needs both rules since the plain one alone (0,2,0) can't beat the
    Tailwind-generated group-hover rule's own specificity (0,3,0). */
-[data-theme="noir"] .noir-icon-accent {
+[data-theme="noir"] .noir-icon-accent,
+[data-theme="illust"] .noir-icon-accent {
   color: #f1f1f1;
 }
-[data-theme="noir"] .group:hover .noir-icon-accent {
+[data-theme="noir"] .group:hover .noir-icon-accent,
+[data-theme="illust"] .group:hover .noir-icon-accent {
   color: #f1f1f1;
 }
 /* Hover-only variant of .noir-icon-accent above — the pair-profile grid's
@@ -537,13 +569,16 @@
    asked for the accent at rest too. No plain (non-hover) rule needed
    here for that reason; only the group-hover rule, at (0,4,0) specificity
    to beat Tailwind's own group-hover:text-ink-600 rule (0,3,0). */
-[data-theme="noir"] .group:hover .noir-icon-hover-accent {
+[data-theme="noir"] .group:hover .noir-icon-hover-accent,
+[data-theme="illust"] .group:hover .noir-icon-hover-accent {
   color: #f1f1f1;
 }
-[data-theme="noir"] .noir-panel-bg {
+[data-theme="noir"] .noir-panel-bg,
+[data-theme="illust"] .noir-panel-bg {
   background-color: #191919;
 }
-[data-theme="noir"] .noir-border {
+[data-theme="noir"] .noir-border,
+[data-theme="illust"] .noir-border {
   border-color: #191919;
 }
 /* Only the desktop links-archive row uses this (min-[1020px]:bg-[#EFEFEF]
@@ -553,7 +588,8 @@
    this override needs the same min-[1020px] gate rather than applying
    unconditionally. */
 @media (min-width: 1020px) {
-  [data-theme="noir"] .noir-selected-bg {
+  [data-theme="noir"] .noir-selected-bg,
+  [data-theme="illust"] .noir-selected-bg {
     background-color: #313131;
   }
   /* Same reasoning as .noir-selected-bg just above — used on the link
@@ -570,7 +606,8 @@
      list row this is harmless: its title/icons all set their own color
      directly (inline style or their own text-ink-* class), which wins
      over an inherited value regardless. */
-  [data-theme="noir"] .noir-row-hover:hover {
+  [data-theme="noir"] .noir-row-hover:hover,
+  [data-theme="illust"] .noir-row-hover:hover {
     background-color: #313131;
     color: #f1f1f1;
   }
@@ -580,14 +617,16 @@
    a fixed light bg-scroll-200 regardless of theme, so the nav's usual
    --theme-accent (near-white on Noir) sitting over it disappears.
    !important since NAV_COLOR_STYLE sets color via an inline style. */
-[data-theme="noir"] .noir-links-nav-color {
+[data-theme="noir"] .noir-links-nav-color,
+[data-theme="illust"] .noir-links-nav-color {
   color: #010101 !important;
 }
 /* Same problem as .noir-links-nav-color above, different route: the post
    modal's own hazy backdrop (post-modal.tsx) sits under the top nav and
    the gallery category rail on a post-detail page, and Noir's usual
    near-white --nav-icon-color/--theme-accent washes out against it. */
-[data-theme="noir"] .noir-post-detail-nav-color {
+[data-theme="noir"] .noir-post-detail-nav-color,
+[data-theme="illust"] .noir-post-detail-nav-color {
   color: #010101 !important;
 }
 /* For an element whose color is a hardcoded inline style (not a
@@ -595,7 +634,8 @@
    per-context accent that's deliberately its own fixed color on Default
    and has no other reason to reference --theme-accent at all. !important
    is the only way a class-based rule ever beats an inline style. */
-[data-theme="noir"] .noir-accent-color {
+[data-theme="noir"] .noir-accent-color,
+[data-theme="illust"] .noir-accent-color {
   color: var(--theme-accent) !important;
 }
 /* RpPostcardPreview's card panel (rp-postcard-preview.tsx) is a cream
@@ -607,7 +647,8 @@
    the card has no background at all — mobile shows only the bare stamp
    image — and this rule shouldn't reintroduce one there). */
 @media (min-width: 520px) {
-  [data-theme="noir"] .noir-rp-postcard-bg {
+  [data-theme="noir"] .noir-rp-postcard-bg,
+  [data-theme="illust"] .noir-rp-postcard-bg {
     background-color: #191919;
   }
 }
@@ -635,13 +676,16 @@
    (near-white on Noir) at roughly the same alpha as each line's own
    Default opacity keeps the same relative hairline-vs-frame contrast,
    just visible against a dark ground instead of a light one. */
-[data-theme="noir"] .noir-rp-postcard-line-25 {
+[data-theme="noir"] .noir-rp-postcard-line-25,
+[data-theme="illust"] .noir-rp-postcard-line-25 {
   border-color: color-mix(in srgb, var(--theme-accent) 25%, transparent);
 }
-[data-theme="noir"] .noir-rp-postcard-line-30 {
+[data-theme="noir"] .noir-rp-postcard-line-30,
+[data-theme="illust"] .noir-rp-postcard-line-30 {
   border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
 }
-[data-theme="noir"] .noir-rp-postcard-line-40 {
+[data-theme="noir"] .noir-rp-postcard-line-40,
+[data-theme="illust"] .noir-rp-postcard-line-40 {
   border-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
 }
 /* memo-card.tsx and new-memo-tile.tsx's own textareas keep the shared
@@ -650,16 +694,21 @@
    invisible, reported directly. noir-accent-color (above) can't fix this
    itself: it targets the element's own `color`, not the separate
    ::placeholder pseudo-element, which keeps its own explicit color
-   regardless. 40%, not the full accent — still meant to read as a
-   placeholder, just no longer illegible. */
-[data-theme="noir"] .noir-placeholder-accent::placeholder {
-  color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
+   regardless. 60% (was 40%, still not fully illegible but reported
+   directly as still too faint) — matches the same 60% mix already used
+   elsewhere in this file (links-archive-view.tsx's own unselected-link
+   text) as this app's established "readable but still secondary" level,
+   rather than inventing a new one. */
+[data-theme="noir"] .noir-placeholder-accent::placeholder,
+[data-theme="illust"] .noir-placeholder-accent::placeholder {
+  color: color-mix(in srgb, var(--theme-accent) 60%, transparent);
 }
 /* .btn-ghost's own border-ink/20 (globals.css's .btn-ghost rule above)
    is too faint to read against the post modal's dark Noir sidebar —
    scoped to the modal's own Edit button, not .btn-ghost generally, so
    every other ghost button elsewhere keeps its usual border. */
-[data-theme="noir"] .noir-edit-border {
+[data-theme="noir"] .noir-edit-border,
+[data-theme="illust"] .noir-edit-border {
   border-color: var(--theme-accent);
 }
 /* .pill-active's own border-ink (globals.css's .pill-active rule above)
@@ -668,8 +717,85 @@
    border-ink shows up as a distinct light ring around the pill. Scoped to
    the mobile gallery category row (gallery/page.tsx) only, not
    .pill-active generally. */
-[data-theme="noir"] .noir-mobile-category-no-border {
+[data-theme="noir"] .noir-mobile-category-no-border,
+[data-theme="illust"] .noir-mobile-category-no-border {
   border-color: transparent;
+}
+
+/* Illust-only (not shared with Noir, unlike everything above) — every
+   page under (main)/layout.tsx (i.e. every page except the separate
+   home scene) gets the landing page's own illustration as a blurred,
+   dimmed backdrop instead of Noir's plain solid black, per direct
+   request. .illust-page-bg is a plain empty fixed div rendered
+   unconditionally by that layout; hidden by default and only shown
+   here, under the theme's own attribute selector, rather than gated by
+   a server-side theme check in that (server) component — a guest's
+   theme choice can be client-only (localStorage, see get-user-theme.ts's
+   own isGuest comment), which a server component can never see, but a
+   CSS attribute selector reacts to data-theme regardless of which side
+   set it. scale(1.01) on ::before pushes the blur's softened edge
+   outside the visible area, same fix (different mechanism, a real
+   `scale-105` class there) as the TRPG session detail page's own
+   background blur (archive/trpg/[slug]/page.tsx) — scaled down each
+   time the blur itself shrank (40px → 20px → 10px → 5px → 6px below,
+   scale following 1.06 → 1.03 → 1.02 → 1.01 → 1.01), per repeated
+   direct request tuning both. Also used by app/loading.tsx (a route's
+   loading state), not just (main)/layout.tsx — same class, same rule. */
+.illust-page-bg { display: none; }
+:where([data-theme="illust"]) .illust-page-bg {
+  display: block;
+}
+/* animation, not a plain opacity transition — a transition only plays
+   when a property changes on an ALREADY-rendered element, but this
+   backdrop's very first appearance for a navigation is a fresh mount
+   (IllustLoadingBg, in app/loading.tsx), where there's no prior
+   rendered frame to transition from. A CSS animation instead runs from
+   the moment an element becomes part of the render tree. Opt-in via the
+   .illust-page-bg-enter modifier (IllustPageBg's own `animate` prop) —
+   only IllustLoadingBg's copy sets it; (main)/layout.tsx's own separate
+   copy does not, so it appears instantly once mounted rather than
+   replaying the same fade a moment after loading.tsx's copy already
+   played it, reported directly as the blur visibly "happening twice"
+   between pages. 0.2s, quicker than an earlier 0.5s per direct request
+   for a faster transition. */
+:where([data-theme="illust"]) .illust-page-bg.illust-page-bg-enter {
+  animation: fade-in 0.2s ease-out both;
+}
+/* The home scene's own crisp illustration+gradient (draggable-home-
+   scene.tsx) — reuses the shared fade-in keyframes but at its own
+   slower pace and gentler easing, tuned separately from
+   .illust-page-bg-enter just above per direct request: this fade
+   covers a bigger visual gap (loading screen all the way to the fully-
+   detailed landing scene) than that one does (nothing to blurred), so
+   it reads better slower rather than sharing that shorter timing. */
+.illust-home-fade-in {
+  animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.illust-page-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/illust-theme-bg.webp');
+  background-size: cover;
+  background-position: center;
+  filter: blur(6px);
+  transform: scale(1.01);
+}
+.illust-page-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+/* Hides (main)/layout.tsx's own faint line-grid texture on Noir and
+   Illust, per direct request — it rendered unconditionally regardless
+   of theme, visibly showing through both Noir's plain black backdrop
+   and Illust's own blurred illustration in the screenshot this was
+   reported from. Left alone on Default (Sticker), which has no other
+   backdrop of its own to conflict with. */
+[data-theme="noir"] .main-grid-texture,
+[data-theme="illust"] .main-grid-texture {
+  display: none;
 }
 
 /* Scrollbar styling */

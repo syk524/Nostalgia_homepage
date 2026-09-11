@@ -1,7 +1,5 @@
-import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { DraggableHomeScene } from '@/components/draggable-home-scene'
-import { Nav } from '@/components/nav'
 import { fetchStickerGallery, fetchUserPlacements } from '@/lib/sticker-queries'
 import { fetchCalendarEvents } from '@/lib/calendar-queries'
 import { fetchDayCounter } from '@/lib/day-counter-queries'
@@ -10,6 +8,12 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Still needed here for canEdit/isAdmin below even though Nav itself
+  // no longer renders from this page — Nav (and its own separate
+  // profile/categories fetch) moved to the root layout's NavWithData, so
+  // it's a single instance shared with every other page instead of a
+  // second copy that unmounted/remounted the shared one on the way in or
+  // out of this route, reported directly.
   const profile = user
     ? (await supabase.from('profiles').select('*').eq('id', user.id).single()).data
     : null
@@ -36,8 +40,20 @@ export default async function HomePage() {
   // every visitor, RLS-gated on write rather than read.
   const dayCounter = await fetchDayCounter(supabase)
 
+  // No inline backgroundColor on the wrapper below (removed) — it
+  // duplicated body's own identical `background-color: var(--theme-bg)`
+  // (globals.css), painting an opaque flat color over body the instant
+  // this div mounted, before DraggableHomeScene's own child Image had
+  // necessarily decoded and painted on top of it. For Illust that color
+  // is solid black, and body now also carries the theme's own
+  // illustration as a background-image (globals.css) specifically so
+  // something resembling the final picture is visible underneath any
+  // gap — this div being opaque defeated that. Removing it is a no-op
+  // for Noir/Sticker, which still see the identical color via body's
+  // own rule; for Illust it closes the black-flash gap this was
+  // reported for.
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: 'var(--theme-bg)' }}>
+    <div className="relative min-h-screen overflow-hidden">
       <DraggableHomeScene
         canEdit={canEdit}
         isAdmin={isAdmin}
@@ -47,14 +63,6 @@ export default async function HomePage() {
         initialEvents={calendarEvents}
         initialDayCounter={dayCounter}
       />
-
-      <Suspense fallback={null}>
-        {/* categoryPostCounts/totalPostCount only matter for the gallery
-            category rail, which never renders here (onGallery is false
-            on the homepage) — empty/0 placeholders, same as the already-
-            empty categories array above. */}
-        <Nav profile={profile} categories={[]} categoryPostCounts={{}} totalPostCount={0} />
-      </Suspense>
     </div>
   )
 }

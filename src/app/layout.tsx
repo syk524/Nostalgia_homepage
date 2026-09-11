@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Noto_Sans_KR, Roboto, Chivo_Mono, Bebas_Neue, Playfair_Display } from 'next/font/google'
 import localFont from 'next/font/local'
 import Script from 'next/script'
 import { SoundPlayer } from '@/components/sound-player/sound-player'
 import { CustomCursor } from '@/components/custom-cursor'
 import { ThemeProvider } from '@/components/theme-provider'
+import { NavWithData } from '@/components/nav-with-data'
 import { getUserTheme } from '@/lib/get-user-theme'
 import './globals.css'
 
@@ -203,6 +205,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           `}
         </Script>
         <ThemeProvider initialTheme={theme.key} isGuest={theme.isGuest}>
+          {/* Rendered once, here, alongside {children} rather than inside
+              either app/page.tsx or (main)/layout.tsx (which each used to
+              mount their own separate copy) — per nav.tsx's own "mounted
+              once for the whole app" comment, which the two-copy setup
+              was quietly violating: navigating between the home scene and
+              any other page unmounted one Nav and mounted a fresh other,
+              reported directly as the nav (and the login/account state in
+              it) visibly reloading instead of just staying put. This
+              spot, inside ThemeProvider — itself a plain Context.Provider
+              with no DOM node of its own, and already documented as
+              surviving client-side navigation without unmounting — is
+              what actually makes this the one persistent instance.
+              fallback={null} keeps this layout itself from having to
+              await Nav's own data (see NavWithData's own comment for
+              why that matters for app/loading.tsx). */}
+          <Suspense fallback={null}>
+            <NavWithData />
+          </Suspense>
           {children}
         </ThemeProvider>
         <SoundPlayer />

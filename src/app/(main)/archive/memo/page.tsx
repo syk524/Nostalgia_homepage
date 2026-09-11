@@ -4,6 +4,7 @@ import { ArchiveSectionTabs } from '@/components/archive-side-nav'
 import { MemoBoard } from '@/components/memo-board'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { getUserTheme } from '@/lib/get-user-theme'
+import { isNoirLike } from '@/lib/themes'
 import type { Memo } from '@/types/database'
 
 // Editor-or-admin-only to view at all, same notFound() gate as
@@ -24,7 +25,7 @@ export default async function ArchiveMemoPage() {
 
   return (
     <>
-      {theme === 'noir' && (
+      {isNoirLike(theme) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <NoirFloatingParticles />
         </div>

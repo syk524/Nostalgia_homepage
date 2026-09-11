@@ -9,6 +9,7 @@ import { getLastListView } from '@/lib/list-view-tracker'
 import { fetchPostDetail } from '@/lib/actions/gallery'
 import { useTheme } from '@/components/theme-provider'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
+import { isNoirLike } from '@/lib/themes'
 import type { Post, Profile, PostImage, Category } from '@/types/database'
 
 type FullPost = Post & { author: Profile; images: PostImage[]; category: Category }
@@ -174,7 +175,7 @@ export function PostModal({
           1020px since nothing (gutter or Nav's rail) occupies that space
           at that breakpoint either. */}
       <div aria-hidden="true" className="hidden min-[1020px]:block shrink-0 w-[calc(2.6vw+159px)] relative overflow-hidden">
-        {theme === 'noir' && <NoirFloatingParticles />}
+        {isNoirLike(theme) && <NoirFloatingParticles />}
       </div>
       {/* Metadata sidebar — fixed width on desktop, unless there are no
           images to show, in which case it takes the full remaining width

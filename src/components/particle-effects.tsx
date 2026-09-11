@@ -8,8 +8,10 @@ import { useEffect, useRef } from 'react'
 export const PARTICLE_EFFECTS = [
   { value: 'rain', label: 'Rain' },
   { value: 'stars', label: 'Stars' },
+  { value: 'shooting-stars', label: 'Shooting Stars' },
   { value: 'vapor', label: 'Vapor' },
   { value: 'notes', label: 'Notes' },
+  { value: 'snow', label: 'Snow' },
 ] as const
 
 type EffectValue = typeof PARTICLE_EFFECTS[number]['value']
@@ -25,8 +27,10 @@ function isEffectValue(value: string | null): value is EffectValue {
 export const DEFAULT_PARTICLE_COLORS: Record<EffectValue, string> = {
   rain: '#ffffff',
   stars: '#ffffff',
+  'shooting-stars': '#ffffff',
   vapor: '#08080a',
   notes: '#ffffff',
+  snow: '#ffffff',
 }
 
 // Canvas fillStyle/strokeStyle both accept a plain hex string directly,
@@ -68,6 +72,44 @@ function randomStar(width: number, height: number): Star {
     baseOpacity: 0.35 + Math.random() * 0.55,
     twinkleSpeed: 0.6 + Math.random() * 1.4,
     twinkleOffset: Math.random() * Math.PI * 2,
+  }
+}
+
+// A rare bright streak crossing the sky, on top of the same ambient
+// twinkling field 'stars' already draws — reference:
+// innocent-aim-546625.framer.app. Ages in frames (framesAlive vs
+// lifespanFrames), same simple-per-frame-increment convention as
+// drops/notes above rather than real elapsed-ms, so it stays consistent
+// with the rest of this file. Diagonal, upper-left toward lower-right
+// (a fixed narrow angle band, not fully random direction) — matches the
+// reference's own single consistent travel direction rather than
+// streaks crossing every which way.
+type ShootingStar = {
+  x: number; y: number
+  angle: number
+  speed: number
+  length: number
+  framesAlive: number
+  lifespanFrames: number
+}
+
+function randomShootingStar(width: number, height: number): ShootingStar {
+  return {
+    x: Math.random() * width,
+    // Starts somewhere in the upper half — reported directly, spawning
+    // low left too little room to trace a visible streak before exiting
+    // the bottom edge.
+    y: Math.random() * height * 0.5,
+    angle: Math.PI * 0.2 + Math.random() * Math.PI * 0.1,
+    // Slower per repeated direct request — lifespanFrames scaled up
+    // alongside each slowdown (52.5 → 105 → 140 frames on average) so
+    // the streak still crosses about the same total distance each time,
+    // just more gradually, rather than crawling a shorter distance at
+    // the old duration.
+    speed: 3.5 + Math.random() * 2,
+    length: 70 + Math.random() * 70,
+    framesAlive: 0,
+    lifespanFrames: 110 + Math.random() * 60,
   }
 }
 
@@ -167,6 +209,27 @@ function randomNote(width: number, height: number, atRandomHeight: boolean): Not
   }
 }
 
+// Same straight-down-plus-sway drift as notes, but a plain filled circle
+// instead of a glyph — denser and smaller, matching a real snowfall's look
+// rather than a handful of large drifting shapes.
+type Snowflake = {
+  x: number; y: number; radius: number; speed: number
+  swayAmp: number; swayFreq: number; swayPhase: number; opacity: number
+}
+
+function randomSnowflake(width: number, height: number, atRandomHeight: boolean): Snowflake {
+  return {
+    x: Math.random() * width,
+    y: atRandomHeight ? Math.random() * height : -10,
+    radius: 1.5 + Math.random() * 2.5,
+    speed: 0.4 + Math.random() * 0.9,
+    swayAmp: 10 + Math.random() * 20,
+    swayFreq: 0.0004 + Math.random() * 0.0006,
+    swayPhase: Math.random() * Math.PI * 2,
+    opacity: 0.4 + Math.random() * 0.5,
+  }
+}
+
 // Layered between the session's fixed background image (z-0) and its log
 // card ([slug]/page.tsx gives that card's wrapper an explicit z-10 so it
 // always stacks above this regardless of DOM order) — a full-viewport
@@ -192,6 +255,12 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     let farClouds: Cloud[] = []
     let nearClouds: Cloud[] = []
     let notes: Note[] = []
+    let snowflakes: Snowflake[] = []
+    // Populated over time by step() below, not up front — a shooting
+    // star is a rare, short-lived event, not a standing population like
+    // every other particle type here.
+    let shootingStars: ShootingStar[] = []
+    let framesUntilNextShootingStar = 0
 
     function resize() {
       width = canvas!.width = window.innerWidth
@@ -211,8 +280,20 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         // Pulled back further still (14000 → 28000 divisor) since even
         // that read as too many, reported directly.
         notes = Array.from({ length: Math.round((width * height) / 28000) }, () => randomNote(width, height, true))
+      } else if (effect === 'snow') {
+        snowflakes = Array.from({ length: Math.round((width * height) / 9000) }, () => randomSnowflake(width, height, true))
       } else {
-        stars = Array.from({ length: Math.round((width * height) / 6000) }, () => randomStar(width, height))
+        // 'shooting-stars' gets a denser ambient field than plain 'stars'
+        // — a smaller divisor, more stars per unit area — per direct
+        // request, kept scoped to this one effect rather than changing
+        // 'stars' itself for every existing TRPG session already using it.
+        const starDivisor = effect === 'shooting-stars' ? 3500 : 6000
+        stars = Array.from({ length: Math.round((width * height) / starDivisor) }, () => randomStar(width, height))
+        // Cleared rather than repositioned on resize — a mid-flight
+        // streak's own start/end make sense only for the viewport size
+        // it was spawned at; step() below spawns a fresh one shortly
+        // after anyway.
+        if (effect === 'shooting-stars') shootingStars = []
       }
     }
     resize()
@@ -239,6 +320,33 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         ctx!.beginPath()
         ctx!.arc(star.x, star.y, star.radius, 0, Math.PI * 2)
         ctx!.fill()
+      }
+      ctx!.globalAlpha = 1
+    }
+
+    function drawShootingStars() {
+      ctx!.lineWidth = 3
+      ctx!.lineCap = 'round'
+      for (const s of shootingStars) {
+        const t = s.framesAlive / s.lifespanFrames
+        // Fades in over the first 15% of its life, then fades back out
+        // over the rest — never sits at full brightness for a hard-edged
+        // stretch the way a flat opacity would.
+        const fade = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85
+        const tailX = s.x - Math.cos(s.angle) * s.length
+        const tailY = s.y - Math.sin(s.angle) * s.length
+        // Gradient along the streak itself, transparent tail to bright
+        // head — a flat stroke color would read as a rigid bar, not a
+        // trail fading away behind a moving point.
+        const gradient = ctx!.createLinearGradient(tailX, tailY, s.x, s.y)
+        gradient.addColorStop(0, `${resolvedColor}00`)
+        gradient.addColorStop(1, resolvedColor)
+        ctx!.strokeStyle = gradient
+        ctx!.globalAlpha = fade
+        ctx!.beginPath()
+        ctx!.moveTo(tailX, tailY)
+        ctx!.lineTo(s.x, s.y)
+        ctx!.stroke()
       }
       ctx!.globalAlpha = 1
     }
@@ -296,12 +404,28 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.globalAlpha = 1
     }
 
+    function drawSnow(time: number) {
+      ctx!.fillStyle = resolvedColor
+      for (const flake of snowflakes) {
+        const swayX = flake.x + Math.sin(time * flake.swayFreq + flake.swayPhase) * flake.swayAmp
+        ctx!.globalAlpha = flake.opacity
+        ctx!.beginPath()
+        ctx!.arc(swayX, flake.y, flake.radius, 0, Math.PI * 2)
+        ctx!.fill()
+      }
+      ctx!.globalAlpha = 1
+    }
+
     function draw(time: number) {
       ctx!.clearRect(0, 0, width, height)
       if (effect === 'rain') drawRain()
       else if (effect === 'vapor') drawVapor()
       else if (effect === 'notes') drawNotes(time)
-      else drawStars(time)
+      else if (effect === 'snow') drawSnow(time)
+      else {
+        drawStars(time)
+        if (effect === 'shooting-stars') drawShootingStars()
+      }
     }
 
     if (reduceMotion) {
@@ -334,6 +458,34 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           // note's own center for that sine wave to swing around.
           if (note.y - note.size > height) Object.assign(note, randomNote(width, height, false))
         }
+      } else if (effect === 'snow') {
+        for (const flake of snowflakes) {
+          flake.y += flake.speed
+          if (flake.y - flake.radius > height) Object.assign(flake, randomSnowflake(width, height, false))
+        }
+      } else if (effect === 'shooting-stars') {
+        // Ambient stars need no per-frame update at all (their twinkle is
+        // computed straight from time in drawStars) — only the rare
+        // streaks have anything to spawn/age/move here.
+        framesUntilNextShootingStar--
+        // Cap raised alongside the higher frequency below (3, was 2) —
+        // streaks now also live roughly twice as long (slower, per
+        // direct request), so more can be in flight at once; the old
+        // cap would otherwise silently swallow a spawn that's due while
+        // two slow ones are still finishing.
+        if (framesUntilNextShootingStar <= 0 && shootingStars.length < 3) {
+          shootingStars.push(randomShootingStar(width, height))
+          // Every ~1-2.5s at a typical 60fps — more frequent than an
+          // earlier ~2.5-6.5s, per direct request, while staying
+          // irregular rather than a predictable metronome.
+          framesUntilNextShootingStar = 60 + Math.random() * 90
+        }
+        for (const s of shootingStars) {
+          s.framesAlive++
+          s.x += Math.cos(s.angle) * s.speed
+          s.y += Math.sin(s.angle) * s.speed
+        }
+        shootingStars = shootingStars.filter(s => s.framesAlive < s.lifespanFrames)
       }
       draw(time)
       frame = requestAnimationFrame(step)

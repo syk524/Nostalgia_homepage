@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CharacterPairGrid } from '@/components/character-pair-grid'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { getUserTheme } from '@/lib/get-user-theme'
+import { isNoirLike } from '@/lib/themes'
 import type { Profile, CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
 
 export default async function CharacterArchivePage() {
@@ -33,7 +34,7 @@ export default async function CharacterArchivePage() {
           animate-fade-up/transform issue documented throughout this
           page's own sibling files). -z-10 sinks it under the grid's own
           unpositioned content without needing z-index on every card. */}
-      {theme === 'noir' && (
+      {isNoirLike(theme) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <NoirFloatingParticles />
         </div>

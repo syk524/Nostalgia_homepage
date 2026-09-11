@@ -14,7 +14,15 @@ import { useEffect, useRef } from 'react'
 // ripple, no cursor interaction). Returns bare content (no wrapper
 // div) so each caller supplies its own aria-hidden/pointer-events-none/
 // positioning wrapper sized to whatever it's meant to sit behind.
-export function NoirParticleField() {
+//
+// ripple (default true) toggles the traveling ripple waves and their
+// origin-marker glow — off for the Illust theme's own home background
+// (draggable-home-scene.tsx), per direct request: the bands of extra-
+// bright dots plus the glow blob read as too busy layered over a full
+// illustration, unlike Noir's own plain backdrop. The ambient twinkle
+// floor and cursor-repulsion scatter stay either way — only asked to
+// remove the ripple specifically, not the whole particle field.
+export function NoirParticleField({ ripple = true }: { ripple?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -98,7 +106,7 @@ export function NoirParticleField() {
         const flicker = reduceMotion ? 0.5 : (Math.sin(t * 0.0005 + p.seed * Math.PI * 2) + 1) / 2
         let density = 0.06 + flicker * 0.05
 
-        if (!reduceMotion) {
+        if (ripple && !reduceMotion) {
           for (let i = 0; i < RIPPLE_COUNT; i++) {
             const phase = ((t + (i * RIPPLE_PERIOD) / RIPPLE_COUNT) % RIPPLE_PERIOD) / RIPPLE_PERIOD
             const front = phase * maxRadius
@@ -107,7 +115,9 @@ export function NoirParticleField() {
             const rippleDensity = band * (1 - phase)
             density = Math.max(density, rippleDensity)
           }
+        }
 
+        if (!reduceMotion) {
           // Scatter away from the cursor, radially, harder the closer
           // it is — then ease back toward its resting cell once the
           // cursor moves on.
@@ -166,16 +176,20 @@ export function NoirParticleField() {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('blur', handleBlur)
     }
-  }, [])
+  }, [ripple])
 
   return (
     <>
       {/* A soft, static glow marking the ripple's origin at the bottom
-          of the page — the ripple itself (canvas below) does the animating. */}
-      <div
-        className="absolute left-1/2 bottom-0 rounded-full bg-white/70"
-        style={{ width: '14vmin', height: '14vmin', transform: 'translate(-50%, 50%)', filter: 'blur(28px)' }}
-      />
+          of the page — the ripple itself (canvas below) does the
+          animating. Pointless without the ripple, so it's gated the
+          same way. */}
+      {ripple && (
+        <div
+          className="absolute left-1/2 bottom-0 rounded-full bg-white/70"
+          style={{ width: '14vmin', height: '14vmin', transform: 'translate(-50%, 50%)', filter: 'blur(28px)' }}
+        />
+      )}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
     </>
   )

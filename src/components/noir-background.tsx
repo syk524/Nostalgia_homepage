@@ -23,10 +23,18 @@ const WORDMARK_LETTERS: { char: string; top: string; left: string; rotate: numbe
 // instead of pre-baked letter paths). Purely decorative — aria-hidden,
 // pointer-events-none throughout — and only ever mounted for a
 // non-default theme (see draggable-home-scene.tsx).
-export function NoirBackground() {
+//
+// ripple (default true) passes straight through to NoirParticleField —
+// draggable-home-scene.tsx sets it false for the Illust theme, whose own
+// background is a full illustration rather than Noir's plain backdrop.
+// particles (default true) skips NoirParticleField entirely — per direct
+// follow-up request, Illust drops the grid/twinkle field and its cursor-
+// repulsion hover effect too, not just the ripple, leaving only the
+// grain-filtered wordmark below over the illustration.
+export function NoirBackground({ ripple = true, particles = true }: { ripple?: boolean; particles?: boolean } = {}) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <NoirParticleField />
+      {particles && <NoirParticleField ripple={ripple} />}
 
       <svg width="0" height="0" className="absolute">
         <defs>

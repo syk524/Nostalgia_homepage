@@ -4,6 +4,7 @@ import { useTheme } from '@/components/theme-provider'
 import Image from 'next/image'
 import { Settings as SettingsIcon } from 'lucide-react'
 import wordmark from '../../public/images/nostalgio-wordmark.webp'
+import illustThemeBg from '../../public/images/illust-theme-bg.webp'
 import { useDraggable } from '@/lib/use-draggable'
 import { Stickers } from '@/components/stickers'
 import { StickerGalleryModal } from '@/components/sticker-gallery-modal'
@@ -14,6 +15,7 @@ import { CalendarDeskWidget } from '@/components/calendar-desk-widget'
 import { DayCounterDeskWidget } from '@/components/day-counter-desk-widget'
 import { SettingsPanel } from '@/components/settings-panel'
 import { NoirBackground } from '@/components/noir-background'
+import { ParticleEffect } from '@/components/particle-effects'
 import { DOCK_APPS } from '@/lib/dock-apps'
 import { savePlacement, removePlacement } from '@/lib/actions/stickers'
 import type { StickerGalleryImage, UserBackgroundSticker, CalendarEvent, DayCounter } from '@/types/database'
@@ -133,6 +135,11 @@ const DOCK_ITEMS_TOP = DOCK_ICON_SIZE + DOCK_GAP
 // move once mounted, so this offset is a plain constant.
 const DOCK_ANCHOR_OFFSET = (DOCK_ICON_SIZE * 3 + DOCK_GAP * 2) / 2
 const PANEL_MARGIN = 16
+// Matches the 400ms `top` transition both desk widgets' own docked panels
+// already use (calendar-desk-widget.tsx/day-counter-desk-widget.tsx) —
+// the move-then-fade/fade-then-move orchestration below needs to know
+// exactly how long that move takes, so the two never overlap.
+const TRANSITION_MS = 400
 
 // The home page's decorative grid + wordmark + sticker + app icons all
 // live on one draggable "desk": dragging empty background pans the
@@ -202,6 +209,58 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [dayCounterOpen, setDayCounterOpen] = useState(false)
 
+  // Orchestrates Calendar's own open/close against DayCounter's move,
+  // per direct request — DayCounter always defers to Calendar (see
+  // dayCounterPanelTop below, which reads calendarSlotOccupied rather
+  // than the raw calendarOpen intent), so only this direction needs
+  // sequencing; DayCounter opening/closing never displaces Calendar,
+  // whose own panelTop is a fixed PANEL_MARGIN regardless.
+  //
+  // calendarOpen above stays the raw click intent (what the dock icon's
+  // own aria-label/toggle reflects); these three track the actual
+  // panel's mount/fade lifecycle, which lags that intent by one
+  // TRANSITION_MS step in either direction whenever DayCounter is also
+  // open and has to move out of the way first:
+  //   opening:  DayCounter starts moving immediately (calendarSlotOccupied
+  //             flips right away); Calendar's own fade-in (calendarVisible)
+  //             waits until that move has finished.
+  //   closing:  Calendar fades out immediately (calendarVisible flips
+  //             right away, calendarMounted stays true so the fade can
+  //             actually play); only once that fade-out finishes does
+  //             DayCounter move back up (calendarSlotOccupied flips) and
+  //             the panel actually unmount (calendarMounted flips).
+  // With DayCounter closed, none of this delay applies — nothing needs
+  // to move, so Calendar just opens/closes immediately, same as before.
+  const [calendarMounted, setCalendarMounted] = useState(false)
+  const [calendarVisible, setCalendarVisible] = useState(false)
+  const [calendarSlotOccupied, setCalendarSlotOccupied] = useState(false)
+
+  useEffect(() => {
+    if (calendarOpen) {
+      setCalendarMounted(true)
+      if (dayCounterOpen) {
+        setCalendarSlotOccupied(true)
+        setCalendarVisible(false)
+        const t = setTimeout(() => setCalendarVisible(true), TRANSITION_MS)
+        return () => clearTimeout(t)
+      }
+      setCalendarSlotOccupied(true)
+      setCalendarVisible(true)
+    } else {
+      setCalendarVisible(false)
+      if (dayCounterOpen) {
+        const t = setTimeout(() => {
+          setCalendarSlotOccupied(false)
+          setCalendarMounted(false)
+        }, TRANSITION_MS)
+        return () => clearTimeout(t)
+      }
+      setCalendarSlotOccupied(false)
+      setCalendarMounted(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarOpen])
+
   // The three dock icons never move — Settings sits at the top, Calendar
   // and DayCounter fixed right below it, all right-aligned and centered
   // as one group at rest (see DOCK_ANCHOR_OFFSET above). Positioned from
@@ -218,7 +277,12 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
   // same top slot only when Calendar's isn't open, otherwise it sits
   // right below Calendar's.
   const calendarPanelTop = `${PANEL_MARGIN}px`
-  const dayCounterPanelTop = calendarOpen ? `${PANEL_MARGIN + DOCK_CALENDAR_OPEN_HEIGHT + DOCK_GAP}px` : `${PANEL_MARGIN}px`
+  // calendarSlotOccupied, not the raw calendarOpen — on close, this stays
+  // true (keeping DayCounter shifted down) until Calendar's own fade-out
+  // has actually finished, per the orchestration above; using the raw
+  // intent here would move DayCounter back up the instant the icon is
+  // clicked, well before Calendar visually vacates the slot.
+  const dayCounterPanelTop = calendarSlotOccupied ? `${PANEL_MARGIN + DOCK_CALENDAR_OPEN_HEIGHT + DOCK_GAP}px` : `${PANEL_MARGIN}px`
 
   const [openApps, setOpenApps] = useState<string[]>([])
   const [zOrder, setZOrder] = useState<string[]>([])
@@ -378,7 +442,73 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             style={{ backgroundPosition: `${canvas.offset.x}px ${canvas.offset.y}px` }}
           />
         ) : (
-          <NoirBackground />
+          <>
+            {/* Illust's own landing-page backdrop, per direct request —
+                the one deliberate visual difference from Noir (both
+                otherwise share every noir-* CSS rule and component
+                branch, see lib/themes.ts's own NOIR_LIKE comment).
+                Sits behind NoirBackground's particle field/wordmark
+                rather than replacing it, since "add this picture to the
+                background" was additive, not a request to redesign
+                Illust's decoration from scratch. */}
+            {theme === 'illust' && (
+              // illust-home-fade-in (its own dedicated animation, not
+              // the shared 0.3s animate-fade-in utility used elsewhere —
+              // tuned independently rather than risking every other
+              // caller of that class) — softens the swap from the root
+              // loading.tsx's own blurred/dimmed illustration
+              // (globals.css's .illust-page-bg) into this crisp,
+              // undimmed one, reported directly as a harsh flash
+              // otherwise: Suspense hard-swaps a fallback for real
+              // content with no crossfade of its own, so the moment
+              // this mounts, going from dark+soft to bright+sharp in a
+              // single frame read as a flash regardless of how briefly
+              // the fallback showed. A plain opacity fade-in doesn't
+              // truly crossfade between the two different treatments,
+              // but it turns the pop-in into a smooth reveal instead.
+              // Slower/gentler than the loading backdrop's own 0.2s fade
+              // (globals.css's .illust-page-bg-enter) per direct request
+              // for a smoother reveal specifically on this leg (another
+              // page back to the landing page) — that one only has to
+              // bridge a much smaller visual gap (nothing to blurred),
+              // while this one bridges the loading screen all the way to
+              // the final, fully-detailed scene.
+              <div className="absolute inset-0 illust-home-fade-in">
+                <Image
+                  src={illustThemeBg}
+                  alt=""
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover"
+                />
+                {/* Top-down darkening so the nav (fixed, top-[3%], z-[60]
+                    — nav.tsx) stays readable over a busy illustration
+                    instead of competing with whatever's directly behind
+                    it — per direct request, same size/placement as a
+                    reference image's own top gradient, black instead of
+                    that reference's red. Sits above the illustration but
+                    (no z-index of its own, just later in DOM order) still
+                    well under nav's z-[60], which lives outside this
+                    component entirely. */}
+                <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/60 to-transparent" />
+                {/* Twinkling stars + occasional shooting-star streaks, per
+                    direct request (reference: innocent-aim-546625.framer.app)
+                    — the same shared particle-effects.tsx system TRPG
+                    sessions pick from (see PARTICLE_EFFECTS), reused here
+                    rather than a one-off implementation. z-[1] (baked into
+                    ParticleEffect's own className) sits above the
+                    illustration/gradient here but still well under nav's
+                    z-[60]. */}
+                <ParticleEffect effect="shooting-stars" />
+              </div>
+            )}
+            {/* No ripple, and no particle field at all (grid twinkle +
+                cursor-repulsion hover), over Illust's own illustration —
+                per direct request, both read as too busy layered on top
+                of a full background image, unlike Noir's plain backdrop. */}
+            <NoirBackground ripple={theme !== 'illust'} particles={theme !== 'illust'} />
+          </>
         )}
 
         {theme === 'default' && (
@@ -437,7 +567,14 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
           events={events}
           canEdit={canEdit}
           onEventsChange={setEvents}
-          docked={theme === 'default' ? undefined : { open: calendarOpen, dockTop: calendarDockTop, panelTop: calendarPanelTop, onOpenChange: setCalendarOpen }}
+          docked={theme === 'default' ? undefined : {
+            open: calendarOpen,
+            mounted: calendarMounted,
+            visible: calendarVisible,
+            dockTop: calendarDockTop,
+            panelTop: calendarPanelTop,
+            onOpenChange: setCalendarOpen,
+          }}
         />
 
         {dayCounter && (

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ArchiveSectionTabs } from '@/components/archive-side-nav'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { getUserTheme } from '@/lib/get-user-theme'
+import { isNoirLike } from '@/lib/themes'
 import type { TrpgSession } from '@/types/database'
 
 type ListedSession = Pick<TrpgSession, 'id' | 'slug' | 'title' | 'date_range' | 'description' | 'cover_url'>
@@ -99,7 +100,7 @@ export default async function TrpgListPage() {
 
   return (
     <>
-    {theme === 'noir' && (
+    {isNoirLike(theme) && (
       // Sibling of the breakout div below, not nested inside it — same
       // reasoning as profile/page.tsx's own NoirFloatingParticles wrapper:
       // that div's own -translate-x-1/2 transform would become this

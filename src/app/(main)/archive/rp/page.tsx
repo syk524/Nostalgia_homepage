@@ -9,6 +9,7 @@ import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 // to restore it.
 import { RpPostcardDeck as RpDeck, type ListedRpPost } from '@/components/rp-postcard-deck'
 import { getUserTheme } from '@/lib/get-user-theme'
+import { isNoirLike } from '@/lib/themes'
 
 // Editor-or-admin-only to view at all, same notFound() gate as
 // archive/memo/page.tsx and archive/links/page.tsx — not a public
@@ -31,7 +32,7 @@ export default async function ArchiveRpPage() {
 
   return (
     <>
-      {theme === 'noir' && (
+      {isNoirLike(theme) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <NoirFloatingParticles />
         </div>

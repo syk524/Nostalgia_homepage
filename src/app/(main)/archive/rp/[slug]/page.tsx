@@ -6,6 +6,7 @@ import { RpConversation } from '@/components/rp-conversation'
 import { ScrollTimeline } from '@/components/scroll-timeline'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { getUserTheme } from '@/lib/get-user-theme'
+import { isNoirLike } from '@/lib/themes'
 import type { RpPost } from '@/types/database'
 
 // Same editor-or-admin notFound() gate as the list page (archive/rp/
@@ -32,7 +33,7 @@ export default async function RpPostPage({ params }: { params: Promise<{ slug: s
 
   return (
     <>
-      {theme === 'noir' && (
+      {isNoirLike(theme) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <NoirFloatingParticles />
         </div>
