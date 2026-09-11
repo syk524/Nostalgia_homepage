@@ -167,16 +167,16 @@ function randomWarpStar(maxDist: number): WarpStar {
   return {
     angle: Math.random() * Math.PI * 2,
     // Staggered starting distance, not all pinned to the exact center —
-    // spawning every star at dist 0 would have them all pop into
-    // existence in a single frame's tiny dot, then take the same amount
-    // of time to reach a visible streak length; staggering means the
-    // field always has stars at every stage of the fly-by, right from
+    // spawning every star at dist 0 would have every star pop into
+    // existence in the same tiny spot at once; staggering means the
+    // field always has stars at every stage of the drift, right from
     // the very first frame.
     dist: Math.random() * maxDist * 0.6,
-    // Slower per direct request — halved alongside the acceleration rate
-    // below (step()) so the whole fly-by takes longer end to end, not
-    // just its starting speed.
-    speed: 0.3 + Math.random() * 0.3,
+    // Slowed a lot per repeated direct request — this and the
+    // acceleration rate below (step()) are both roughly 1/15th of the
+    // original speed, so a full drift from center to edge now takes on
+    // the order of half a minute instead of a handful of seconds.
+    speed: 0.02 + Math.random() * 0.02,
   }
 }
 
@@ -266,7 +266,9 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       if (effect === 'rain') {
         drops = Array.from({ length: Math.round((width * height) / 9000) }, () => randomDrop(width, height, true))
       } else if (effect === 'snow') {
-        snowflakes = Array.from({ length: Math.round((width * height) / 9000) }, () => randomSnowflake(width, height, true))
+        // Sparser than rain's drops (18000 vs 9000 divisor) — per direct
+        // request, the rain-level density read as too much snow.
+        snowflakes = Array.from({ length: Math.round((width * height) / 18000) }, () => randomSnowflake(width, height, true))
       } else if (effect === 'star-voyage') {
         // Cleared and respawned on resize (not repositioned) — like
         // shooting stars, a mid-flight warp star's angle/distance only
@@ -380,39 +382,34 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       }
     }
 
-    // Hyperspace fly-by — every star races outward from a shared center,
-    // accelerating (not constant speed) so the field reads as travel
-    // toward the viewer rather than a uniform outward drift. Reference:
-    // star-effect.framer.website.
+    // A drifting starfield radiating outward from a shared center —
+    // reference: star-effect.framer.website (its own mouse-hover
+    // interaction excluded per direct request; only the base drifting
+    // field is reproduced here). Drawn as plain round dots, not streaked
+    // lines — an earlier pass rendered each star as a short comet-tail
+    // stroke, which read as "drawing lines" rather than the reference's
+    // own look of individual particles drifting apart, reported directly.
     function drawWarpStars() {
       const cx = width / 2
       const cy = height / 2
-      ctx!.lineCap = 'round'
+      const maxDist = Math.hypot(width, height) / 2 + 40
+      ctx!.fillStyle = resolvedColor
       for (const s of warpStars) {
         // Fades in over its first stretch from center — otherwise a
         // freshly spawned star pops in at full brightness right next to
         // wherever the last one just vanished, reported as distracting
         // in the shooting-star effect's own early tuning.
         const fade = Math.min(1, s.dist / 60)
-        const tailDist = Math.max(0, s.dist - (8 + s.speed * 6))
-        const cos = Math.cos(s.angle)
-        const sin = Math.sin(s.angle)
-        const headX = cx + cos * s.dist
-        const headY = cy + sin * s.dist
-        const tailX = cx + cos * tailDist
-        const tailY = cy + sin * tailDist
-        const gradient = ctx!.createLinearGradient(tailX, tailY, headX, headY)
-        gradient.addColorStop(0, `${resolvedColor}00`)
-        gradient.addColorStop(1, resolvedColor)
-        ctx!.strokeStyle = gradient
+        // Grows slightly the farther out it drifts, standing in for
+        // perspective (a star "closer" to the viewer reads as bigger)
+        // without needing an actual z-axis.
+        const radius = 0.8 + (s.dist / maxDist) * 1.8
+        const headX = cx + Math.cos(s.angle) * s.dist
+        const headY = cy + Math.sin(s.angle) * s.dist
         ctx!.globalAlpha = fade
-        // Thicker the faster (= farther along) a star is, matching a
-        // real fly-by where nearer stars appear to streak past wider.
-        ctx!.lineWidth = 1 + Math.min(2, s.speed * 0.5)
         ctx!.beginPath()
-        ctx!.moveTo(tailX, tailY)
-        ctx!.lineTo(headX, headY)
-        ctx!.stroke()
+        ctx!.arc(headX, headY, radius, 0, Math.PI * 2)
+        ctx!.fill()
       }
       ctx!.globalAlpha = 1
     }
@@ -498,7 +495,7 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           s.dist += s.speed
           // Accelerates the farther out it travels — a constant speed
           // read as a uniform drift rather than a fly-by rushing past.
-          s.speed += 0.0125
+          s.speed += 0.0008
           if (s.dist > maxDist) Object.assign(s, randomWarpStar(maxDist))
         }
       } else if (effect === 'water') {
