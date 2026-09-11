@@ -141,7 +141,11 @@ function randomSnowflake(width: number, height: number, atRandomHeight: boolean)
     x: Math.random() * width,
     y: atRandomHeight ? Math.random() * height : -10,
     radius: 1.5 + Math.random() * 2.5,
-    speed: 0.4 + Math.random() * 0.9,
+    // Slower per direct request — a flat, unconditional halving of the
+    // fall speed, not a cursor-driven slowdown; like every other
+    // particle type in this file, snow has no mouse/cursor interaction
+    // at all (step() below only ever advances y by this fixed speed).
+    speed: 0.2 + Math.random() * 0.45,
     swayAmp: 10 + Math.random() * 20,
     swayFreq: 0.0004 + Math.random() * 0.0006,
     swayPhase: Math.random() * Math.PI * 2,
@@ -169,7 +173,10 @@ function randomWarpStar(maxDist: number): WarpStar {
     // field always has stars at every stage of the fly-by, right from
     // the very first frame.
     dist: Math.random() * maxDist * 0.6,
-    speed: 0.6 + Math.random() * 0.6,
+    // Slower per direct request — halved alongside the acceleration rate
+    // below (step()) so the whole fly-by takes longer end to end, not
+    // just its starting speed.
+    speed: 0.3 + Math.random() * 0.3,
   }
 }
 
@@ -491,7 +498,7 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           s.dist += s.speed
           // Accelerates the farther out it travels — a constant speed
           // read as a uniform drift rather than a fly-by rushing past.
-          s.speed += 0.025
+          s.speed += 0.0125
           if (s.dist > maxDist) Object.assign(s, randomWarpStar(maxDist))
         }
       } else if (effect === 'water') {
