@@ -12,6 +12,9 @@ export const PARTICLE_EFFECTS = [
   { value: 'vapor', label: 'Vapor' },
   { value: 'notes', label: 'Notes' },
   { value: 'snow', label: 'Snow' },
+  { value: 'light', label: 'Light' },
+  { value: 'star-voyage', label: 'Star Voyage' },
+  { value: 'water', label: 'Water' },
 ] as const
 
 type EffectValue = typeof PARTICLE_EFFECTS[number]['value']
@@ -31,6 +34,9 @@ export const DEFAULT_PARTICLE_COLORS: Record<EffectValue, string> = {
   vapor: '#08080a',
   notes: '#ffffff',
   snow: '#ffffff',
+  light: '#9fd0ff',
+  'star-voyage': '#ffffff',
+  water: '#6fb3ff',
 }
 
 // Canvas fillStyle/strokeStyle both accept a plain hex string directly,
@@ -44,6 +50,14 @@ function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
   if (!m) return [8, 8, 10]
   return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]
+}
+
+// Two-digit hex alpha suffix for a plain "#rrggbb" fillStyle/strokeStyle —
+// same trick drawShootingStars already uses for its transparent gradient
+// stop (`${resolvedColor}00`), generalized to any alpha rather than just
+// fully-transparent.
+function alphaHex(alpha: number): string {
+  return Math.round(Math.min(1, Math.max(0, alpha)) * 255).toString(16).padStart(2, '0')
 }
 
 type Drop = { x: number; y: number; length: number; speed: number; opacity: number }
@@ -102,14 +116,14 @@ function randomShootingStar(width: number, height: number): ShootingStar {
     y: Math.random() * height * 0.5,
     angle: Math.PI * 0.2 + Math.random() * Math.PI * 0.1,
     // Slower per repeated direct request — lifespanFrames scaled up
-    // alongside each slowdown (52.5 → 105 → 140 frames on average) so
-    // the streak still crosses about the same total distance each time,
-    // just more gradually, rather than crawling a shorter distance at
-    // the old duration.
-    speed: 3.5 + Math.random() * 2,
+    // alongside each slowdown (52.5 → 105 → 140 → 195 frames on average)
+    // so the streak still crosses about the same total distance each
+    // time, just more gradually, rather than crawling a shorter distance
+    // at the old duration.
+    speed: 2.5 + Math.random() * 1.5,
     length: 70 + Math.random() * 70,
     framesAlive: 0,
-    lifespanFrames: 110 + Math.random() * 60,
+    lifespanFrames: 150 + Math.random() * 90,
   }
 }
 
@@ -230,6 +244,76 @@ function randomSnowflake(width: number, height: number, atRandomHeight: boolean)
   }
 }
 
+// A star flying straight outward from a fixed center, accelerating the
+// farther out it gets — reference: star-effect.framer.website, which
+// (confirmed by sampling its canvas twice 800ms apart — every bright
+// pixel had moved, nothing held still) turned out to be a moving warp
+// field rather than a plain twinkling one, matching its own "voyage"
+// name. dist/speed only, no x/y — position is derived from the shared
+// center each frame, same as shooting stars derive their tail from a
+// single angle+length rather than storing two endpoints.
+type WarpStar = { angle: number; dist: number; speed: number }
+
+function randomWarpStar(maxDist: number): WarpStar {
+  return {
+    angle: Math.random() * Math.PI * 2,
+    // Staggered starting distance, not all pinned to the exact center —
+    // spawning every star at dist 0 would have them all pop into
+    // existence in a single frame's tiny dot, then take the same amount
+    // of time to reach a visible streak length; staggering means the
+    // field always has stars at every stage of the fly-by, right from
+    // the very first frame.
+    dist: Math.random() * maxDist * 0.6,
+    speed: 0.6 + Math.random() * 0.6,
+  }
+}
+
+// Calm, slow-breathing glow — reference: calmwatershader.framer.ai (the
+// site's own shooting star excluded per direct request; only the ambient
+// blue light-through-water glow is reproduced here). A handful of large,
+// heavily-blurred radial blobs drifting sideways at a near-imperceptible
+// speed, each pulsing its own opacity slowly out of phase with the
+// others so the glow reads as shifting light rather than a static wash.
+type WaterGlow = {
+  x: number; y: number; radius: number; vx: number
+  opacityBase: number; pulseSpeed: number; pulsePhase: number
+}
+
+function randomWaterGlow(width: number, height: number): WaterGlow {
+  return {
+    x: Math.random() * width,
+    y: Math.random() * height,
+    radius: 140 + Math.random() * 180,
+    vx: (Math.random() - 0.5) * 0.05,
+    opacityBase: 0.1 + Math.random() * 0.12,
+    pulseSpeed: 0.15 + Math.random() * 0.25,
+    pulsePhase: Math.random() * Math.PI * 2,
+  }
+}
+
+// A thin horizontal shimmer line, undulating via a sine wave sampled
+// across x — same "compute purely from elapsed time, don't accumulate a
+// per-frame offset" approach as the notes/snow sway, so it stays
+// perfectly periodic no matter how long the effect has been running.
+type WaterRipple = {
+  y: number; amplitude: number; frequency: number
+  phase: number; speed: number; opacity: number
+}
+
+function randomWaterRipple(height: number, index: number, count: number): WaterRipple {
+  return {
+    // Evenly spread top-to-bottom rather than fully random — a random Y
+    // per ripple risks two landing close together (reads as one thick
+    // band) or a wide empty gap; even spacing guarantees coverage.
+    y: (height * (index + 1)) / (count + 1),
+    amplitude: 6 + Math.random() * 10,
+    frequency: 0.006 + Math.random() * 0.01,
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.0004 + Math.random() * 0.0006,
+    opacity: 0.07 + Math.random() * 0.08,
+  }
+}
+
 // Layered between the session's fixed background image (z-0) and its log
 // card ([slug]/page.tsx gives that card's wrapper an explicit z-10 so it
 // always stacks above this regardless of DOM order) — a full-viewport
@@ -246,7 +330,10 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     if (!canvas || !ctx) return
 
     const resolvedColor = color || DEFAULT_PARTICLE_COLORS[effect]
-    const [vaporR, vaporG, vaporB] = hexToRgb(resolvedColor)
+    // Shared by drawClouds (vapor) and drawWater's glow blobs — both need
+    // the resolved color as rgba() components for a radial gradient, not
+    // just a flat fillStyle string.
+    const [colorR, colorG, colorB] = hexToRgb(resolvedColor)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let width = 0
     let height = 0
@@ -256,6 +343,9 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
     let nearClouds: Cloud[] = []
     let notes: Note[] = []
     let snowflakes: Snowflake[] = []
+    let warpStars: WarpStar[] = []
+    let waterGlows: WaterGlow[] = []
+    let waterRipples: WaterRipple[] = []
     // Populated over time by step() below, not up front — a shooting
     // star is a rare, short-lived event, not a standing population like
     // every other particle type here.
@@ -282,6 +372,17 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
         notes = Array.from({ length: Math.round((width * height) / 28000) }, () => randomNote(width, height, true))
       } else if (effect === 'snow') {
         snowflakes = Array.from({ length: Math.round((width * height) / 9000) }, () => randomSnowflake(width, height, true))
+      } else if (effect === 'star-voyage') {
+        // Cleared and respawned on resize (not repositioned) — like
+        // shooting stars, a mid-flight warp star's angle/distance only
+        // make sense relative to the viewport size it was spawned at.
+        const maxDist = Math.hypot(width, height) / 2 + 40
+        warpStars = Array.from({ length: Math.max(40, Math.round((width * height) / 7000)) }, () => randomWarpStar(maxDist))
+      } else if (effect === 'water') {
+        const area = width * height
+        waterGlows = Array.from({ length: Math.max(3, Math.round(area / 480000)) }, () => randomWaterGlow(width, height))
+        const rippleCount = 5
+        waterRipples = Array.from({ length: rippleCount }, (_, i) => randomWaterRipple(height, i, rippleCount))
       } else {
         // 'shooting-stars' gets a denser ambient field than plain 'stars'
         // — a smaller divisor, more stars per unit area — per direct
@@ -351,6 +452,76 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.globalAlpha = 1
     }
 
+    // A soft diagonal godray fanning down from the upper-right corner
+    // over the ambient star field drawStars already renders — reference:
+    // excited-fancy-786074.framer.app. Three overlapping rays at slightly
+    // different angles/widths instead of one flat beam, since a single
+    // gradient rectangle read as a plain stripe rather than the
+    // reference's fanned, feathered light. Breathes slowly (a sine on
+    // time, not a fixed opacity) rather than sitting static — a light
+    // source that never varies read as a flat image, not an atmosphere.
+    function drawLightBeam(time: number) {
+      const originX = width * 0.85
+      const originY = -height * 0.1
+      const beamLength = Math.max(width, height) * 1.8
+      const pulse = 0.7 + 0.3 * Math.sin(time * 0.00035)
+      const rays = [
+        { angleOffset: -0.09, width: 0.5, opacity: 0.16 },
+        { angleOffset: 0, width: 0.32, opacity: 0.22 },
+        { angleOffset: 0.09, width: 0.42, opacity: 0.14 },
+      ]
+      for (const ray of rays) {
+        ctx!.save()
+        ctx!.translate(originX, originY)
+        ctx!.rotate(Math.PI * 0.25 + ray.angleOffset)
+        const beamWidth = Math.min(width, height) * ray.width
+        const gradient = ctx!.createLinearGradient(-beamWidth / 2, 0, beamWidth / 2, 0)
+        gradient.addColorStop(0, `${resolvedColor}00`)
+        gradient.addColorStop(0.5, `${resolvedColor}${alphaHex(ray.opacity * pulse)}`)
+        gradient.addColorStop(1, `${resolvedColor}00`)
+        ctx!.fillStyle = gradient
+        ctx!.fillRect(-beamWidth / 2, 0, beamWidth, beamLength)
+        ctx!.restore()
+      }
+    }
+
+    // Hyperspace fly-by — every star races outward from a shared center,
+    // accelerating (not constant speed) so the field reads as travel
+    // toward the viewer rather than a uniform outward drift. Reference:
+    // star-effect.framer.website.
+    function drawWarpStars() {
+      const cx = width / 2
+      const cy = height / 2
+      ctx!.lineCap = 'round'
+      for (const s of warpStars) {
+        // Fades in over its first stretch from center — otherwise a
+        // freshly spawned star pops in at full brightness right next to
+        // wherever the last one just vanished, reported as distracting
+        // in the shooting-star effect's own early tuning.
+        const fade = Math.min(1, s.dist / 60)
+        const tailDist = Math.max(0, s.dist - (8 + s.speed * 6))
+        const cos = Math.cos(s.angle)
+        const sin = Math.sin(s.angle)
+        const headX = cx + cos * s.dist
+        const headY = cy + sin * s.dist
+        const tailX = cx + cos * tailDist
+        const tailY = cy + sin * tailDist
+        const gradient = ctx!.createLinearGradient(tailX, tailY, headX, headY)
+        gradient.addColorStop(0, `${resolvedColor}00`)
+        gradient.addColorStop(1, resolvedColor)
+        ctx!.strokeStyle = gradient
+        ctx!.globalAlpha = fade
+        // Thicker the faster (= farther along) a star is, matching a
+        // real fly-by where nearer stars appear to streak past wider.
+        ctx!.lineWidth = 1 + Math.min(2, s.speed * 0.5)
+        ctx!.beginPath()
+        ctx!.moveTo(tailX, tailY)
+        ctx!.lineTo(headX, headY)
+        ctx!.stroke()
+      }
+      ctx!.globalAlpha = 1
+    }
+
     function drawClouds(clouds: Cloud[]) {
       for (const cloud of clouds) {
         for (const lobe of cloud.lobes) {
@@ -364,8 +535,8 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           // can soften, so it showed through as a visible solid-white disc
           // with a hard rim, reported directly. A true gradient has no
           // such boundary anywhere in it for a blur to fail to hide.
-          gradient.addColorStop(0, `rgba(${vaporR}, ${vaporG}, ${vaporB}, ${cloud.opacity})`)
-          gradient.addColorStop(1, `rgba(${vaporR}, ${vaporG}, ${vaporB}, 0)`)
+          gradient.addColorStop(0, `rgba(${colorR}, ${colorG}, ${colorB}, ${cloud.opacity})`)
+          gradient.addColorStop(1, `rgba(${colorR}, ${colorG}, ${colorB}, 0)`)
           ctx!.fillStyle = gradient
           ctx!.beginPath()
           ctx!.arc(cx, cy, lobe.r, 0, Math.PI * 2)
@@ -416,15 +587,51 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
       ctx!.globalAlpha = 1
     }
 
+    // Ambient light-through-water glow plus a few undulating shimmer
+    // lines — reference: calmwatershader.framer.ai, minus the shooting
+    // star that site also had, per direct request (that streak effect
+    // already exists here as its own 'shooting-stars' option).
+    function drawWater(time: number) {
+      ctx!.filter = 'blur(24px)'
+      for (const g of waterGlows) {
+        const pulse = 0.6 + 0.4 * Math.sin(time * 0.0006 * g.pulseSpeed + g.pulsePhase)
+        const gradient = ctx!.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.radius)
+        gradient.addColorStop(0, `rgba(${colorR}, ${colorG}, ${colorB}, ${g.opacityBase * pulse})`)
+        gradient.addColorStop(1, `rgba(${colorR}, ${colorG}, ${colorB}, 0)`)
+        ctx!.fillStyle = gradient
+        ctx!.beginPath()
+        ctx!.arc(g.x, g.y, g.radius, 0, Math.PI * 2)
+        ctx!.fill()
+      }
+      ctx!.filter = 'none'
+
+      ctx!.strokeStyle = resolvedColor
+      ctx!.lineWidth = 1.5
+      for (const ripple of waterRipples) {
+        ctx!.globalAlpha = ripple.opacity
+        ctx!.beginPath()
+        for (let x = 0; x <= width; x += 12) {
+          const y = ripple.y + Math.sin(x * ripple.frequency + time * ripple.speed + ripple.phase) * ripple.amplitude
+          if (x === 0) ctx!.moveTo(x, y)
+          else ctx!.lineTo(x, y)
+        }
+        ctx!.stroke()
+      }
+      ctx!.globalAlpha = 1
+    }
+
     function draw(time: number) {
       ctx!.clearRect(0, 0, width, height)
       if (effect === 'rain') drawRain()
       else if (effect === 'vapor') drawVapor()
       else if (effect === 'notes') drawNotes(time)
       else if (effect === 'snow') drawSnow(time)
+      else if (effect === 'water') drawWater(time)
+      else if (effect === 'star-voyage') drawWarpStars()
       else {
         drawStars(time)
         if (effect === 'shooting-stars') drawShootingStars()
+        else if (effect === 'light') drawLightBeam(time)
       }
     }
 
@@ -463,6 +670,24 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           flake.y += flake.speed
           if (flake.y - flake.radius > height) Object.assign(flake, randomSnowflake(width, height, false))
         }
+      } else if (effect === 'star-voyage') {
+        const maxDist = Math.hypot(width, height) / 2 + 40
+        for (const s of warpStars) {
+          s.dist += s.speed
+          // Accelerates the farther out it travels — a constant speed
+          // read as a uniform drift rather than a fly-by rushing past.
+          s.speed += 0.025
+          if (s.dist > maxDist) Object.assign(s, randomWarpStar(maxDist))
+        }
+      } else if (effect === 'water') {
+        for (const g of waterGlows) {
+          g.x += g.vx
+          if (g.x - g.radius > width) g.x = -g.radius
+          else if (g.x + g.radius < 0) g.x = width + g.radius
+        }
+        // Ripples need no per-frame position update — their undulation is
+        // computed straight from elapsed time in drawWater, same as the
+        // notes/snow sway above.
       } else if (effect === 'shooting-stars') {
         // Ambient stars need no per-frame update at all (their twinkle is
         // computed straight from time in drawStars) — only the rare
