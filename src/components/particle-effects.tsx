@@ -172,11 +172,10 @@ function randomWarpStar(maxDist: number): WarpStar {
     // field always has stars at every stage of the drift, right from
     // the very first frame.
     dist: Math.random() * maxDist * 0.6,
-    // Slowed a lot per repeated direct request — this and the
-    // acceleration rate below (step()) are both roughly 1/15th of the
-    // original speed, so a full drift from center to edge now takes on
-    // the order of half a minute instead of a handful of seconds.
-    speed: 0.02 + Math.random() * 0.02,
+    // Nudged back up a bit after being slowed a lot — this and the
+    // acceleration rate below (step()) are both ~1.75x the prior value,
+    // still nowhere near the original pre-slowdown speed.
+    speed: 0.035 + Math.random() * 0.035,
   }
 }
 
@@ -495,7 +494,7 @@ export function ParticleEffect({ effect, color }: { effect: string | null; color
           s.dist += s.speed
           // Accelerates the farther out it travels — a constant speed
           // read as a uniform drift rather than a fly-by rushing past.
-          s.speed += 0.0008
+          s.speed += 0.0014
           if (s.dist > maxDist) Object.assign(s, randomWarpStar(maxDist))
         }
       } else if (effect === 'water') {
