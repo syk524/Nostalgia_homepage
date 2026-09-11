@@ -433,7 +433,15 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
         onPointerDown={theme === 'default' ? e => { setSelectedId(null); canvas.handlers.onPointerDown(e) } : undefined}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className={`absolute inset-0 touch-none ${theme === 'default' ? (canvas.dragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+        // touch-none only for Default's own drag-to-pan canvas — it
+        // disables the browser's native touch scroll/gesture handling so
+        // canvas.handlers can drive panning itself instead, but Noir and
+        // Illust have no drag gesture of their own (canvas.handlers isn't
+        // even wired up for them, just above) and blanket-disabling touch
+        // scrolling for every theme left their landing page unscrollable
+        // on touch devices too, reported directly alongside the same bug
+        // for mouse/wheel scrolling (globals.css's .home-scene-wrapper).
+        className={`absolute inset-0 ${theme === 'default' ? `touch-none ${canvas.dragging ? 'cursor-grabbing' : 'cursor-grab'}` : ''}`}
       >
         {theme === 'default' ? (
           <div

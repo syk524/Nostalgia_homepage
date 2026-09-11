@@ -798,6 +798,25 @@
   display: none;
 }
 
+/* app/page.tsx's own wrapper around the home scene clips overflow by
+   default — needed for Default (Sticker), whose draggable canvas is an
+   infinite pannable surface where letting the page itself scroll would
+   fight the drag gesture. Noir and Illust have no such canvas (their
+   scene never sets draggable-home-scene.tsx's own drag handlers — see
+   that file's `theme === 'default'` gates), so on a short viewport where
+   the desk widgets (the calendar panel especially, once opened) don't
+   fit in one screen, that same clip made the overflowing part not just
+   hidden but genuinely unreachable — nothing to scroll to, since the
+   wrapper's own box height can't grow around an absolutely positioned
+   child (draggable-home-scene.tsx's scene div is `absolute inset-0`),
+   reported directly as unable to scroll at all on the landing page.
+   Letting overflow escape this wrapper for these two themes hands that
+   overflow to the page's own natural scroll instead. */
+[data-theme="noir"] .home-scene-wrapper,
+[data-theme="illust"] .home-scene-wrapper {
+  overflow: visible;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -53,7 +53,7 @@ export default async function HomePage() {
   // own rule; for Illust it closes the black-flash gap this was
   // reported for.
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="home-scene-wrapper relative min-h-screen overflow-hidden">
       <DraggableHomeScene
         canEdit={canEdit}
         isAdmin={isAdmin}
