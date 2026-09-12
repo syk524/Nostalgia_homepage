@@ -7,7 +7,7 @@ import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/datab
 // Everything the grid needs comes from the primary profile — title,
 // thumbnail image/background, and both characters' names — since nothing
 // is shared at the pair level any more.
-type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'illustration_source' | 'world' | 'swap_thumbnail_names' | 'background_url'> & {
+type PrimaryProfileSummary = Pick<PairProfile, 'title' | 'title_font' | 'pair_image_url' | 'thumbnail_image_url' | 'illustration_source' | 'world' | 'swap_thumbnail_names' | 'background_url'> & {
   profile_characters: Pick<ProfileCharacter, 'name' | 'name_color' | 'name_font' | 'slot'>[]
 }
 type PairWithPrimaryProfile = CharacterPair & { pair_profiles: PrimaryProfileSummary[] }
@@ -34,6 +34,12 @@ const THUMBNAIL_ASPECT_CLASSES = 'aspect-[5/2] max-h-[320px]'
 
 function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
   const primaryProfile = pair.pair_profiles[0]
+  // Falls back to the pair image itself — thumbnail_image_url is an
+  // editor-opt-in override (character-pair-form.tsx's own checkbox) for
+  // when the pair image doesn't crop well into this box; most profiles
+  // never set it, and the grid keeps defaulting to pair_image_url as
+  // before.
+  const thumbnailImageUrl = primaryProfile?.thumbnail_image_url ?? primaryProfile?.pair_image_url
   const [char1, char2] = [...(primaryProfile?.profile_characters ?? [])].sort((a, b) => a.slot - b.slot)
   // Thumbnail-only — the detail page's own caption layout
   // (character-pair-hero.tsx) always follows char1/char2 slot order
@@ -42,7 +48,7 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
 
   return (
     <Link href={`/profile/${pair.slug}`} className="group block">
-      {primaryProfile?.pair_image_url ? (
+      {thumbnailImageUrl ? (
         // Box sized off the column width (via aspect ratio), not off the
         // pair image's own height — the pair image is absolutely
         // positioned inside it, so anything past the box's bottom edge
@@ -83,7 +89,7 @@ function PairCard({ pair }: { pair: PairWithPrimaryProfile }) {
               next/image's required width/height (or a fill parent with a
               known aspect) would need. */}
           <img
-            src={primaryProfile.pair_image_url}
+            src={thumbnailImageUrl}
             alt=""
             className="absolute left-1/2 top-[15px] z-10 w-[75%] max-w-[600px] h-auto -translate-x-1/2 transition-transform duration-200 group-hover:-translate-y-[15px]"
           />

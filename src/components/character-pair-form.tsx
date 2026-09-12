@@ -203,6 +203,12 @@ type ProfileState = {
   pageType: 'template' | 'custom_html'
   customHtmlUrl: string | null; customHtmlFile: File | null; customHtmlFileName: string; uploadingCustomHtml: boolean
   pairImageUrl: string | null; pairImageFile: File | null; pairImagePreview: string; uploadingPairImage: boolean
+  // Optional override for the pair-list grid thumbnail — unchecked (the
+  // default) means the grid keeps using pairImageUrl above, exactly as
+  // before this existed. Checking it reveals its own independent
+  // upload slot, same shape as every other single-image field here.
+  useThumbnailImage: boolean
+  thumbnailImageUrl: string | null; thumbnailImageFile: File | null; thumbnailImagePreview: string; uploadingThumbnailImage: boolean
   characterBackdropUrl: string | null; characterBackdropFile: File | null; characterBackdropPreview: string; uploadingCharacterBackdrop: boolean
   illustrationSource: string; illustrationSourceFont: string; illustrationSourceColor: string
   world: string
@@ -243,6 +249,15 @@ function emptyProfile(existing?: PairProfileWithContent): ProfileState {
     pairImageFile: null,
     pairImagePreview: existing?.pair_image_url ?? '',
     uploadingPairImage: false,
+    // Starts checked whenever a thumbnail image already exists (editing
+    // a profile that has one) — unchecked for a brand-new profile or one
+    // that's never set it, matching the "unchecked = default behavior"
+    // resting state.
+    useThumbnailImage: existing?.thumbnail_image_url != null,
+    thumbnailImageUrl: existing?.thumbnail_image_url ?? null,
+    thumbnailImageFile: null,
+    thumbnailImagePreview: existing?.thumbnail_image_url ?? '',
+    uploadingThumbnailImage: false,
     characterBackdropUrl: existing?.character_backdrop_url ?? null,
     characterBackdropFile: null,
     characterBackdropPreview: existing?.character_backdrop_url ?? '',
@@ -365,6 +380,20 @@ export function CharacterPairForm({ initialData, initialActiveProfileSlug }: { i
         finalPairImageUrl = url
       }
 
+      // Unchecking the box reverts to the default behavior (grid falls
+      // back to pairImageUrl) rather than just hiding an orphaned upload
+      // — forced to null regardless of whatever URL/file the field still
+      // holds from before it was unchecked.
+      let finalThumbnailImageUrl: string | null = null
+      if (p.useThumbnailImage) {
+        finalThumbnailImageUrl = p.thumbnailImageUrl
+        if (p.thumbnailImageFile) {
+          const { url, error: err } = await uploadImage(p.thumbnailImageFile, user.id, 'gallery-images')
+          if (err) { setError(err); setSubmitting(false); return }
+          finalThumbnailImageUrl = url
+        }
+      }
+
       let finalCharacterBackdropUrl = p.characterBackdropUrl
       if (p.characterBackdropFile) {
         const { url, error: err } = await uploadImage(p.characterBackdropFile, user.id, 'gallery-images')
@@ -431,7 +460,7 @@ export function CharacterPairForm({ initialData, initialActiveProfileSlug }: { i
         title: p.title, profileTitle: p.profileTitle, titleFont: p.titleFont, titleColor: p.titleColor, titleSize: p.titleSize, iconColor: p.iconColor,
         linkText: p.linkText, linkUrl: p.linkUrl, linkFont: p.linkFont, linkColor: p.linkColor, hasMusic: p.hasMusic,
         isPrimary: p.isPrimary, pageType: p.pageType, customHtmlUrl: p.pageType === 'custom_html' ? finalCustomHtmlUrl : null,
-        pairImageUrl: finalPairImageUrl, characterBackdropUrl: finalCharacterBackdropUrl,
+        pairImageUrl: finalPairImageUrl, thumbnailImageUrl: finalThumbnailImageUrl, characterBackdropUrl: finalCharacterBackdropUrl,
         illustrationSource: p.illustrationSource, illustrationSourceFont: p.illustrationSourceFont, illustrationSourceColor: p.illustrationSourceColor,
         world: p.world,
         swapThumbnailNames: p.swapThumbnailNames,
@@ -629,6 +658,11 @@ function ProfileFieldset({
     if (!file) return
     onPatch({ pairImageFile: file, pairImagePreview: URL.createObjectURL(file) })
   }
+  function handleThumbnailImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    onPatch({ thumbnailImageFile: file, thumbnailImagePreview: URL.createObjectURL(file) })
+  }
   function handleCharacterBackdropChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -773,6 +807,29 @@ function ProfileFieldset({
                 <input type="file" accept="image/*" onChange={handlePairImageChange} className="sr-only" disabled={profile.uploadingPairImage} />
               </label>
             </div>
+            <label className="flex items-center gap-2 mt-2 text-xs text-ink-500 normal-case tracking-normal">
+              <input
+                type="checkbox"
+                checked={profile.useThumbnailImage}
+                onChange={e => onPatch({ useThumbnailImage: e.target.checked })}
+                className="cursor-pointer"
+              />
+              페어 목록 썸네일에 다른 이미지 사용
+            </label>
+            {profile.useThumbnailImage && (
+              <div className="flex items-center gap-4 mt-2">
+                <div className="w-32 aspect-video rounded border-2 border-dashed border-scroll-300 overflow-hidden flex items-center justify-center bg-scroll-100 shrink-0">
+                  {profile.thumbnailImagePreview
+                    ? <img src={profile.thumbnailImagePreview} alt="" className="w-full h-full object-cover" />
+                    : <span className="text-2xl text-scroll-400">◯</span>
+                  }
+                </div>
+                <label className="btn-ghost text-xs cursor-pointer" aria-busy={profile.uploadingThumbnailImage}>
+                  {profile.uploadingThumbnailImage ? '업로드 중…' : '이미지 선택'}
+                  <input type="file" accept="image/*" onChange={handleThumbnailImageChange} className="sr-only" disabled={profile.uploadingThumbnailImage} />
+                </label>
+              </div>
+            )}
           </div>
 
           <div>
