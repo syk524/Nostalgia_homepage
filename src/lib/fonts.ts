@@ -24,6 +24,8 @@ export const PAIR_FONTS = {
   moonscythe: { label: 'MOONSCYTHE (Eng)', family: 'var(--font-moonscythe), sans-serif' },
   fantasyNarratives: { label: 'Fantasy Narratives (Eng)', family: 'var(--font-fantasy-narratives), cursive' },
   janeAust: { label: 'JaneAust (Eng)', family: 'var(--font-jane-aust), cursive' },
+  starWars: { label: 'Star Wars (Eng)', family: 'var(--font-star-wars), sans-serif' },
+  starWarsHollow: { label: 'Star Wars Hole (Eng)', family: 'var(--font-star-wars-hollow), sans-serif' },
   // Not self-hosted like the others — loaded from Adobe Fonts (Typekit
   // kit 'dan3fpf', see the <Script> in app/layout.tsx), so there's no
   // --font-* CSS variable here, just the family name the kit itself
