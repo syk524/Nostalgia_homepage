@@ -49,6 +49,23 @@ type StateKey = keyof typeof STATES
 // (resize handles, `alias`, …) returns null, meaning "no custom cursor
 // for this — let the native OS cursor show through" rather than showing
 // nothing.
+// A trailing sparkle behind the pointer — reference:
+// particle-mouse-trail.framer.website. Lives on this same canvas/rAF
+// loop rather than a separate component/listener, since one already
+// exists here tracking pointer position every frame anyway. Drawn (see
+// step() below) independently of the sprite's own visible/activeKey
+// gating — the trail should keep animating and fading even where no
+// custom cursor sprite shows (e.g. hovering a text input), matching the
+// reference's own cursor-agnostic trail.
+type TrailParticle = { x: number; y: number; vx: number; vy: number; size: number; life: number; maxLife: number; color: string }
+const MAX_TRAIL_PARTICLES = 140
+// Spawned per pointermove that's actually moved this far since the last
+// spawn, not on every event — pointermove can fire far faster than the
+// mouse visibly travels, and spawning unconditionally on each one
+// clumps a shower of particles on top of each other whenever the
+// pointer is nearly still instead of a trail spaced along its path.
+const TRAIL_SPAWN_MIN_DIST = 4
+
 function stateForComputedCursor(computed: string): StateKey | null {
   switch (computed) {
     case 'pointer': return 'pointer'
@@ -105,6 +122,59 @@ export function CustomCursor() {
     let x = -1000
     let y = -1000
     let visible = false
+    let trailParticles: TrailParticle[] = []
+    let lastSpawnX = -1000
+    let lastSpawnY = -1000
+
+    function spawnTrailParticles(px: number, py: number) {
+      if (reduceMotion) return
+      if (Math.hypot(px - lastSpawnX, py - lastSpawnY) < TRAIL_SPAWN_MIN_DIST) return
+      lastSpawnX = px
+      lastSpawnY = py
+      // Reads the live theme's own ink color rather than a fixed white —
+      // same reasoning as every other themed accent in this app: Noir/
+      // Illust's accent is near-white against their dark backdrop,
+      // Default/Sticker's is dark ink against its light one, so the
+      // trail stays visible either way without a per-theme branch here.
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--theme-accent').trim() || '#ffffff'
+      for (let i = 0; i < 2; i++) {
+        if (trailParticles.length >= MAX_TRAIL_PARTICLES) trailParticles.shift()
+        const angle = Math.random() * Math.PI * 2
+        const speed = 0.3 + Math.random() * 0.8
+        trailParticles.push({
+          x: px + (Math.random() - 0.5) * 6,
+          y: py + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 0.2,
+          size: 1.5 + Math.random() * 2,
+          life: 0,
+          maxLife: 30 + Math.random() * 20,
+          color: accent,
+        })
+      }
+    }
+
+    function updateAndDrawTrailParticles() {
+      for (let i = trailParticles.length - 1; i >= 0; i--) {
+        const p = trailParticles[i]
+        p.life++
+        if (p.life >= p.maxLife) { trailParticles.splice(i, 1); continue }
+        p.x += p.vx
+        p.y += p.vy
+        p.vy += 0.015
+        p.vx *= 0.98
+        p.vy *= 0.98
+      }
+      for (const p of trailParticles) {
+        const t = p.life / p.maxLife
+        ctx.globalAlpha = (1 - t) * 0.8
+        ctx.fillStyle = p.color
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * (1 - t * 0.6), 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
     // Computed once per pointermove (event-driven), not once per
     // animation frame — getComputedStyle forces a synchronous style
     // recalc, and calling it ~60×/sec regardless of whether the hovered
@@ -126,6 +196,7 @@ export function CustomCursor() {
       x = e.clientX
       y = e.clientY
       visible = true
+      spawnTrailParticles(x, y)
 
       // custom-cursor-active forces `cursor: none !important` on every
       // element (globals.css) — including whatever getComputedStyle
@@ -187,6 +258,7 @@ export function CustomCursor() {
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      updateAndDrawTrailParticles()
       if (!visible || !activeKey) return
 
       const state = STATES[activeKey]
