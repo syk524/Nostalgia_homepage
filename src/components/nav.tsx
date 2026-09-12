@@ -226,7 +226,13 @@ export function Nav({ profile, categories, categoryPostCounts, totalPostCount }:
             <span><ScrambleText text="All" /> ({totalPostCount})</span>
             {!activeCategory && <span className="h-[6px] w-[6px] rounded-full bg-current shrink-0" />}
           </CategoryLink>
-          {categories.map(cat => (
+          {/* Categories with nothing in them yet are just dead weight in
+              this rail — filtered out here rather than at the query/props
+              level, since "how many posts does this category have" is
+              purely this list's own display concern, not something the
+              category-picker/admin views (which still need to show every
+              category, empty or not) should also have to account for. */}
+          {categories.filter(cat => (categoryPostCounts[cat.id] ?? 0) > 0).map(cat => (
             <CategoryLink
               key={cat.id}
               href={`/gallery?category=${encodeURIComponent(cat.name)}`}
