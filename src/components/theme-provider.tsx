@@ -7,8 +7,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 // A guest has no profiles row to persist a theme choice to — without
 // this, switching to Sticker as a guest would silently revert to the
-// new Noir default (migration 090) on every fresh visit, since
-// getUserTheme() has nothing else to go on for someone with no account.
+// server-rendered guest default (getUserTheme.ts, currently Illust) on
+// every fresh visit, since getUserTheme() has nothing else to go on for
+// someone with no account.
 // Signed-in users never touch this key: their choice already has a real
 // home in profiles.theme, which is authoritative and shouldn't be
 // second-guessed by a stale local value left over from some earlier
@@ -39,20 +40,20 @@ const GUEST_THEME_KEY = 'guest-theme'
 export function ThemeProvider({ initialTheme, isGuest, children }: { initialTheme: ThemeKey; isGuest: boolean; children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemeKey>(initialTheme)
 
-  // Corrects the server-rendered Noir default to whatever this guest
+  // Corrects the server-rendered guest default to whatever this guest
   // picked last time, if anything — runs once, after mount, since
   // localStorage isn't reachable during the server render that produced
   // initialTheme. That means a returning guest who chose Sticker briefly
-  // sees Noir flash before this fires, same trade-off this codebase
-  // already accepts elsewhere for other localStorage-backed defaults
-  // (e.g. calendar-desk-widget.tsx's own open/closed state).
+  // sees the guest default flash before this fires, same trade-off this
+  // codebase already accepts elsewhere for other localStorage-backed
+  // defaults (e.g. calendar-desk-widget.tsx's own open/closed state).
   useEffect(() => {
     if (!isGuest) return
     try {
       const saved = localStorage.getItem(GUEST_THEME_KEY)
       if (saved && isThemeKey(saved)) setTheme(saved)
     } catch {
-      // Storage unavailable — just keeps the server-rendered Noir default.
+      // Storage unavailable — just keeps the server-rendered guest default.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
