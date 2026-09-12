@@ -606,6 +606,16 @@ export function DraggableHomeScene({ canEdit, isAdmin, userId, initialGalleryIma
             className="fixed flex items-center justify-center rounded-2xl transition-transform hover:scale-105"
             style={{ top: dockTop(0), right: DOCK_GAP, width: DOCK_ICON_SIZE, height: DOCK_ICON_SIZE, background: '#282625' }}
           >
+            {/* "On" indicator — per direct request, a small dot to the
+                left of each Noir/Illust dock icon (this one, Calendar,
+                DayCounter) whenever that widget's own window/panel is
+                currently open. Absolutely positioned against this
+                button's own box (the nearest positioned ancestor, since
+                the button itself is `fixed`) rather than needing a
+                separate wrapper element. */}
+            {openApps.includes('settings') && (
+              <span aria-hidden="true" className="absolute top-1/2 -left-2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-scroll-100" />
+            )}
             <SettingsIcon size={18} className="text-scroll-100" />
           </button>
         )}

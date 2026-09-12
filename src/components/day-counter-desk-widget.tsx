@@ -298,6 +298,21 @@ export function DayCounterDeskWidget({ panX, panY, dayCounter, canEdit, onDayCou
           />
         </button>
 
+        {/* "On" indicator — per direct request, a small dot to the left
+            of the dock icon whenever this panel is open. A sibling, not
+            a child of the button above — that button's own
+            overflow-hidden (needed to clip DayCounterDockIcon's own
+            photo to the rounded box) would otherwise cut off a dot
+            positioned outside its bounds. Same positioning approach as
+            calendar-desk-widget.tsx's own copy — see that one's comment. */}
+        {docked.open && (
+          <span
+            aria-hidden="true"
+            className="fixed w-1.5 h-1.5 rounded-full bg-scroll-100 pointer-events-none"
+            style={{ top: `calc(${docked.dockTop} + ${ICON_SIZE / 2}px)`, right: 16 + ICON_SIZE + 8, transform: 'translateY(-50%)' }}
+          />
+        )}
+
         {docked.open && (
           <div
             className="fixed rounded-xl bg-scroll-50 overflow-hidden animate-fade-up"

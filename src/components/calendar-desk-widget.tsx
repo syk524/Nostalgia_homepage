@@ -367,6 +367,24 @@ export function CalendarDeskWidget({ panX, panY, events, canEdit, onEventsChange
           <CalendarDockIcon size={ICON_SIZE} />
         </button>
 
+        {/* "On" indicator — per direct request, a small dot to the left
+            of the dock icon whenever this panel is open. A sibling, not
+            a child of the button above — that button's own
+            overflow-hidden (needed to clip CalendarDockIcon's own
+            rendering to the rounded box) would otherwise cut off a dot
+            positioned outside its bounds. top mirrors the icon's own
+            vertical center (dockTop + half its height, same ICON_SIZE
+            constant), translateY(-50%) centers the dot itself on that
+            point; right is the icon's own right offset plus its full
+            width plus a small gap, landing just to its left. */}
+        {docked.open && (
+          <span
+            aria-hidden="true"
+            className="fixed w-1.5 h-1.5 rounded-full bg-scroll-100 pointer-events-none"
+            style={{ top: `calc(${docked.dockTop} + ${ICON_SIZE / 2}px)`, right: 16 + ICON_SIZE + 8, transform: 'translateY(-50%)' }}
+          />
+        )}
+
         {docked.mounted && (
           // opacity, not animate-fade-up's mount-only keyframe — that
           // only ever plays on entry, so closing while DayCounter also
