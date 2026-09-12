@@ -55,6 +55,8 @@ export type TrpgSession = {
   updated_at: string
 }
 
+export type PostType = 'image' | 'novel'
+
 export type Post = {
   id: string
   author_id: string
@@ -63,11 +65,36 @@ export type Post = {
   body: string
   is_edited: boolean
   position: number
+  post_type: PostType
   created_at: string
   updated_at: string
   author?: Profile
   images?: PostImage[]
+  pages?: PostPage[]
   category?: Category
+}
+
+// One page of a "novel" post — an image post's equivalent unit is a
+// PostImage; a novel post's is this. Optional image (a page can be text-
+// only) + a body paragraph, ordered by position exactly like PostImage,
+// and saved the same wholesale-delete-then-reinsert way (see updatePost
+// in src/lib/actions/gallery.ts).
+export type PostPage = {
+  id: string
+  post_id: string
+  position: number
+  image_url: string | null
+  image_credit: string | null
+  // Only meaningful alongside image_url — is_thumbnail marks which one
+  // page's image the gallery grid should use (see gallery-grid.tsx),
+  // since a novel can have several pages with images but only one grid
+  // thumbnail; focal_x/focal_y are that same page's own crop framing,
+  // same meaning as PostImage's own fields below.
+  is_thumbnail: boolean
+  focal_x: number
+  focal_y: number
+  body: string
+  created_at: string
 }
 
 export type DescriptionSection = {
@@ -330,14 +357,20 @@ export type Database = {
       }
       posts: {
         Row: Post
-        Insert: Omit<Post, 'id' | 'is_edited' | 'position' | 'created_at' | 'updated_at' | 'author' | 'images' | 'category'>
-        Update: Partial<Pick<Post, 'title' | 'body' | 'is_edited' | 'category_id' | 'position'>>
+        Insert: Omit<Post, 'id' | 'is_edited' | 'position' | 'created_at' | 'updated_at' | 'author' | 'images' | 'pages' | 'category'>
+        Update: Partial<Pick<Post, 'title' | 'body' | 'is_edited' | 'category_id' | 'position' | 'post_type'>>
         Relationships: []
       }
       post_images: {
         Row: PostImage
         Insert: Omit<PostImage, 'id' | 'created_at'>
         Update: Partial<Pick<PostImage, 'image_url' | 'position' | 'focal_x' | 'focal_y'>>
+        Relationships: []
+      }
+      post_pages: {
+        Row: PostPage
+        Insert: Omit<PostPage, 'id' | 'created_at'>
+        Update: Partial<Pick<PostPage, 'position' | 'image_url' | 'image_credit' | 'is_thumbnail' | 'focal_x' | 'focal_y' | 'body'>>
         Relationships: []
       }
       categories: {

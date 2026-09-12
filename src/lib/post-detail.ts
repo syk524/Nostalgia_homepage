@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Post, Profile, PostImage, Category } from '@/types/database'
+import type { Post, Profile, PostImage, PostPage, Category } from '@/types/database'
 
-export type FullPost = Post & { author: Profile; images: PostImage[]; category: Category }
+export type FullPost = Post & { author: Profile; images: PostImage[]; pages: PostPage[]; category: Category }
 
 // Shared by both the intercepted modal route and its plain-page fallback —
 // the two now render identical UI (PostModal), so there's no "full page"
@@ -15,7 +15,7 @@ export async function getPostDetail(id: string) {
   // dependency left once post is out of that chain.
   const [{ data: { user } }, { data: post }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from('posts').select('*, author:profiles(*), images:post_images(*), category:categories(*)').eq('id', id).single(),
+    supabase.from('posts').select('*, author:profiles(*), images:post_images(*), pages:post_pages(*), category:categories(*)').eq('id', id).single(),
   ])
 
   if (!post) return null

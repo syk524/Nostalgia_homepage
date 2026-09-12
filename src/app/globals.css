@@ -624,10 +624,17 @@
 /* Same problem as .noir-links-nav-color above, different route: the post
    modal's own hazy backdrop (post-modal.tsx) sits under the top nav and
    the gallery category rail on a post-detail page, and Noir's usual
-   near-white --nav-icon-color/--theme-accent washes out against it. */
+   near-white --nav-icon-color/--theme-accent washes out against it.
+   var(--post-detail-nav-override, #010101) rather than a bare literal —
+   post-modal.tsx sets that variable (via a plain <style> tag in its own
+   JSX, not a client effect — needs to already be true on the very first
+   paint, including a hard page load) to force pure white on a novel
+   post's own detail page specifically (per direct request); every other
+   post detail page leaves the variable unset and falls through to the
+   same #010101 as before. */
 [data-theme="noir"] .noir-post-detail-nav-color,
 [data-theme="illust"] .noir-post-detail-nav-color {
-  color: #010101 !important;
+  color: var(--post-detail-nav-override, #010101) !important;
 }
 /* For an element whose color is a hardcoded inline style (not a
    className, so a plain specificity edge isn't enough to win) — e.g. a

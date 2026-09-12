@@ -9,31 +9,44 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Plus } from 'lucide-react'
+import { GripVertical, Plus, BookOpen } from 'lucide-react'
 import { reorderPosts } from '@/lib/actions/gallery'
-import type { Post, Profile, PostImage, Category } from '@/types/database'
+import type { Post, Profile, PostImage, PostPage, Category } from '@/types/database'
 
-type GalleryPost = Post & { author: Profile; images: PostImage[]; category: Category }
+type GalleryPost = Post & { author: Profile; images: PostImage[]; pages?: PostPage[]; category: Category }
 
 const GRID_CLASSES = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'
 
 function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.ReactNode }) {
-  const thumb = [...(post.images ?? [])].sort((a, b) => a.position - b.position)[0]
+  // A novel post never has post_images rows (see gallery.ts's own
+  // createPost/updatePost) — its thumbnail is whichever page the editor
+  // starred (novel-page-editor.tsx's own is_thumbnail toggle), so several
+  // pages can carry an image without ambiguity over which one shows on
+  // the grid. Falls back to "first page with an image" for posts saved
+  // before that toggle existed, or that never touched it. focal_x/focal_y
+  // are that same page's own crop framing, same meaning as PostImage's.
+  const sortedPages = [...(post.pages ?? [])].sort((a, b) => a.position - b.position)
+  const thumb = post.post_type === 'novel'
+    ? sortedPages.find(p => p.is_thumbnail && p.image_url) ?? sortedPages.find(p => p.image_url)
+    : [...(post.images ?? [])].sort((a, b) => a.position - b.position)[0]
+  const thumbUrl = thumb?.image_url ?? undefined
+  const focalX = thumb && 'focal_x' in thumb ? thumb.focal_x : 50
+  const focalY = thumb && 'focal_y' in thumb ? thumb.focal_y : 50
   return (
     // Not a <Link> at the root — the drag handle is a sibling <button>,
     // and a <button> can't legally nest inside an <a> (invalid HTML,
     // same class of bug as the earlier nested-<form> issue).
     <div className="group relative rounded overflow-hidden">
       <Link href={`/gallery/${post.id}`} className="block">
-        {thumb
+        {thumbUrl
           ? <div className="relative w-full aspect-video overflow-hidden">
               <Image
-                src={thumb.image_url}
+                src={thumbUrl}
                 alt=""
                 fill
                 sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                 className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                style={{ objectPosition: `${thumb.focal_x}% ${thumb.focal_y}%` }}
+                style={{ objectPosition: `${focalX}% ${focalY}%` }}
               />
             </div>
           : <div className="w-full aspect-video flex items-center justify-center bg-scroll-200">
@@ -48,11 +61,26 @@ function PostCard({ post, dragHandle }: { post: GalleryPost; dragHandle?: React.
           </p>
         </div>
       </Link>
-      {post.category && (
-        <span className="absolute top-2 left-2 text-[10px] font-mono uppercase tracking-wide text-white bg-black/50 rounded px-1.5 py-0.5">
-          {post.category.name}
-        </span>
-      )}
+      <div className="absolute top-2 left-2 flex items-center gap-1.5">
+        {post.category && (
+          <span className="text-[10px] font-mono uppercase tracking-wide text-white bg-black/50 rounded px-1.5 py-0.5">
+            {post.category.name}
+          </span>
+        )}
+        {/* Only marker distinguishing a novel post from an image post on
+            the grid — its thumbnail alone (falls back to the same
+            placeholder-graphic treatment when a novel has no page images
+            at all) doesn't otherwise signal "this opens a reader, not a
+            photo," per direct request. Grouped with the category badge
+            here (was its own top-2 right-2 corner, sharing that spot
+            with the drag handle below in the editor reorder view) rather
+            than needing its own separate positioning. */}
+        {post.post_type === 'novel' && (
+          <span className="w-5 h-5 rounded bg-black/50 text-white/80 flex items-center justify-center shrink-0" aria-label="Novel post">
+            <BookOpen size={11} />
+          </span>
+        )}
+      </div>
       {dragHandle}
     </div>
   )

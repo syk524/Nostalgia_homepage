@@ -7,10 +7,16 @@ import { uploadImages } from '@/lib/upload'
 import { createPost } from '@/lib/actions/gallery'
 import { CategoryPicker } from '@/components/category-picker'
 import { ImageManager } from '@/components/image-manager'
+import { NovelPageEditor } from '@/components/novel-page-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
-import type { Category } from '@/types/database'
+import type { Category, PostType } from '@/types/database'
 
 type ImageItem = { file: File; preview: string; focalX: number; focalY: number }
+// imageFile null + imageUrl set covers nothing here (a brand-new post has
+// no existing uploaded URLs yet) — kept as the same two-field shape as
+// edit-post-form.tsx's own novel page state anyway, so both forms' submit
+// logic can resolve a page's final image URL identically.
+type NovelPageState = { imageFile: File | null; imageUrl: string | null; imagePreview: string; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }
 
 export function NewPostForm({ categories: initialCategories, initialCategoryId = null }: { categories: Category[]; initialCategoryId?: string | null }) {
   const router = useRouter()
@@ -25,7 +31,9 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
   // ordinary starting selection, not locked in any way, so the user can
   // freely pick a different category before publishing.
   const [categoryId, setCategoryId] = useState<string | null>(initialCategoryId)
+  const [postType, setPostType] = useState<PostType>('image')
   const [images, setImages] = useState<ImageItem[]>([])
+  const [novelPages, setNovelPages] = useState<NovelPageState[]>([{ imageFile: null, imageUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50, body: '' }])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [createdPostId, setCreatedPostId] = useState<string | null>(null)
@@ -76,6 +84,45 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
     })
   }
 
+  function addNovelPage() {
+    setNovelPages(prev => [...prev, { imageFile: null, imageUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50, body: '' }])
+  }
+  function removeNovelPage(index: number) {
+    setNovelPages(prev => prev.filter((_, i) => i !== index))
+  }
+  function moveNovelPage(index: number, direction: -1 | 1) {
+    setNovelPages(prev => {
+      const to = index + direction
+      if (to < 0 || to >= prev.length) return prev
+      const next = [...prev]
+      const [item] = next.splice(index, 1)
+      next.splice(to, 0, item)
+      return next
+    })
+  }
+  function setNovelPageBody(index: number, value: string) {
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, body: value } : p))
+  }
+  function setNovelPageImage(index: number, file: File) {
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageFile: file, imagePreview: URL.createObjectURL(file) } : p))
+  }
+  function removeNovelPageImage(index: number) {
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageFile: null, imageUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50 } : p))
+  }
+  function setNovelPageCredit(index: number, value: string) {
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageCredit: value } : p))
+  }
+  // Exclusive, like character-pair-form.tsx's own primary-profile star —
+  // clearing every other page's flag here (rather than relying on
+  // gallery-grid.tsx to just pick "the first" if several came in true) is
+  // what keeps a single flip always resolving to exactly one thumbnail.
+  function setNovelPageThumbnail(index: number) {
+    setNovelPages(prev => prev.map((p, i) => ({ ...p, isThumbnail: i === index })))
+  }
+  function setNovelPageFocal(index: number, x: number, y: number) {
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, focalX: x, focalY: y } : p))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -90,13 +137,31 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
     if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
 
     let imagePayload: { url: string; focalX: number; focalY: number }[] = []
-    if (images.length) {
+    let pagePayload: { imageUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }[] = []
+    if (postType === 'novel') {
+      const filesToUpload = novelPages.filter(p => p.imageFile).map(p => p.imageFile!)
+      let uploadedUrls: string[] = []
+      if (filesToUpload.length) {
+        const { urls, errors } = await uploadImages(filesToUpload, user.id, 'gallery-images')
+        if (errors.length) { setError(errors[0]); setSubmitting(false); return }
+        uploadedUrls = urls
+      }
+      let uploadCursor = 0
+      pagePayload = novelPages.map(p => ({
+        imageUrl: p.imageFile ? uploadedUrls[uploadCursor++] : p.imageUrl,
+        imageCredit: p.imageCredit,
+        isThumbnail: p.isThumbnail,
+        focalX: p.focalX,
+        focalY: p.focalY,
+        body: p.body,
+      }))
+    } else if (images.length) {
       const { urls, errors } = await uploadImages(images.map(i => i.file), user.id, 'gallery-images')
       if (errors.length) { setError(errors[0]); setSubmitting(false); return }
       imagePayload = urls.map((url, i) => ({ url, focalX: images[i].focalX, focalY: images[i].focalY }))
     }
 
-    const result = await createPost({ title, body, images: imagePayload, categoryId: effectiveCategoryId })
+    const result = await createPost({ title, body, postType, images: imagePayload, pages: pagePayload, categoryId: effectiveCategoryId })
     if (result?.error || !result?.postId) { setError(result?.error ?? 'Could not create the post.'); setSubmitting(false); return }
     setCreatedPostId(result.postId)
   }
@@ -139,17 +204,47 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
         </div>
 
         <div>
-          <label className="label">Images</label>
-          <ImageManager
-            images={images.map(i => ({ src: i.preview, focalX: i.focalX, focalY: i.focalY }))}
-            onSetThumbnail={setThumbnail}
-            onRemove={removeImage}
-            onFocalChange={setFocal}
-            onReorder={reorderImages}
-            onAddClick={() => fileRef.current?.click()}
-          />
-          <input ref={fileRef} type="file" accept="image/*" multiple className="sr-only" onChange={handleFiles} />
+          <label className="label">Post Type</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setPostType('image')} className={postType === 'image' ? 'btn-primary text-xs' : 'btn-ghost text-xs'}>
+              Image
+            </button>
+            <button type="button" onClick={() => setPostType('novel')} className={postType === 'novel' ? 'btn-primary text-xs' : 'btn-ghost text-xs'}>
+              Novel
+            </button>
+          </div>
         </div>
+
+        {postType === 'novel' ? (
+          <div>
+            <label className="label">Pages</label>
+            <NovelPageEditor
+              pages={novelPages.map(p => ({ imagePreview: p.imagePreview || p.imageUrl, imageCredit: p.imageCredit, isThumbnail: p.isThumbnail, focalX: p.focalX, focalY: p.focalY, body: p.body }))}
+              onBodyChange={setNovelPageBody}
+              onImageSelect={setNovelPageImage}
+              onImageRemove={removeNovelPageImage}
+              onCreditChange={setNovelPageCredit}
+              onSetThumbnail={setNovelPageThumbnail}
+              onFocalChange={setNovelPageFocal}
+              onAdd={addNovelPage}
+              onRemove={removeNovelPage}
+              onMove={moveNovelPage}
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="label">Images</label>
+            <ImageManager
+              images={images.map(i => ({ src: i.preview, focalX: i.focalX, focalY: i.focalY }))}
+              onSetThumbnail={setThumbnail}
+              onRemove={removeImage}
+              onFocalChange={setFocal}
+              onReorder={reorderImages}
+              onAddClick={() => fileRef.current?.click()}
+            />
+            <input ref={fileRef} type="file" accept="image/*" multiple className="sr-only" onChange={handleFiles} />
+          </div>
+        )}
 
         {error && (
           <p className="field-error bg-ember/10 border border-ember/20 rounded px-4 py-2.5 text-sm">{error}</p>

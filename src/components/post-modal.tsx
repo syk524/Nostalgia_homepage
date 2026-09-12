@@ -10,10 +10,11 @@ import { fetchPostDetail } from '@/lib/actions/gallery'
 import { useTheme } from '@/components/theme-provider'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { IllustPageBg } from '@/components/illust-page-bg'
+import { NovelReader } from '@/components/novel-reader'
 import { isNoirLike } from '@/lib/themes'
-import type { Post, Profile, PostImage, Category } from '@/types/database'
+import type { Post, Profile, PostImage, PostPage, Category } from '@/types/database'
 
-type FullPost = Post & { author: Profile; images: PostImage[]; category: Category }
+type FullPost = Post & { author: Profile; images: PostImage[]; pages: PostPage[]; category: Category }
 
 export function PostModal({
   post: initialPost, canEdit: initialCanEdit, prevId: initialPrevId, nextId: initialNextId,
@@ -40,8 +41,17 @@ export function PostModal({
   const [current, setCurrent] = useState({ post: initialPost, canEdit: initialCanEdit, prevId: initialPrevId, nextId: initialNextId })
   const [navigating, setNavigating] = useState(false)
   const { post, canEdit, prevId, nextId } = current
+  const isNovel = post.post_type === 'novel'
   const images = [...(post.images ?? [])].sort((a, b) => a.position - b.position)
+  const pages = [...(post.pages ?? [])].sort((a, b) => a.position - b.position)
   const backdrop = images[0]?.image_url
+  // Drives the sidebar's own full-width-vs-fixed-width toggle below — a
+  // novel post never has post_images rows (see gallery.ts's own
+  // createPost/updatePost, which only ever write one or the other table),
+  // so checking images.length alone would wrongly treat every novel post
+  // as "nothing to show" and both widen the sidebar and skip rendering
+  // the reader entirely.
+  const hasVisualArea = isNovel ? pages.length > 0 : images.length > 0
 
   // Bypasses Next's router entirely (a plain history.replaceState, not
   // router.replace) — router.replace would re-trigger the exact same
@@ -175,6 +185,22 @@ export function PostModal({
           background-color, so it shows through the gutter's own
           transparent background while staying hidden behind the
           metadata panel's deliberately opaque fill. */}
+      {/* A literal <style> tag, not an effect mutating documentElement
+          (novel-nav-color-setter.tsx's original approach) — that only
+          ever ran after hydration, so a hard/direct load of a novel
+          post's URL always painted the server-rendered HTML (which has
+          no way to know about a client-only CSS variable) with the
+          normal color first and only corrected it a tick later, reported
+          directly as the nav "only updating once the page had loaded."
+          This tag is part of PostModal's own JSX output, so it's already
+          present in the very first server-rendered HTML — no JS needs to
+          run for the color to be right on the very first paint. Sets the
+          same two variables .noir-post-detail-nav-color and NAV_COLOR_
+          STYLE's own base style already consume (see globals.css), so no
+          other rule needs to change; removed automatically (React just
+          drops the tag) the moment isNovel goes false, restoring
+          whatever :root's own real stylesheet defines. */}
+      {isNovel && <style>{':root{--nav-icon-color:#FFFFFF;--post-detail-nav-override:#FFFFFF}'}</style>}
       <IllustPageBg />
       {/* Category gutter — clears Nav's floating category links (left-2.6%,
           ~99px wide at their widest label) with a steady 60px gap — see
@@ -202,7 +228,7 @@ export function PostModal({
           Stays solidly opaque on every theme, including Noir — the
           particle effect belongs in the gutter above, not behind this
           panel's own readable text, reported directly. */}
-      <div className={`${images.length ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 noir-border bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
+      <div className={`${hasVisualArea ? 'w-full min-[1020px]:w-96 shrink-0' : 'flex-1'} min-[1020px]:max-h-full min-[1020px]:h-full min-[1020px]:overflow-y-auto border-b min-[1020px]:border-b-0 min-[1020px]:border-r border-scroll-300 noir-border bg-scroll-50 noir-panel-bg p-6 flex flex-col gap-4`}>
         {/* Same rounded (not rounded-full) + hover:bg-[#EFEFEF] treatment
             as the link bar's own collapse/expand toggle
             (links-archive-view.tsx's "Hide/Show link list" buttons) —
@@ -262,8 +288,14 @@ export function PostModal({
             </div>
             {post.category && (
               <div className="flex justify-between items-baseline gap-4">
-                <span className="font-mono text-xs uppercase tracking-wide noir-accent-color" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Category</span>
-                <span className="tag">{post.category.name}</span>
+                <span className="font-mono text-xs uppercase tracking-wide" style={{ color: 'color-mix(in srgb, var(--theme-accent) 60%, transparent)' }}>Category</span>
+                {/* .tag's own default grey (globals.css) is a deliberate
+                    match to .pill's neutral filter-chip color elsewhere —
+                    overridden here, not in the shared class, so only this
+                    metadata-sidebar badge picks up the theme accent (same
+                    color as the Author value right above it, per direct
+                    request) without touching .tag's other, non-themed use. */}
+                <span className="tag" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-accent) 18%, transparent)', color: 'var(--theme-accent)' }}>{post.category.name}</span>
               </div>
             )}
           </div>
@@ -307,7 +339,18 @@ export function PostModal({
           instead of the root scrolling past it. min-[1020px]:flex-1
           overrides shrink-0 back on at that breakpoint, restoring the
           original bounded/clipped desktop pane. */}
-      {images.length > 0 && (
+      {isNovel ? (
+        pages.length > 0 && (
+          // key={post.id} — same remount-on-prev/next reasoning as the
+          // image area's own key below; NovelReader keeps its page index
+          // in local state, which this remount resets to 0 for a
+          // different post instead of carrying over the last post's
+          // page position.
+          <div key={post.id} className="contents animate-fade-up">
+            <NovelReader pages={pages} />
+          </div>
+        )
+      ) : images.length > 0 && (
         // key={post.id} — same reasoning as the metadata block above:
         // remounts just this pane's own content on prev/next so its
         // animate-fade-up entrance replays as a smooth swap, instead of

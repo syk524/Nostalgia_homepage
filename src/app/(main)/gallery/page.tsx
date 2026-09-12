@@ -5,7 +5,7 @@ import { GalleryGrid } from '@/components/gallery-grid'
 import { TrackListView } from '@/components/track-list-view'
 import { NoirFloatingParticles } from '@/components/noir-floating-particles'
 import { isThemeKey, isNoirLike } from '@/lib/themes'
-import type { Post, Profile, PostImage, Category } from '@/types/database'
+import type { Post, Profile, PostImage, PostPage, Category } from '@/types/database'
 
 // Reading `searchParams` already makes this dynamic on the server —
 // every request re-runs this component — but the category links (both
@@ -47,7 +47,7 @@ export default async function GalleryPage({
 
   let postsQuery = supabase
     .from('posts')
-    .select('*, author:profiles(*), images:post_images(*), category:categories(*)')
+    .select('*, author:profiles(*), images:post_images(*), pages:post_pages(*), category:categories(*)')
     .order('position', { ascending: true })
 
   if (activeCategory) postsQuery = postsQuery.eq('category_id', activeCategory.id)
@@ -154,7 +154,7 @@ export default async function GalleryPage({
               survive a category switch. */}
           <GalleryGrid
             key={activeCategory?.id ?? 'all'}
-            posts={(posts ?? []) as unknown as (Post & { author: Profile; images: PostImage[]; category: Category })[]}
+            posts={(posts ?? []) as unknown as (Post & { author: Profile; images: PostImage[]; pages: PostPage[]; category: Category })[]}
             canReorder={canReorder}
             canEdit={canEdit}
             newPostHref={newPostHref}
