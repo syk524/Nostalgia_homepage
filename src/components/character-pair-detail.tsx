@@ -9,7 +9,7 @@ import { CustomHtmlProfileView } from '@/components/custom-html-profile-view'
 import { ParticleEffect } from '@/components/particle-effects'
 import { PairDescriptionView } from '@/components/pair-description-editor'
 import { NavIconColorSetter } from '@/components/nav-icon-color-setter'
-import { PairProfileSideNav } from '@/components/pair-profile-side-nav'
+import { PairProfileSideNav, PairProfileMobileTabs } from '@/components/pair-profile-side-nav'
 import { ScrollBounceLock } from '@/components/scroll-bounce-lock'
 import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 import type { CharacterPair, PairProfile, ProfileCharacter } from '@/types/database'
@@ -198,8 +198,12 @@ export function CharacterPairDetail({
         <>
           <CustomHtmlProfileView htmlContent={customHtmlContent ?? null} title={activeProfile.title} />
           {/* The iframe above is fixed full-viewport with nothing else in
-              the page flow, so Edit/Delete have nowhere inline to sit —
-              this is the one case that still needs them floating. */}
+              the page flow, so Edit/Delete (and, on mobile/tablet, the
+              profile switcher) have nowhere inline to sit — this is the
+              one case that still needs them floating. */}
+          <div className="fixed left-[2.6%] top-14 z-[60] max-w-[calc(100%-5.2%)]">
+            <PairProfileMobileTabs pairSlug={pair.slug} profiles={profiles} activeProfileSlug={activeProfile.profile_slug} />
+          </div>
           {canEdit && (
             <div className="fixed bottom-[3%] right-[2.6%] z-[60] flex gap-2">
               <Link href={`/profile/${pair.slug}/edit?profile=${activeProfile.profile_slug}`} className="btn-ghost" style={{ color: activeProfile.icon_color, borderColor: `${activeProfile.icon_color}33` }}>Edit</Link>
@@ -290,6 +294,7 @@ export function CharacterPairDetail({
                   fighting another same-breakpoint class over the same
                   property. */}
               <div className="px-4 min-[1020px]:pr-6 min-[1020px]:pl-[calc(2.6vw+159px)] -mt-8 min-[1020px]:mt-0 pt-4 space-y-8">
+                <PairProfileMobileTabs pairSlug={pair.slug} profiles={profiles} activeProfileSlug={activeProfile.profile_slug} />
                 <CharacterPairHero
                   imageUrl={pairImageUrl}
                   characterBackdropUrl={activeProfile.character_backdrop_url}
