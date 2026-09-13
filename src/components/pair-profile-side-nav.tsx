@@ -3,15 +3,21 @@ import { ScrambleText } from '@/components/scramble-text'
 
 type Profile = { profile_slug: string; profile_title: string; is_primary: boolean }
 
-function ProfileLink({ pairSlug, profile, active, className, dotPosition }: {
+function ProfileLink({ pairSlug, profile, active, className, dotPosition, scramble }: {
   pairSlug: string
   profile: Profile
   active: boolean
   className: string
   dotPosition: 'trailing' | 'top'
+  // The desktop rail's hover-decode flourish (ScrambleText) doesn't
+  // really make sense on the mobile/tablet tab row — there's no hover
+  // there, just an occasional simulated one on tap in some browsers —
+  // and was reported as unwanted on that row specifically, so it renders
+  // the plain label instead there.
+  scramble: boolean
 }) {
   const href = profile.is_primary ? `/profile/${pairSlug}` : `/profile/${pairSlug}/${profile.profile_slug}`
-  const label = <ScrambleText text={profile.profile_title} />
+  const label = scramble ? <ScrambleText text={profile.profile_title} /> : <span>{profile.profile_title}</span>
   // Trailing (desktop): only the active item ever gets a dot at all — a
   // single inline row, so an absent dot on every other item doesn't
   // shift anything. Top (mobile/tablet, per direct request — the dot
@@ -62,6 +68,7 @@ export function PairProfileSideNav({
           active={profile.profile_slug === activeProfileSlug}
           className="flex items-center gap-2"
           dotPosition="trailing"
+          scramble
         />
       ))}
     </div>
@@ -96,6 +103,7 @@ export function PairProfileMobileTabs({
           active={profile.profile_slug === activeProfileSlug}
           className="flex flex-col items-center gap-1"
           dotPosition="top"
+          scramble={false}
         />
       ))}
     </div>
