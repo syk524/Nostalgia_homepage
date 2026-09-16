@@ -5,9 +5,9 @@ import { pairFontFamily, pairFontWeight } from '@/lib/fonts'
 // June 22, 2026 — the fixed reference date the "D+NN" count runs from,
 // kept here (not in the day_counter table) since the user asked for a
 // specific unmoving start date, not an editor-configurable one. Local
-// calendar dates (not elapsed 24h periods), so D+0 is the reference day
-// itself and D+1 is the very next calendar day, regardless of time zone
-// or time-of-day.
+// calendar dates (not elapsed 24h periods), so D+1 is the reference day
+// itself (inclusive, per direct request) and D+2 is the very next
+// calendar day, regardless of time zone or time-of-day.
 const START_YEAR = 2026
 const START_MONTH = 5 // 0-indexed: June
 const START_DAY = 22
@@ -16,7 +16,7 @@ export function dayCount(): number {
   const now = new Date()
   const startUTC = Date.UTC(START_YEAR, START_MONTH, START_DAY)
   const nowUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.floor((nowUTC - startUTC) / 86_400_000)
+  return Math.floor((nowUTC - startUTC) / 86_400_000) + 1
 }
 
 // The dock's day-counter icon gets a live face like the calendar's,
