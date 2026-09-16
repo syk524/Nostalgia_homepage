@@ -7,6 +7,11 @@ const MAX_SIZE = 5 * 1024 * 1024
 
 const MAX_DIMENSION = 2560
 const WEBP_QUALITY = 0.85
+// Purely for gallery-grid thumbnails (see uploadImages' own comment) —
+// large enough to look crisp at the grid's own small card size, small
+// enough to keep file size (and therefore this feature's whole point)
+// low.
+const THUMBNAIL_MAX_DIMENSION = 480
 
 function withExtension(name: string, ext: string) {
   return name.replace(/\.[^./]+$/, '') + '.' + ext
@@ -52,6 +57,38 @@ async function optimizeForUpload(file: File): Promise<File> {
   }
 }
 
+// Same downscale-and-reencode approach as optimizeForUpload above, just to
+// a much smaller box — see uploadImages' own comment for why this exists
+// as a second, separate file rather than just relying on the already-
+// optimized full image. Returns null (not the original file) on any
+// failure — a thumbnail is a pure bonus, so uploadImages treats a miss
+// here as "fall back to the full image on the grid," never as an upload
+// error.
+async function makeThumbnail(file: File): Promise<File | null> {
+  if (file.type === 'image/gif') return null
+
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, THUMBNAIL_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height))
+    const width = Math.round(bitmap.width * scale)
+    const height = Math.round(bitmap.height * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+
+    const webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY))
+    if (!webp || webp.type !== 'image/webp') return null
+    return new File([webp], withExtension(file.name, 'webp'), { type: 'image/webp' })
+  } catch {
+    return null
+  }
+}
+
 export async function uploadImage(file: File, ownerId: string, bucket: Bucket) {
   const supabase = createClient()
 
@@ -75,11 +112,38 @@ export async function uploadImage(file: File, ownerId: string, bucket: Bucket) {
   return { url: data.publicUrl, path, error: null }
 }
 
+// Gallery posts' own batch upload path — the only caller of this function
+// (new/edit post forms). Unlike the single-file uploadImage above, used
+// everywhere else in the app (pair images, TRPG backgrounds, sticker
+// uploads, ...), this also generates and uploads a small pre-shrunk
+// thumbnail alongside each full image. The gallery grid (gallery-
+// grid.tsx) renders 70+ posts' worth of these, and Vercel's own
+// per-request Image Optimization was resizing the SAME full-size upload
+// down for every distinct viewport width it saw across visitors — burning
+// through the free plan's "5,000 transformations/month" quota fast.
+// Serving this pre-shrunk file directly (unoptimized, see gallery-
+// grid.tsx) instead means Vercel never has to transform it at all.
 export async function uploadImages(files: File[], ownerId: string, bucket: Bucket) {
-  const results = await Promise.all(files.map(file => uploadImage(file, ownerId, bucket)))
+  const results = await Promise.all(files.map(async file => {
+    const result = await uploadImage(file, ownerId, bucket)
+    if (!result.url || bucket !== 'gallery-images') return { ...result, thumbnailUrl: null as string | null }
+
+    const thumbFile = await makeThumbnail(file)
+    if (!thumbFile) return { ...result, thumbnailUrl: null }
+
+    const supabase = createClient()
+    const ext = thumbFile.name.split('.').pop()
+    const thumbPath = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-thumb.${ext}`
+    const { error: thumbErr } = await supabase.storage.from(bucket).upload(thumbPath, thumbFile, { upsert: true })
+    if (thumbErr) return { ...result, thumbnailUrl: null }
+
+    const thumbnailUrl = supabase.storage.from(bucket).getPublicUrl(thumbPath).data.publicUrl
+    return { ...result, thumbnailUrl }
+  }))
   const urls = results.filter(r => r.url).map(r => r.url as string)
+  const thumbnailUrls = results.filter(r => r.url).map(r => r.thumbnailUrl)
   const errors = results.filter(r => r.error).map(r => r.error as string)
-  return { urls, errors }
+  return { urls, thumbnailUrls, errors }
 }
 
 type HtmlBucket = 'profile-pages'

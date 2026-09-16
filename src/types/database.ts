@@ -16,6 +16,15 @@ export type PostImage = {
   id: string
   post_id: string
   image_url: string
+  // A pre-shrunk (480px) copy of image_url, generated client-side at
+  // upload time (see uploadImages in lib/upload.ts) — the gallery grid
+  // (gallery-grid.tsx) renders this directly, unoptimized, instead of
+  // asking Vercel's Image Optimization to resize the full image down for
+  // every distinct viewport width it sees, which was burning through the
+  // free plan's monthly transformation quota. Null for any image
+  // uploaded before this existed, or if the thumbnail failed to
+  // generate/upload — the grid falls back to image_url in that case.
+  thumbnail_url: string | null
   position: number
   focal_x: number
   focal_y: number
@@ -84,6 +93,9 @@ export type PostPage = {
   post_id: string
   position: number
   image_url: string | null
+  // A pre-shrunk copy of image_url — same meaning and same reason as
+  // PostImage's own thumbnail_url field above.
+  thumbnail_url: string | null
   image_credit: string | null
   // Only meaningful alongside image_url — is_thumbnail marks which one
   // page's image the gallery grid should use (see gallery-grid.tsx),
@@ -364,13 +376,13 @@ export type Database = {
       post_images: {
         Row: PostImage
         Insert: Omit<PostImage, 'id' | 'created_at'>
-        Update: Partial<Pick<PostImage, 'image_url' | 'position' | 'focal_x' | 'focal_y'>>
+        Update: Partial<Pick<PostImage, 'image_url' | 'thumbnail_url' | 'position' | 'focal_x' | 'focal_y'>>
         Relationships: []
       }
       post_pages: {
         Row: PostPage
         Insert: Omit<PostPage, 'id' | 'created_at'>
-        Update: Partial<Pick<PostPage, 'position' | 'image_url' | 'image_credit' | 'is_thumbnail' | 'focal_x' | 'focal_y' | 'body'>>
+        Update: Partial<Pick<PostPage, 'position' | 'image_url' | 'thumbnail_url' | 'image_credit' | 'is_thumbnail' | 'focal_x' | 'focal_y' | 'body'>>
         Relationships: []
       }
       categories: {

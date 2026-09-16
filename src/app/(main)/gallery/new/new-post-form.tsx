@@ -136,29 +136,28 @@ export function NewPostForm({ categories: initialCategories, initialCategoryId =
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
 
-    let imagePayload: { url: string; focalX: number; focalY: number }[] = []
-    let pagePayload: { imageUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }[] = []
+    let imagePayload: { url: string; thumbnailUrl: string | null; focalX: number; focalY: number }[] = []
+    let pagePayload: { imageUrl: string | null; thumbnailUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }[] = []
     if (postType === 'novel') {
       const filesToUpload = novelPages.filter(p => p.imageFile).map(p => p.imageFile!)
       let uploadedUrls: string[] = []
+      let uploadedThumbnailUrls: (string | null)[] = []
       if (filesToUpload.length) {
-        const { urls, errors } = await uploadImages(filesToUpload, user.id, 'gallery-images')
+        const { urls, thumbnailUrls, errors } = await uploadImages(filesToUpload, user.id, 'gallery-images')
         if (errors.length) { setError(errors[0]); setSubmitting(false); return }
         uploadedUrls = urls
+        uploadedThumbnailUrls = thumbnailUrls
       }
       let uploadCursor = 0
-      pagePayload = novelPages.map(p => ({
-        imageUrl: p.imageFile ? uploadedUrls[uploadCursor++] : p.imageUrl,
-        imageCredit: p.imageCredit,
-        isThumbnail: p.isThumbnail,
-        focalX: p.focalX,
-        focalY: p.focalY,
-        body: p.body,
-      }))
+      pagePayload = novelPages.map(p => {
+        if (!p.imageFile) return { imageUrl: p.imageUrl, thumbnailUrl: null, imageCredit: p.imageCredit, isThumbnail: p.isThumbnail, focalX: p.focalX, focalY: p.focalY, body: p.body }
+        const i = uploadCursor++
+        return { imageUrl: uploadedUrls[i], thumbnailUrl: uploadedThumbnailUrls[i], imageCredit: p.imageCredit, isThumbnail: p.isThumbnail, focalX: p.focalX, focalY: p.focalY, body: p.body }
+      })
     } else if (images.length) {
-      const { urls, errors } = await uploadImages(images.map(i => i.file), user.id, 'gallery-images')
+      const { urls, thumbnailUrls, errors } = await uploadImages(images.map(i => i.file), user.id, 'gallery-images')
       if (errors.length) { setError(errors[0]); setSubmitting(false); return }
-      imagePayload = urls.map((url, i) => ({ url, focalX: images[i].focalX, focalY: images[i].focalY }))
+      imagePayload = urls.map((url, i) => ({ url, thumbnailUrl: thumbnailUrls[i], focalX: images[i].focalX, focalY: images[i].focalY }))
     }
 
     const result = await createPost({ title, body, postType, images: imagePayload, pages: pagePayload, categoryId: effectiveCategoryId })

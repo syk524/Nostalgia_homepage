@@ -4,7 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getPostDetail } from '@/lib/post-detail'
 import type { PostType } from '@/types/database'
 
-type PostImageInput = { url: string; focalX: number; focalY: number }
+// thumbnailUrl is uploadImages' own pre-shrunk copy of url (lib/upload.ts)
+// — null for an existing image untouched on this save, or if generating
+// one failed; either way, the gallery grid just falls back to the full
+// url in that case (see gallery-grid.tsx).
+type PostImageInput = { url: string; thumbnailUrl: string | null; focalX: number; focalY: number }
 // One novel page — imageUrl is optional (a text-only page), matching
 // post_pages.image_url's own nullability. imageCredit is likewise
 // optional and only meaningful alongside an image (there's nothing to
@@ -15,7 +19,7 @@ type PostImageInput = { url: string; focalX: number; focalY: number }
 // image — at most one page across the whole array should ever come in
 // with isThumbnail true (the editor's own star toggle enforces that
 // exclusivity client-side before submit; see novel-page-editor.tsx).
-type PostPageInput = { imageUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }
+type PostPageInput = { imageUrl: string | null; thumbnailUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }
 type PostInput = {
   title: string; body: string; categoryId: string
   postType: PostType
@@ -60,6 +64,7 @@ export async function createPost(input: PostInput) {
     if (pages.length) {
       const rows = pages.map((p, position) => ({
         post_id: post.id, position, image_url: p.imageUrl,
+        thumbnail_url: p.imageUrl ? p.thumbnailUrl : null,
         image_credit: p.imageUrl ? p.imageCredit.trim() || null : null,
         is_thumbnail: p.imageUrl ? p.isThumbnail : false,
         focal_x: p.focalX, focal_y: p.focalY,
@@ -70,7 +75,7 @@ export async function createPost(input: PostInput) {
     }
   } else if (images.length) {
     const rows = images.map((img, position) => ({
-      post_id: post.id, image_url: img.url, position, focal_x: img.focalX, focal_y: img.focalY,
+      post_id: post.id, image_url: img.url, thumbnail_url: img.thumbnailUrl, position, focal_x: img.focalX, focal_y: img.focalY,
     }))
     const { error: imgErr } = await supabase.from('post_images').insert(rows)
     if (imgErr) return { error: imgErr.message }
@@ -117,6 +122,7 @@ export async function updatePost(postId: string, input: PostInput) {
     if (pages.length) {
       const rows = pages.map((p, position) => ({
         post_id: postId, position, image_url: p.imageUrl,
+        thumbnail_url: p.imageUrl ? p.thumbnailUrl : null,
         image_credit: p.imageUrl ? p.imageCredit.trim() || null : null,
         is_thumbnail: p.imageUrl ? p.isThumbnail : false,
         focal_x: p.focalX, focal_y: p.focalY,
@@ -127,7 +133,7 @@ export async function updatePost(postId: string, input: PostInput) {
     }
   } else if (images.length) {
     const rows = images.map((img, position) => ({
-      post_id: postId, image_url: img.url, position, focal_x: img.focalX, focal_y: img.focalY,
+      post_id: postId, image_url: img.url, thumbnail_url: img.thumbnailUrl, position, focal_x: img.focalX, focal_y: img.focalY,
     }))
     const { error: imgErr } = await supabase.from('post_images').insert(rows)
     if (imgErr) return { error: imgErr.message }

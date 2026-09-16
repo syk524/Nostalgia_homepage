@@ -11,15 +11,20 @@ import { NovelPageEditor } from '@/components/novel-page-editor'
 import { DotMatrixLoader } from '@/components/dot-matrix-loader'
 import type { Post, PostImage, PostPage, Category, PostType } from '@/types/database'
 
-type ExistingImage = { kind: 'existing'; url: string; focalX: number; focalY: number }
+// thumbnailUrl carries the existing row's own pre-shrunk copy straight
+// through untouched — only a NewImage ever gets a freshly-generated one,
+// at upload time in handleSubmit below.
+type ExistingImage = { kind: 'existing'; url: string; thumbnailUrl: string | null; focalX: number; focalY: number }
 type NewImage = { kind: 'new'; file: File; preview: string; focalX: number; focalY: number }
 type ImageItem = ExistingImage | NewImage
 // imageUrl carries the existing page's own image straight through
 // unless imageFile replaces it; imagePreview is only ever set once a new
 // file is picked (an existing page's own imageUrl is rendered directly,
 // same as ExistingImage above never getting its own separate preview
-// field).
-type NovelPageState = { imageFile: File | null; imageUrl: string | null; imagePreview: string; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }
+// field). thumbnailUrl works the same way: the existing row's own value
+// unless imageFile replaces it, in which case handleSubmit below
+// generates a fresh one alongside the new upload.
+type NovelPageState = { imageFile: File | null; imageUrl: string | null; thumbnailUrl: string | null; imagePreview: string; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }
 
 export function EditPostForm({ postId, categories: initialCategories }: { postId: string; categories: Category[] }) {
   const router = useRouter()
@@ -71,9 +76,9 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
           setCategoryId(post.category_id)
           setPostType(post.post_type)
           const sorted = [...(post.images ?? [])].sort((a, b) => a.position - b.position)
-          setImages(sorted.map(img => ({ kind: 'existing', url: img.image_url, focalX: img.focal_x, focalY: img.focal_y })))
+          setImages(sorted.map(img => ({ kind: 'existing', url: img.image_url, thumbnailUrl: img.thumbnail_url, focalX: img.focal_x, focalY: img.focal_y })))
           const sortedPages = [...(post.pages ?? [])].sort((a, b) => a.position - b.position)
-          setNovelPages(sortedPages.map(p => ({ imageFile: null, imageUrl: p.image_url, imagePreview: '', imageCredit: p.image_credit ?? '', isThumbnail: p.is_thumbnail, focalX: p.focal_x, focalY: p.focal_y, body: p.body })))
+          setNovelPages(sortedPages.map(p => ({ imageFile: null, imageUrl: p.image_url, thumbnailUrl: p.thumbnail_url, imagePreview: '', imageCredit: p.image_credit ?? '', isThumbnail: p.is_thumbnail, focalX: p.focal_x, focalY: p.focal_y, body: p.body })))
         }
         setLoading(false)
       })
@@ -113,7 +118,7 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
   }
 
   function addNovelPage() {
-    setNovelPages(prev => [...prev, { imageFile: null, imageUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50, body: '' }])
+    setNovelPages(prev => [...prev, { imageFile: null, imageUrl: null, thumbnailUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50, body: '' }])
   }
   function removeNovelPage(index: number) {
     setNovelPages(prev => prev.filter((_, i) => i !== index))
@@ -135,7 +140,7 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
     setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageFile: file, imagePreview: URL.createObjectURL(file) } : p))
   }
   function removeNovelPageImage(index: number) {
-    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageFile: null, imageUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50 } : p))
+    setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageFile: null, imageUrl: null, thumbnailUrl: null, imagePreview: '', imageCredit: '', isThumbnail: false, focalX: 50, focalY: 50 } : p))
   }
   function setNovelPageCredit(index: number, value: string) {
     setNovelPages(prev => prev.map((p, i) => i === index ? { ...p, imageCredit: value } : p))
@@ -164,38 +169,41 @@ export function EditPostForm({ postId, categories: initialCategories }: { postId
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('You must be signed in.'); setSubmitting(false); return }
 
-    let imagePayload: { url: string; focalX: number; focalY: number }[] = []
-    let pagePayload: { imageUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }[] = []
+    let imagePayload: { url: string; thumbnailUrl: string | null; focalX: number; focalY: number }[] = []
+    let pagePayload: { imageUrl: string | null; thumbnailUrl: string | null; imageCredit: string; isThumbnail: boolean; focalX: number; focalY: number; body: string }[] = []
 
     if (postType === 'novel') {
       const filesToUpload = novelPages.filter(p => p.imageFile).map(p => p.imageFile!)
       let uploadedPageUrls: string[] = []
+      let uploadedPageThumbnailUrls: (string | null)[] = []
       if (filesToUpload.length) {
-        const { urls, errors } = await uploadImages(filesToUpload, user.id, 'gallery-images')
+        const { urls, thumbnailUrls, errors } = await uploadImages(filesToUpload, user.id, 'gallery-images')
         if (errors.length) { setError(errors[0]); setSubmitting(false); return }
         uploadedPageUrls = urls
+        uploadedPageThumbnailUrls = thumbnailUrls
       }
       let pageUploadCursor = 0
-      pagePayload = novelPages.map(p => ({
-        imageUrl: p.imageFile ? uploadedPageUrls[pageUploadCursor++] : p.imageUrl,
-        imageCredit: p.imageCredit,
-        isThumbnail: p.isThumbnail,
-        focalX: p.focalX,
-        focalY: p.focalY,
-        body: p.body,
-      }))
+      pagePayload = novelPages.map(p => {
+        if (!p.imageFile) return { imageUrl: p.imageUrl, thumbnailUrl: p.thumbnailUrl, imageCredit: p.imageCredit, isThumbnail: p.isThumbnail, focalX: p.focalX, focalY: p.focalY, body: p.body }
+        const i = pageUploadCursor++
+        return { imageUrl: uploadedPageUrls[i], thumbnailUrl: uploadedPageThumbnailUrls[i], imageCredit: p.imageCredit, isThumbnail: p.isThumbnail, focalX: p.focalX, focalY: p.focalY, body: p.body }
+      })
     } else {
       const newFiles = images.filter((i): i is NewImage => i.kind === 'new').map(i => i.file)
       let uploadedUrls: string[] = []
+      let uploadedThumbnailUrls: (string | null)[] = []
       if (newFiles.length) {
-        const { urls, errors } = await uploadImages(newFiles, user.id, 'gallery-images')
+        const { urls, thumbnailUrls, errors } = await uploadImages(newFiles, user.id, 'gallery-images')
         if (errors.length) { setError(errors[0]); setSubmitting(false); return }
         uploadedUrls = urls
+        uploadedThumbnailUrls = thumbnailUrls
       }
       let uploadIndex = 0
-      imagePayload = images.map(img => img.kind === 'existing'
-        ? { url: img.url, focalX: img.focalX, focalY: img.focalY }
-        : { url: uploadedUrls[uploadIndex++], focalX: img.focalX, focalY: img.focalY })
+      imagePayload = images.map(img => {
+        if (img.kind === 'existing') return { url: img.url, thumbnailUrl: img.thumbnailUrl, focalX: img.focalX, focalY: img.focalY }
+        const i = uploadIndex++
+        return { url: uploadedUrls[i], thumbnailUrl: uploadedThumbnailUrls[i], focalX: img.focalX, focalY: img.focalY }
+      })
     }
 
     const result = await updatePost(postId, { title, body, postType, images: imagePayload, pages: pagePayload, categoryId: effectiveCategoryId })
