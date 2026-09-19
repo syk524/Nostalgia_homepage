@@ -29,6 +29,7 @@ export const PAIR_FONTS = {
   // registers. Confirmed live via document.fonts after the kit script
   // loads (kit-generated names aren't predictable from the display name
   // alone) — it's 'sictake-shigure', not 'shigure'.
+  starWars: { label: 'Star Wars (Eng)', family: 'var(--font-star-wars), sans-serif' },
   shigure: { label: 'Shigure (JP)', family: "'sictake-shigure', sans-serif" },
   // Same Typekit kit as Shigure — its config lists this family with two
   // static weight faces, 300 and 700, not a variable range, so a plain
