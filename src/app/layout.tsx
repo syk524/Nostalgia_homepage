@@ -119,15 +119,6 @@ const anomale = localFont({
   display: 'swap',
 })
 
-// A variable font (its own "Angle" axis, per the source filename) — no
-// weight/style variants declared here since PAIR_FONTS only ever renders
-// it at the browser's own default instance rather than picking a
-// specific point on that axis.
-const tokAngle = localFont({
-  src: './fonts/TOKAngle.ttf',
-  variable: '--font-tok-angle',
-  display: 'swap',
-})
 
 const kopubMedium = localFont({
   src: './fonts/KoPubWorldBatangMedium.ttf',
@@ -217,7 +208,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${tokAngle.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${starWarsHollow.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${starWarsHollow.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike

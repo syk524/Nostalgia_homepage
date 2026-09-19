@@ -18,7 +18,6 @@ export const PAIR_FONTS = {
   hotra: { label: 'Hotra (Eng)', family: 'var(--font-hotra), sans-serif' },
   popstar: { label: 'Popstar (Eng)', family: 'var(--font-popstar), sans-serif' },
   anomale: { label: 'Anomale (Eng)', family: 'var(--font-anomale), sans-serif' },
-  tokAngle: { label: 'Tok Angle (JP)', family: 'var(--font-tok-angle), sans-serif' },
   kopubMedium: { label: 'Kopub Medium (KR)', family: 'var(--font-kopub-medium), Georgia, serif' },
   kopubLight: { label: 'Kopub Light (KR)', family: 'var(--font-kopub-light), Georgia, serif' },
   moonscythe: { label: 'MOONSCYTHE (Eng)', family: 'var(--font-moonscythe), sans-serif' },
