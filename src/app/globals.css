@@ -2,8 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Heavy fonts served from Supabase Storage to keep the Vercel bundle small.
+   CSS variables are defined in @layer base :root below so they match the
+   next/font/local variable pattern the rest of the app uses. */
+@font-face {
+  font-family: 'ChosunNm';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/ChosunNm.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ChosunKm';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/ChosunKm.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'HomuraMincho';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/HomuraMincho.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorldBatangMedium';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/KoPubWorldBatangMedium.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorldBatangLight';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/KoPubWorldBatangLight.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'DungGeunMo';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/DungGeunMo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'OGRenaissance';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/OGRenaissance.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dalmoori';
+  src: url('https://iawxsciepocpadlfgwuf.supabase.co/storage/v1/object/public/fonts/Dalmoori.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
+    /* CSS variables for fonts served from Supabase Storage */
+    --font-chosun-nm:    'ChosunNm', Georgia, serif;
+    --font-chosun-km:    'ChosunKm', Georgia, serif;
+    --font-homura-mincho:'HomuraMincho', serif;
+    --font-kopub-medium: 'KoPubWorldBatangMedium', Georgia, serif;
+    --font-kopub-light:  'KoPubWorldBatangLight', Georgia, serif;
+    --font-dung-geun-mo: 'DungGeunMo', monospace;
+    --font-og-renaissance:'OGRenaissance', serif;
+    --font-dalmoori:     'Dalmoori', sans-serif;
+
     --bg:       #f1f1f1;
     --surface:  #faf9f7;
     --border:   #dbd8d1;

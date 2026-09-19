@@ -47,23 +47,6 @@ const playfairDisplay = Playfair_Display({
   variable: '--font-playfair-display',
 })
 
-// The "serif" pair-font choice (see lib/fonts.ts) — used for both Korean
-// and Latin text, no mixed-font fallback chain.
-const chosunNm = localFont({
-  src: './fonts/ChosunNm.ttf',
-  variable: '--font-chosun-nm',
-  display: 'swap',
-})
-
-// The bold weight of the same Chosun Myeongjo family as chosunNm above —
-// a separate font file (not a `weight`/`style` variant on chosunNm's own
-// localFont call), so it's its own selectable PAIR_FONTS entry rather
-// than an alternate rendering of the "serif" one.
-const chosunKm = localFont({
-  src: './fonts/ChosunKm.ttf',
-  variable: '--font-chosun-km',
-  display: 'swap',
-})
 
 const zaslia = localFont({
   src: './fonts/Zaslia.otf',
@@ -71,21 +54,9 @@ const zaslia = localFont({
   display: 'swap',
 })
 
-const homuraMincho = localFont({
-  src: './fonts/HomuraMincho.otf',
-  variable: '--font-homura-mincho',
-  display: 'swap',
-})
-
 const kmu80Sungkok = localFont({
   src: './fonts/KMU80Sungkok.ttf',
   variable: '--font-kmu80-sungkok',
-  display: 'swap',
-})
-
-const ogRenaissance = localFont({
-  src: './fonts/OGRenaissance.ttf',
-  variable: '--font-og-renaissance',
   display: 'swap',
 })
 
@@ -120,17 +91,6 @@ const anomale = localFont({
 })
 
 
-const kopubMedium = localFont({
-  src: './fonts/KoPubWorldBatangMedium.ttf',
-  variable: '--font-kopub-medium',
-  display: 'swap',
-})
-
-const kopubLight = localFont({
-  src: './fonts/KoPubWorldBatangLight.ttf',
-  variable: '--font-kopub-light',
-  display: 'swap',
-})
 
 const moonscythe = localFont({
   src: './fonts/MOONSCYTHE-Demo.otf',
@@ -163,17 +123,6 @@ const pokemonKR = localFont({
   display: 'swap',
 })
 
-const dungGeunMo = localFont({
-  src: './fonts/DungGeunMo.ttf',
-  variable: '--font-dung-geun-mo',
-  display: 'swap',
-})
-
-const dalmoori = localFont({
-  src: './fonts/Dalmoori.ttf',
-  variable: '--font-dalmoori',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: 'Nustalgio',
@@ -199,7 +148,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${zaslia.variable} ${kmu80Sungkok.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${pokemonKR.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike
