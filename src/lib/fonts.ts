@@ -29,6 +29,9 @@ export const PAIR_FONTS = {
   // registers. Confirmed live via document.fonts after the kit script
   // loads (kit-generated names aren't predictable from the display name
   // alone) — it's 'sictake-shigure', not 'shigure'.
+  pokemonKR: { label: '포켓몬 (KR)', family: 'var(--font-pokemon-kr), sans-serif' },
+  dungGeunMo: { label: '둥근모 (KR)', family: 'var(--font-dung-geun-mo), monospace' },
+  dalmoori: { label: '달무리 (KR)', family: 'var(--font-dalmoori), sans-serif' },
   starWars: { label: 'Star Wars (Eng)', family: 'var(--font-star-wars), sans-serif' },
   shigure: { label: 'Shigure (JP)', family: "'sictake-shigure', sans-serif" },
   // Same Typekit kit as Shigure — its config lists this family with two
