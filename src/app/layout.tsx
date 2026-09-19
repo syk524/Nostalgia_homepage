@@ -156,15 +156,6 @@ const starWars = localFont({
   display: 'swap',
 })
 
-// The same face's hollow/outline variant — a separate PAIR_FONTS entry
-// (below) rather than a font-weight/style variant of starWars above,
-// since it's a genuinely different set of glyph outlines (a distinct
-// .ttf), not a bold/italic face next/font/local could pick between.
-const starWarsHollow = localFont({
-  src: './fonts/StarjediHollow.ttf',
-  variable: '--font-star-wars-hollow',
-  display: 'swap',
-})
 
 const pokemonKR = localFont({
   src: './fonts/PokemonDPPT.otf',
@@ -208,7 +199,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${starWarsHollow.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike
