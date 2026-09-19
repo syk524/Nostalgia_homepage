@@ -150,12 +150,6 @@ const janeAust = localFont({
   display: 'swap',
 })
 
-const starWars = localFont({
-  src: './fonts/Starjedi.ttf',
-  variable: '--font-star-wars',
-  display: 'swap',
-})
-
 
 const pokemonKR = localFont({
   src: './fonts/PokemonDPPT.otf',
@@ -199,7 +193,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       style={{ ['--theme-accent' as string]: theme.pointColor, ['--theme-bg' as string]: theme.background }}
     >
       <body
-        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${starWars.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
+        className={`${notoSansKR.variable} ${roboto.variable} ${chivoMono.variable} ${bebasNeue.variable} ${playfairDisplay.variable} ${chosunNm.variable} ${chosunKm.variable} ${zaslia.variable} ${homuraMincho.variable} ${kmu80Sungkok.variable} ${ogRenaissance.variable} ${antroVectraBold.variable} ${kunstlerScript.variable} ${hotra.variable} ${popstar.variable} ${anomale.variable} ${kopubMedium.variable} ${kopubLight.variable} ${moonscythe.variable} ${fantasyNarratives.variable} ${janeAust.variable} ${pokemonKR.variable} ${dungGeunMo.variable} ${dalmoori.variable} font-sans`}
         suppressHydrationWarning
       >
         {/* Adobe Fonts (Typekit) kit for Shigure (lib/fonts.ts) — unlike
